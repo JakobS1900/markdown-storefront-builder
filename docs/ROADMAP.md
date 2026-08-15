@@ -27,7 +27,7 @@ change it.
 - [x] **0.4** First-pass host verification, target set decided
 - [x] **0.5** Constitution ratified v1.0.0
 - [x] **0.6** Roadmap and workflow docs (this file and `docs/WORKFLOW.md`)
-- [ ] **0.7** Toolchain bootstrapped and proved: build, test, lint, a11y, secret
+- [x] **0.7** Toolchain bootstrapped and proved: build, test, lint, a11y, secret
       scan, and a trivial end to end skeleton that compiles an empty document
       and runs clean
 

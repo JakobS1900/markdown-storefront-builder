@@ -72,6 +72,23 @@ carrying, not as a step that was unnecessary.
 - `specify` crashes with `UnicodeEncodeError` drawing its banner unless
   `PYTHONIOENCODING=utf-8` is exported first.
 - Spec-Kit scripts here are PowerShell (`.specify/scripts/powershell`).
+- **`npm install` MUST be run from PowerShell, not the Bash tool.** Under msys2
+  Git Bash it fails with `ERR_INVALID_ARG_TYPE` plus `EPERM` cleanup errors,
+  because it picks up the msys2 npm cache. The same command succeeds in
+  PowerShell. Run all npm commands there.
+
+## Verification gate
+
+`npm run verify` runs typecheck, lint, test, secret scan, and the a11y gate in
+that order. Run it from PowerShell. It is what "done" means.
+
+The a11y gate currently SKIPS with a visible message because no app exists yet.
+It fails loudly the moment `app/index.html` appears, so it cannot be forgotten.
+That is deliberate, not an oversight.
+
+Constitution Principle I is enforced by ESLint, not by review:
+`engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,
+`Math.random`, or `new Date`. Verified firing on 2026-08-15.
 
 <!-- ACTIVE FEATURE: none -->
 
@@ -82,6 +99,6 @@ carrying, not as a step that was unnecessary.
 - [x] Project rules written
 - [x] Constitution ratified v1.0.0 (`.specify/memory/constitution.md`)
 - [x] Roadmap and workflow docs written (`docs/ROADMAP.md`, `docs/WORKFLOW.md`)
-- [ ] Toolchain bootstrapped: build, test, lint, a11y, secret scan
-- [ ] Empty end-to-end skeleton builds, tests, and runs clean
-- [ ] Phase 0 committed
+- [x] Toolchain bootstrapped: build, test, lint, a11y, secret scan
+- [x] Empty end-to-end skeleton builds, tests, and runs clean
+- [x] Phase 0 committed

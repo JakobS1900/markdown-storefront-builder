@@ -1,0 +1,26 @@
+{
+  "name": "markdown-storefront-builder",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Compiles a block document model into host-correct Markdown for people who do not know Markdown.",
+  "workspaces": [
+    "engine"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --force",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "secretscan": "node scripts/secret-scan.mjs",
+    "a11y": "node scripts/a11y.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run a11y"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}

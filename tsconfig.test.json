@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["vitest/globals"],
+    "resolveJsonModule": true
+  },
+  "include": ["engine/tests/**/*.ts", "scripts/**/*.mjs"]
+}
