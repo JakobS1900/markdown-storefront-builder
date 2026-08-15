@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "target": "portable",
+  "blocks": [
+    {
+      "id": "x1",
+      "kind": "heading",
+      "text": "# not a heading",
+      "level": 2
+    },
+    {
+      "id": "x2",
+      "kind": "heading",
+      "text": "<script>alert(1)</script>",
+      "level": 2
+    },
+    {
+      "id": "x3",
+      "kind": "heading",
+      "text": "line one\nline two",
+      "level": 3
+    },
+    {
+      "id": "x4",
+      "kind": "heading",
+      "text": "*stars* _unders_ `tick` [x](y) | pipe & amp",
+      "level": 3
+    },
+    {
+      "id": "x5",
+      "kind": "heading",
+      "text": "trailing backslash \\",
+      "level": 4
+    }
+  ]
+}

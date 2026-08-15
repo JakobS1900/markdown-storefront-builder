@@ -1,0 +1,14 @@
+# Later rules win, so the general rule goes FIRST and the exceptions after it.
+* text=auto
+
+# Golden files, fixtures, and the parity snapshot are compared BYTE FOR BYTE.
+# Git must not rewrite their line endings in the working copy, or the
+# checked-in expected output stops being the output the compiler actually
+# produces, and the strongest guarantee in the project quietly becomes a
+# comparison against something else.
+#
+# The compiler always emits LF. These stay LF on every platform.
+engine/tests/compile/golden/**/*.md         -text
+engine/tests/compile/fixtures/*.json        -text
+engine/tests/document/fixtures/*.json       -text
+engine/tests/document/parity.snapshot.json  -text
