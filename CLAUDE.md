@@ -81,7 +81,7 @@ carrying, not as a step that was unnecessary.
 - [x] Spec-Kit initialized (`specify` 0.7.5.dev0, claude integration, ps scripts)
 - [x] Project rules written
 - [x] Constitution ratified v1.0.0 (`.specify/memory/constitution.md`)
-- [ ] Roadmap and workflow docs written
+- [x] Roadmap and workflow docs written (`docs/ROADMAP.md`, `docs/WORKFLOW.md`)
 - [ ] Toolchain bootstrapped: build, test, lint, a11y, secret scan
 - [ ] Empty end-to-end skeleton builds, tests, and runs clean
 - [ ] Phase 0 committed
