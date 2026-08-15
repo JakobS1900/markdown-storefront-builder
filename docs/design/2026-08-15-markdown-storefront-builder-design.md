@@ -1,6 +1,6 @@
 # Markdown Storefront Builder: Validated Design
 
-Date: 2026-08-14
+Date: 2026-08-15
 Status: Approved. Input to `/speckit-constitution` and `/speckit-specify`.
 
 ## 1. The problem
@@ -29,7 +29,7 @@ Scope decisions already made:
 | Decision | Choice |
 |---|---|
 | Primary audience | Both hiring managers and real artists, engine first |
-| Host targets | Two or three hosts that genuinely render Markdown, verified |
+| Host targets | Two: `rentry` and `portable`, a CommonMark plus GFM baseline. See `docs/research/2026-08-15-host-verification.md` |
 | Blocks in v1 | Menu and pricing, gallery, ToS and policies, about and links |
 | Images | Both paste a URL and upload, upload as an optional layer |
 | Mobile | Responsive web plus PWA, one codebase |

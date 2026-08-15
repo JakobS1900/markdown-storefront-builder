@@ -1,6 +1,6 @@
 # Host verification: what these services actually render
 
-Date: 2026-08-14
+Date: 2026-08-15
 Status: First pass. Feeds the capability matrix and the golden fixtures.
 
 ## Method
@@ -44,9 +44,22 @@ confirm whether it renders Markdown. Not a candidate for a v1 target on current
 evidence: a target whose renderer we cannot verify is one whose fixtures we
 cannot validate.
 
-## Open item
+## Target set: DECIDED 2026-08-15
 
-A second and third target still need to be chosen and verified. See the
-recommendation raised with Jakob on 2026-08-14 about using a strict
-CommonMark/GFM baseline as the second target rather than another individual
-site.
+**Target one: `rentry`.** The host the commission scene actually uses. Verified
+above.
+
+**Target two: `portable`.** A strict CommonMark plus GFM tables baseline, not an
+individual site. Chosen over hunting for a second host because:
+
+- It is defined by a written specification, so we validate against a standard
+  rather than reverse-engineering someone's deployment.
+- It cannot go offline, change its renderer, or refuse our connection the way
+  `txt.is` did.
+- It is what an artist actually wants when moving hosts or when they do not know
+  what their host runs: "give me the version that works everywhere."
+- It is the target that catches rentry extensions leaking, because every rentry
+  extension is by definition absent from it.
+
+No third target in v1. Adding one later is a target record plus fixtures, which
+is the whole point of the design.

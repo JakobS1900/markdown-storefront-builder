@@ -31,7 +31,19 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Name each principle and state how this plan satisfies it, or record an explicit,
+justified exception in the Complexity Tracking table below. An exception without a
+written justification is a blocker, not a note.
+
+| # | Principle | How this plan satisfies it |
+|---|---|---|
+| I | The Engine Is a Pure Function | |
+| II | Hosts Are Data, Never Code | |
+| III | Test-First, With Golden Files | |
+| IV | The Narrow Gate | |
+| V | The User's Work Is Sacred | |
+| VI | Reachable By The People Who Need It | |
+| VII | Honest Fidelity | |
 
 ## Project Structure
 
