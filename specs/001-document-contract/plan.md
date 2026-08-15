@@ -35,7 +35,7 @@ milliseconds on a mid-range phone (SC-005), guarded by a test with headroom
 **Constraints**: Pure. No DOM, no network, no clock, no randomness, enforced by
 ESLint over `engine/src/**` and verified firing on 2026-08-15
 **Scale/Scope**: Pages of kilobytes, tens of blocks. Six block kinds, four
-nested item types, seventeen validation rules
+nested item types, twenty validation rules
 
 ## Constitution Check
 
@@ -67,11 +67,11 @@ roadmap item where it becomes enforcing. The Complexity Tracking table is empty.
 specs/001-document-contract/
 ├── plan.md              # This file
 ├── spec.md              # The specification, with clarifications
-├── research.md          # Phase 0 output, eight decisions
+├── research.md          # Phase 0 output, ten decisions
 ├── data-model.md        # Phase 1 output, the normative field order
 ├── quickstart.md        # Phase 1 output
 ├── contracts/
-│   └── document-api.md  # Phase 1 output, the public surface and six guarantees
+│   └── document-api.md  # Phase 1 output, the public surface and eight guarantees
 ├── eng-review.md        # Architecture review gate, two HIGH findings folded back
 ├── checklists/
 │   └── requirements.md  # Spec quality validation
@@ -97,7 +97,9 @@ engine/
     └── document/
         ├── parity.test.ts
         ├── parity.snapshot.json
+        ├── types.test.ts
         ├── roundtrip.test.ts
+        ├── parse.test.ts
         ├── serialize.test.ts
         ├── validate.test.ts
         ├── version.test.ts

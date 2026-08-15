@@ -61,7 +61,11 @@ change it.
 ## Phase 2: The app
 
 - [ ] **2.1 App shell and persistence.** The three surfaces, routing, IndexedDB
-      storage, export and import, and the schema migration path.
+      storage, export and import, and the schema migration path. Carries FR-018
+      from feature 001: a page that fails to load MUST still be retrievable as
+      its raw stored content, and the failure message MUST offer that action.
+      Raised by review R-4, because refusing to open a page is only recoverable
+      if the artist can still get their work out.
 - [ ] **2.2 The block editor.** Add, edit, reorder, and delete blocks. Mobile
       sheet and desktop card forms. Accessibility gates enforced from the first
       control, not retrofitted.
