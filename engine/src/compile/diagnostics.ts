@@ -12,7 +12,8 @@
 export type DiagnosticCode =
   | "unknown_target"
   | "heading_level_reduced"
-  | "size_limit_exceeded";
+  | "size_limit_exceeded"
+  | "block_not_supported";
 
 export type DiagnosticSeverity = "info" | "warning";
 

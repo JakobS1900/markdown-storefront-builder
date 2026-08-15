@@ -61,6 +61,30 @@ export function escapeText(text: string): string {
  * space rather than leaving invisible whitespace that editors strip on save.
  */
 export function escapeInline(text: string): string {
-  const oneLine = text.replace(/\s+/g, " ").trim();
+  const oneLine = text.replace(LINE_BREAKING, " ").replace(/\s+/g, " ").trim();
   return escapeText(oneLine);
 }
+
+/**
+ * Characters that some renderer somewhere treats as a line boundary.
+ *
+ * Holistic review H-6. JavaScript's `\s` does NOT include U+0085, U+001C,
+ * U+001D, or U+001E, so relying on `\s` alone leaves them in the output.
+ *
+ * That matters because the escaper runs in JavaScript and the renderer does
+ * not. Python's `str.splitlines`, which a Python Markdown pipeline is likely to
+ * reach for, splits on all four of those in addition to the usual set. rentry
+ * is a Python service. A heading containing U+0085 could therefore survive our
+ * check and still be split in half by the host, turning the remainder of the
+ * artist's heading into body text.
+ *
+ * This is a cross-language seam: our idea of "whitespace" and the renderer's do
+ * not have to agree, and where they disagree the renderer wins. Collapsing the
+ * union of both is cheap and removes the question.
+ */
+// The control characters below are the entire point. U+001C to U+001E are line
+// boundaries to Python's splitlines and invisible to JavaScript's whitespace
+// class, which is exactly the gap this closes. no-control-regex exists to catch
+// them arriving by accident, and these did not.
+// eslint-disable-next-line no-control-regex
+const LINE_BREAKING =/[\r\n\v\f\u001c\u001d\u001e\u0085\u2028\u2029]/g;

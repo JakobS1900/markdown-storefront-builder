@@ -40,9 +40,28 @@ function emitBlock(block: Block, target: Target, sink: DiagnosticSink): string |
       // Roadmap 1.3 to 1.6. Skipped rather than half emitted: a partial
       // rendering of an artist's commission menu is worse than its absence,
       // because they would paste it believing it complete.
+      //
+      // Holistic review H-4: skipping SILENTLY is worse still. A page whose
+      // every section was one of these compiled to an empty string with no
+      // warning at all, so the artist would copy nothing, paste nothing, and
+      // believe it had worked. Every skipped section now says so.
+      sink.add({
+        code: "block_not_supported",
+        severity: "warning",
+        blockId: block.id,
+        message: `This version cannot lay out a ${KIND_NAMES[block.kind]} section yet, so it has been left out. Nothing in your page has been changed.`,
+      });
       return undefined;
   }
 }
+
+/** Section names as an artist would recognise them, not as the code names them. */
+const KIND_NAMES: Record<"prose" | "menu" | "gallery" | "profile", string> = {
+  prose: "text",
+  menu: "pricing menu",
+  gallery: "gallery",
+  profile: "profile",
+};
 
 /**
  * Compiles a page for a host.
