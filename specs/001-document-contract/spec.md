@@ -8,14 +8,48 @@
 ## Why This Lands First and Alone
 
 Everything else in the product reads or writes this one shape. The compiler
-consumes it, the editor mutates it, storage persists it, export writes it to a
-file, and sharing puts it in a link. A silent change to it corrupts an artist's
+consumes it, the editor mutates it, storage persists it, and export writes it to
+a file. A silent change to it corrupts an artist's
 saved page in a way no error message will catch, because every consumer will
 happily read the wrong thing.
 
 The rule this feature exists to satisfy: the contract lands in its own commit,
 guarded by a test that fails if its field names, types, or order change without
 someone deciding to change them.
+
+## Clarifications
+
+### Session 2026-08-15
+
+**Q1: Is sharing a page by link in scope, and must the contract be designed for
+it?**
+
+Answer: out of scope for now. Export and import via file only.
+
+Consequence: nothing in the contract is shaped by URL length. Field names are
+chosen for readability, not brevity. The URL fragment has been removed from the
+list of boundaries this contract crosses, in the design, in `CLAUDE.md`, and in
+the constitution, so it stops being an implied requirement nobody committed to.
+If link sharing arrives later it is a separate encoding layer above the
+contract, never a compaction of the contract itself. Recorded as a constraint in
+constitution 1.0.1.
+
+**Q2: When a page contains fields this version does not recognize, what
+happens?**
+
+Answer: reject the page.
+
+Consequence: validation is strict. An unrecognized field means the page came
+from somewhere this version does not understand, so it is refused rather than
+guessed at. This catches corruption, truncation, and hand-editing mistakes
+immediately instead of letting them propagate into a page that looks fine and is
+not.
+
+The accepted cost, recorded honestly: a page touched by a future version becomes
+unopenable in an older one even when the unknown field was harmless. This is the
+same trade the version stamp already makes in FR-004, so the behaviour is at
+least consistent, and refusing to open is a recoverable state while silently
+dropping a section is not.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -111,7 +145,8 @@ confirm it is refused without modification.
 - A page containing a block type this version does not recognize.
 - A page containing two blocks with the same identifier.
 - A page missing a required field, or carrying a field of the wrong type.
-- A page carrying fields we do not recognize at the current version.
+- A page carrying fields we do not recognize at the current version. Per Q2,
+  rejected.
 - A page large enough to exhaust available storage.
 - Text fields containing the longest realistic content an artist would write,
   and text fields that are empty strings rather than absent.
@@ -155,6 +190,9 @@ confirm it is refused without modification.
 - **FR-015**: The contract MUST record which host a page is targeting, so that
   reopening a page restores the target the artist last chose.
 - **FR-016**: A page MUST remain valid with zero blocks.
+- **FR-017**: The system MUST reject a page containing any field it does not
+  recognize, naming the offending field and the block it appears in, and MUST
+  NOT modify the stored page when doing so.
 
 ### Key Entities
 

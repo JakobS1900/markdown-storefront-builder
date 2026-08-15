@@ -50,7 +50,7 @@ carrying, not as a step that was unnecessary.
 
 - **The cross-boundary contract lands FIRST, alone, with a parity test.** In
   this project that is the `Document` JSON schema, which crosses the engine, the
-  app, IndexedDB, the URL fragment, and the export file. Grow it in its own
+  app, IndexedDB, and the export file. Grow it in its own
   isolated chunk guarded by a name, type, and order parity test.
 - **Chunk the implementation.** Group tasks into coherent chunks aligned to
   phases. One fresh implementer subagent per chunk, then a fresh spec-compliance
