@@ -73,6 +73,17 @@ carrying, not as a step that was unnecessary.
 - `specify` crashes with `UnicodeEncodeError` drawing its banner unless
   `PYTHONIOENCODING=utf-8` is exported first.
 - Spec-Kit scripts here are PowerShell (`.specify/scripts/powershell`).
+- **Do NOT append to files with `cat >>` through the Bash tool.** It corrupted
+  two files here, `app/src/styles.css` and `app/tests/a11y.test.ts`, in both
+  cases writing partway through the file and destroying what was already there.
+  Use the Write or Edit tools instead. The same applies to multi-line `node -e`
+  string surgery: backticks and template literals do not survive the shell.
+- **`Select-Object -First N` corrupts the exit code you are reading.** Piping a
+  command through it terminates the pipeline early, and PowerShell reports that
+  as a non-zero exit (seen as 255). A gate can print entirely green and still
+  appear to have failed. Check a gate's real status by running it alone, not
+  through a truncating pipe. Diagnosed 2026-08-15 after `npm run verify` seemed
+  to fail while every one of its steps passed.
 - **`npm install` MUST be run from PowerShell, not the Bash tool.** Under msys2
   Git Bash it fails with `ERR_INVALID_ARG_TYPE` plus `EPERM` cleanup errors,
   because it picks up the msys2 npm cache. The same command succeeds in
@@ -83,15 +94,22 @@ carrying, not as a step that was unnecessary.
 `npm run verify` runs typecheck, lint, test, secret scan, and the a11y gate in
 that order. Run it from PowerShell. It is what "done" means.
 
-The a11y gate currently SKIPS with a visible message because no app exists yet.
-It fails loudly the moment `app/index.html` appears, so it cannot be forgotten.
-That is deliberate, not an oversight.
+The a11y gate is REAL as of feature 004. `npm run a11y` runs axe-core over the
+rendered shell under jsdom, plus assertions covering what a machine cannot
+check: that every control has an accessible name rather than a plausible
+looking one, that no placeholder stands in for a label, and that the touch
+target minimum is in the stylesheet. Verified firing on 2026-08-15 by stripping
+the aria-label from icon buttons.
+
+Its one honest gap: colour contrast is disabled, because jsdom does not lay
+anything out and asserting it there would produce a number that means nothing.
+That is covered by the manual pass in `docs/WORKFLOW.md`.
 
 Constitution Principle I is enforced by ESLint, not by review:
 `engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,
 `Math.random`, or `new Date`. Verified firing on 2026-08-15.
 
-<!-- ACTIVE FEATURE: none. Phase 1 complete through 003. -->
+<!-- ACTIVE FEATURE: 004-app-shell-editor -->
 
 ## Bootstrap status
 

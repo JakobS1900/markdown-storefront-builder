@@ -27,8 +27,14 @@ const STATUS_TEXT: Record<string, string> = {
 export function emitProfile(block: Profile, target: Target, sink: DiagnosticSink): string {
   const parts: (string | undefined)[] = [];
 
-  const level = Math.min(SECTION_HEADING_LEVEL, target.capabilities.maxHeadingLevel);
-  parts.push(`${"#".repeat(level)} ${escapeInline(block.displayName)}`);
+  // A section the artist has started but not named yet emits no heading rather
+  // than a bare run of hashes. The contract deliberately allows empty content,
+  // so every emitter has to cope with it gracefully.
+  const name = escapeInline(block.displayName);
+  if (name !== "") {
+    const level = Math.min(SECTION_HEADING_LEVEL, target.capabilities.maxHeadingLevel);
+    parts.push(`${"#".repeat(level)} ${name}`);
+  }
 
   if (block.avatarUrl !== undefined) {
     if (isSafeUrl(block.avatarUrl)) {

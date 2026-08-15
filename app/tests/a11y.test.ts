@@ -1,0 +1,269 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * The accessibility gate. Constitution Principle VI.
+ *
+ * This is the gate `scripts/a11y.mjs` promised would become enforcing at
+ * roadmap 2.2, written to fail loudly rather than to be remembered later.
+ *
+ * axe catches what a machine can catch. The assertions after it cover the
+ * things a machine reliably cannot: that every control has a real accessible
+ * name rather than a plausible-looking one, that the touch target minimum is
+ * actually met, and that nothing depends on a pointing device.
+ */
+import axe from "axe-core";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { addBlock, getState, init, selectBlock, setSurface } from "../src/store.js";
+import { blankBlock } from "../src/ui/forms.js";
+import { renderShell } from "../src/ui/shell.js";
+
+/**
+ * Reads the stylesheet from disk.
+ *
+ * Resolved from the working directory rather than from `import.meta.url`: under
+ * jsdom the module URL is not a file URL, so `fileURLToPath` refuses it.
+ */
+async function stylesheet(): Promise<string> {
+  const { readFileSync } = await import("node:fs");
+  return readFileSync("app/src/styles.css", "utf8");
+}
+
+function mount(): HTMLElement {
+  document.body.innerHTML =
+    '<a class="skip" href="#surface">Skip to the editor</a><div id="app"></div>' +
+    '<div id="live-region" class="sr-only" role="status" aria-live="polite"></div>';
+  const root = document.getElementById("app");
+  if (root === null) throw new Error("missing #app");
+  return root;
+}
+
+async function violations(): Promise<axe.Result[]> {
+  const results = await axe.run(document.body, {
+    // Colour contrast needs real layout and computed styles, which jsdom does
+    // not provide. Asserting it here would produce a result that means nothing.
+    // It is covered by the manual pass in docs/WORKFLOW.md instead, and that
+    // limitation is stated rather than hidden behind a green test.
+    rules: { "color-contrast": { enabled: false } },
+  });
+  return results.violations;
+}
+
+describe("the shell is accessible", () => {
+  beforeEach(() => {
+    init(true);
+  });
+
+  it("has no axe violations when empty", async () => {
+    renderShell(mount());
+    const found = await violations();
+    expect(found.map((v) => `${v.id}: ${v.nodes.length} node(s)`)).toEqual([]);
+  });
+
+  it("has no axe violations with every section type present", async () => {
+    const root = mount();
+    for (const kind of ["profile", "menu", "gallery", "prose", "heading", "divider"] as const) {
+      addBlock(blankBlock(kind));
+    }
+    renderShell(root);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations with a section open for editing", async () => {
+    const root = mount();
+    addBlock(blankBlock("menu"));
+    selectBlock(getState().doc.blocks[0]?.id);
+    renderShell(root);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+});
+
+describe("the preview and export surfaces are accessible", () => {
+  beforeEach(() => {
+    init(true);
+  });
+
+  it("has no axe violations on the preview", async () => {
+    const root = mount();
+    addBlock(blankBlock("profile"));
+    addBlock(blankBlock("menu"));
+    setSurface("preview");
+    renderShell(root);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations on the export surface", async () => {
+    const root = mount();
+    addBlock(blankBlock("heading"));
+    setSurface("export");
+    renderShell(root);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("labels the output box rather than leaving it bare", () => {
+    const root = mount();
+    addBlock(blankBlock("heading"));
+    setSurface("export");
+    renderShell(root);
+    expect(document.getElementById("output")).not.toBeNull();
+    expect(document.querySelector('label[for="output"]')).not.toBeNull();
+  });
+});
+
+describe("every control can be named and reached", () => {
+  beforeEach(() => {
+    init(true);
+  });
+
+  it("gives every button an accessible name", () => {
+    const root = mount();
+    for (const kind of ["profile", "menu", "gallery", "prose"] as const) addBlock(blankBlock(kind));
+    selectBlock(getState().doc.blocks[1]?.id);
+    renderShell(root);
+
+    const buttons = [...document.querySelectorAll("button")];
+    expect(buttons.length).toBeGreaterThan(10);
+    for (const b of buttons) {
+      const name = b.getAttribute("aria-label") ?? b.textContent ?? "";
+      expect(name.trim()).not.toBe("");
+    }
+  });
+
+  it("gives icon-only buttons a name that says what they do, not what they look like", () => {
+    const root = mount();
+    addBlock(blankBlock("heading"));
+    addBlock(blankBlock("prose"));
+    renderShell(root);
+
+    for (const b of document.querySelectorAll("button.icon")) {
+      const name = b.getAttribute("aria-label") ?? "";
+      expect(name.length).toBeGreaterThan(4);
+      // The glyph alone would be useless read aloud.
+      expect(name).not.toBe(b.textContent);
+    }
+  });
+
+  it("binds every form control to a real label", () => {
+    const root = mount();
+    addBlock(blankBlock("profile"));
+    selectBlock(getState().doc.blocks[0]?.id);
+    renderShell(root);
+
+    for (const control of document.querySelectorAll("input, textarea, select")) {
+      const id = control.getAttribute("id");
+      expect(id).toBeTruthy();
+      expect(document.querySelector(`label[for="${id}"]`)).not.toBeNull();
+    }
+  });
+
+  it("does not use a placeholder in place of a label", () => {
+    const root = mount();
+    addBlock(blankBlock("menu"));
+    selectBlock(getState().doc.blocks[0]?.id);
+    renderShell(root);
+
+    for (const control of document.querySelectorAll("input, textarea")) {
+      expect(control.getAttribute("placeholder")).toBeNull();
+    }
+  });
+
+  it("keeps every interactive element reachable by keyboard", () => {
+    const root = mount();
+    addBlock(blankBlock("gallery"));
+    renderShell(root);
+
+    for (const node of document.querySelectorAll("button, input, textarea, select, a[href]")) {
+      // A positive tabindex reorders the tab sequence and breaks it for
+      // everyone. A negative one on a control removes it from the sequence.
+      const tabindex = node.getAttribute("tabindex");
+      if (tabindex !== null) expect(Number(tabindex)).toBe(0);
+    }
+  });
+
+  it("marks the pressed state of toggle buttons", () => {
+    const root = mount();
+    renderShell(root);
+    const tabs = document.querySelectorAll(".tabs button");
+    expect(tabs.length).toBe(3);
+    for (const tab of tabs) expect(tab.getAttribute("aria-pressed")).not.toBeNull();
+  });
+});
+
+describe("no artist text can become markup", () => {
+  const corpus = [
+    "<script>alert(1)</script>",
+    "<img src=x onerror=alert(1)>",
+    "<iframe src=//evil.test></iframe>",
+    "javascript:alert(1)",
+    "<svg/onload=alert(1)>",
+    "</textarea><script>alert(1)</script>",
+    "&lt;script&gt;alert(1)&lt;/script&gt;",
+  ];
+
+  beforeEach(() => {
+    init(true);
+  });
+
+  it.each(corpus)("renders %j as text, never as an element", (payload) => {
+    const root = mount();
+    addBlock({ id: "p", kind: "profile", displayName: payload, tagline: payload });
+    addBlock({ id: "t", kind: "prose", text: payload });
+    setSurface("preview");
+    renderShell(root);
+
+    // The decisive assertion: no script, iframe, or svg exists anywhere in the
+    // document. Not "was filtered out" but never created, because nothing in
+    // this application parses HTML. That is why there is no sanitizer: the
+    // dangerous operation is never performed rather than being filtered.
+    expect(document.querySelectorAll("script, iframe, svg, object, embed")).toHaveLength(0);
+
+    for (const node of document.querySelectorAll("*")) {
+      for (const attr of node.attributes) {
+        expect(attr.name.startsWith("on")).toBe(false);
+        expect(attr.value.toLowerCase().startsWith("javascript:")).toBe(false);
+      }
+    }
+  });
+
+  it("shows the artist the characters they actually typed", () => {
+    const root = mount();
+    addBlock({ id: "t", kind: "prose", text: "a < b and c > d and e & f" });
+    setSurface("preview");
+    renderShell(root);
+
+    // The compiler emits entities so the host cannot build a tag. The preview
+    // decodes them back for display, or the artist sees "&lt;" where they wrote
+    // "<" and reasonably concludes the tool mangled their text.
+    const rendered = document.querySelector(".rendered")?.textContent ?? "";
+    expect(rendered).toContain("a < b");
+    expect(rendered).toContain("c > d");
+    expect(rendered).toContain("e & f");
+  });
+});
+
+describe("the stylesheet meets the touch target minimum", () => {
+  it("sets a 44 pixel minimum on every control", async () => {
+    // Read the stylesheet as text: jsdom lays nothing out, so an assertion on
+    // computed size would be measuring nothing. This checks the rule exists,
+    // and the manual pass checks it holds on a real device.
+    const css = await stylesheet();
+
+    expect(css).toContain("--tap: 44px");
+    for (const rule of ["min-height: var(--tap)", "min-width: var(--tap)"]) {
+      expect(css).toContain(rule);
+    }
+  });
+
+  it("keeps focus visible and does not remove the outline", async () => {
+    const css = await stylesheet();
+
+    expect(css).toContain(":focus-visible");
+    // `outline: none` without a replacement is the single most common way a
+    // keyboard user is stranded with no idea where they are on the page.
+    expect(css).not.toMatch(/outline:\s*(none|0)\s*;/);
+  });
+
+  it("respects a stated preference for reduced motion", async () => {
+    expect(await stylesheet()).toContain("prefers-reduced-motion");
+  });
+});

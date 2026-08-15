@@ -44,34 +44,53 @@ export type FieldSpec =
   | { readonly name: string; readonly type: "blockArray"; readonly required: boolean };
 
 export const MENU_TIER_FIELDS = [
-  { name: "name", type: "string", required: true, nonEmpty: true },
+  { name: "name", type: "string", required: true },
   // A string, not a number. Artists write "45", "from 45", "45+", and "DM me".
   // A numeric type would either reject real prices or discard what they wrote.
   { name: "price", type: "string", required: true },
   { name: "blurb", type: "string", required: false },
   { name: "includes", type: "stringArray", required: false },
-  { name: "imageUrl", type: "string", required: false, nonEmpty: true },
+  { name: "imageUrl", type: "string", required: false },
 ] as const satisfies readonly FieldSpec[];
 
 export const MENU_ADDON_FIELDS = [
-  { name: "name", type: "string", required: true, nonEmpty: true },
+  { name: "name", type: "string", required: true },
   { name: "price", type: "string", required: true },
 ] as const satisfies readonly FieldSpec[];
 
 export const GALLERY_ITEM_FIELDS = [
-  { name: "imageUrl", type: "string", required: true, nonEmpty: true },
+  { name: "imageUrl", type: "string", required: true },
   { name: "caption", type: "string", required: false },
-  { name: "linkUrl", type: "string", required: false, nonEmpty: true },
+  { name: "linkUrl", type: "string", required: false },
 ] as const satisfies readonly FieldSpec[];
 
 export const PROFILE_LINK_FIELDS = [
-  { name: "label", type: "string", required: true, nonEmpty: true },
-  { name: "url", type: "string", required: true, nonEmpty: true },
+  { name: "label", type: "string", required: true },
+  { name: "url", type: "string", required: true },
 ] as const satisfies readonly FieldSpec[];
 
 /**
  * Present on every block, in this order, before that block's own fields.
  * `id` first so a validation issue can always name the block it came from.
+ *
+ * `nonEmpty` appears on exactly two fields in this whole schema, `id` and
+ * `target`, and both are structural. Content fields deliberately allow an empty
+ * string.
+ *
+ * That was not the original design, and running the editor for the first time
+ * showed why it had to change. Adding an "About you" section creates a profile
+ * with no name yet, which the old schema rejected, so the first action a new
+ * user takes made their page unsaveable. Inventing placeholder text would have
+ * put words in their mouth.
+ *
+ * The deeper point: an empty display name is a perfectly valid document. It is
+ * a page that will render oddly, and this project's own rule is that the
+ * compiler warns rather than the contract refuses. Emptiness is a publishing
+ * concern, not a storage one.
+ *
+ * Relaxing a constraint is backward compatible. Every page valid before is
+ * valid now, so no version bump and no migration are needed. The parity
+ * snapshot changes, which is the guard doing its job.
  */
 export const COMMON_BLOCK_FIELDS = [
   { name: "id", type: "string", required: true, nonEmpty: true },
@@ -102,8 +121,8 @@ export const BLOCK_FIELDS = {
     { name: "items", type: "objectArray", required: true, of: GALLERY_ITEM_FIELDS },
   ],
   profile: [
-    { name: "displayName", type: "string", required: true, nonEmpty: true },
-    { name: "avatarUrl", type: "string", required: false, nonEmpty: true },
+    { name: "displayName", type: "string", required: true },
+    { name: "avatarUrl", type: "string", required: false },
     { name: "tagline", type: "string", required: false },
     { name: "status", type: "enum", required: false, values: ["open", "closed", "waitlist"] },
     { name: "links", type: "objectArray", required: false, of: PROFILE_LINK_FIELDS },

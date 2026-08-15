@@ -6,10 +6,24 @@
       "vitest/globals",
       "node"
     ],
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "paths": {
+      "@mdsb/engine": [
+        "./engine/src/index.ts"
+      ]
+    },
+    "baseUrl": "."
   },
   "include": [
     "engine/tests/**/*.ts",
-    "scripts/**/*.mjs"
+    "app/tests/**/*.ts",
+    "scripts/**/*.mjs",
+    "vite.config.ts",
+    "vitest.config.ts"
   ]
 }

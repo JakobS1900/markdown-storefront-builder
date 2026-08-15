@@ -1,0 +1,414 @@
+/*
+ * Mobile first, because the audience is on phones.
+ *
+ * Constitution Principle VI is enforced here as much as in the markup: every
+ * interactive control is at least 44 by 44 CSS pixels, focus is always visible,
+ * and nothing depends on hover or on a pointing device.
+ */
+
+:root {
+  --bg: #fbfaf8;
+  --panel: #ffffff;
+  --ink: #1b1a19;
+  --muted: #5c5955;
+  --line: #e2ded8;
+  --accent: #7a4bd6;
+  --accent-ink: #ffffff;
+  --danger: #a3271f;
+  --warn-bg: #fdf3e3;
+  --warn-ink: #7a4b06;
+  --tap: 44px;
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16151a;
+    --panel: #201f26;
+    --ink: #f2f0ee;
+    --muted: #a9a49e;
+    --line: #35333c;
+    --accent: #b394f5;
+    --accent-ink: #17131f;
+    --danger: #ffa79f;
+    --warn-bg: #302713;
+    --warn-ink: #f0cd8b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Room for the fixed tab bar, and for the phone's own home indicator. */
+  padding-bottom: calc(var(--tap) + 1.5rem + env(safe-area-inset-bottom));
+}
+
+/* Visible to screen readers, out of the way of everyone else. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10;
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.skip:focus {
+  left: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.bar h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  flex: 1 1 auto;
+}
+
+main {
+  padding: 1rem;
+}
+
+.stack > * + * {
+  margin-top: 1.25rem;
+}
+
+/* Fields */
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.field .hint {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.field textarea {
+  min-height: calc(var(--tap) * 2.5);
+  resize: vertical;
+}
+
+/* Buttons. Every one of these meets the touch target minimum. */
+
+.btn {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0.5rem 0.9rem;
+  font: inherit;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.btn.danger {
+  color: var(--danger);
+}
+
+.btn.icon {
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.btn[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Section list */
+
+.blocks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.block.selected {
+  border-color: var(--accent);
+}
+
+.block-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.block-row > .btn:first-child {
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+}
+
+.block-tools {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.35rem;
+}
+
+.block-editor {
+  padding: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.block-editor > div > * + * {
+  margin-top: 1rem;
+}
+
+fieldset.sub {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+fieldset.sub legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+}
+
+fieldset.sub > * + * {
+  margin-top: 0.75rem;
+}
+
+.adders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.empty {
+  color: var(--muted);
+  padding: 1.5rem 0;
+}
+
+/* Status */
+
+.status {
+  padding: 0 1rem;
+  min-height: 1.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.status.error {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+}
+
+.status.error > * + * {
+  margin-top: 0.75rem;
+}
+
+/* Preview */
+
+.rendered {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow-wrap: break-word;
+}
+
+.rendered img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* A wide table scrolls inside itself rather than pushing the page sideways. */
+.rendered table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.rendered th,
+.rendered td {
+  border: 1px solid var(--line);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rendered hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5rem 0;
+}
+
+.warnings {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.warnings h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.warnings ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diagnostic + .diagnostic {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid currentColor;
+}
+
+.diagnostic p {
+  margin: 0 0 0.5rem;
+}
+
+.caveat {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Export */
+
+#output {
+  width: 100%;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.steps {
+  padding-left: 1.25rem;
+}
+
+.steps li + li {
+  margin-top: 0.5rem;
+}
+
+/* Tab bar, within thumb reach on a phone. */
+
+.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+.tabs .btn {
+  flex: 1;
+  text-align: center;
+}
+
+/* Wider screens: Build beside Preview, since there is room to see both. */
+
+@media (min-width: 900px) {
+  body {
+    padding-bottom: 0;
+  }
+
+  .tabs {
+    position: static;
+    border-top: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0.5rem 1rem;
+  }
+
+  .tabs .btn {
+    flex: 0 0 auto;
+    min-width: 8rem;
+  }
+
+  main {
+    max-width: 70rem;
+    margin: 0 auto;
+  }
+}
+
+/* Respect a stated preference for less motion. Nothing here animates yet, and
+   this is the guard for when something does. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
