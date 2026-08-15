@@ -5,3 +5,5 @@ coverage/
 .vite/
 .DS_Store
 temp/
+dist-types/
+.gstack/

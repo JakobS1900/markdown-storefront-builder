@@ -22,7 +22,6 @@
         "of": [
           {
             "name": "imageUrl",
-            "nonEmpty": true,
             "required": true,
             "type": "string"
           },
@@ -33,7 +32,6 @@
           },
           {
             "name": "linkUrl",
-            "nonEmpty": true,
             "required": false,
             "type": "string"
           }
@@ -72,7 +70,6 @@
         "of": [
           {
             "name": "name",
-            "nonEmpty": true,
             "required": true,
             "type": "string"
           },
@@ -93,7 +90,6 @@
           },
           {
             "name": "imageUrl",
-            "nonEmpty": true,
             "required": false,
             "type": "string"
           }
@@ -106,7 +102,6 @@
         "of": [
           {
             "name": "name",
-            "nonEmpty": true,
             "required": true,
             "type": "string"
           },
@@ -123,13 +118,11 @@
     "profile": [
       {
         "name": "displayName",
-        "nonEmpty": true,
         "required": true,
         "type": "string"
       },
       {
         "name": "avatarUrl",
-        "nonEmpty": true,
         "required": false,
         "type": "string"
       },
@@ -153,13 +146,11 @@
         "of": [
           {
             "name": "label",
-            "nonEmpty": true,
             "required": true,
             "type": "string"
           },
           {
             "name": "url",
-            "nonEmpty": true,
             "required": true,
             "type": "string"
           }

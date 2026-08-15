@@ -1,6 +1,11 @@
 {
   "files": [],
   "references": [
-    { "path": "./engine" }
+    {
+      "path": "./engine"
+    },
+    {
+      "path": "./app"
+    }
   ]
 }

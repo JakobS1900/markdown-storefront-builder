@@ -83,9 +83,16 @@ carrying, not as a step that was unnecessary.
 `npm run verify` runs typecheck, lint, test, secret scan, and the a11y gate in
 that order. Run it from PowerShell. It is what "done" means.
 
-The a11y gate currently SKIPS with a visible message because no app exists yet.
-It fails loudly the moment `app/index.html` appears, so it cannot be forgotten.
-That is deliberate, not an oversight.
+The a11y gate is REAL as of feature 004. `npm run a11y` runs axe-core over the
+rendered shell under jsdom, plus assertions covering what a machine cannot
+check: that every control has an accessible name rather than a plausible
+looking one, that no placeholder stands in for a label, and that the touch
+target minimum is in the stylesheet. Verified firing on 2026-08-15 by stripping
+the aria-label from icon buttons.
+
+Its one honest gap: colour contrast is disabled, because jsdom does not lay
+anything out and asserting it there would produce a number that means nothing.
+That is covered by the manual pass in `docs/WORKFLOW.md`.
 
 Constitution Principle I is enforced by ESLint, not by review:
 `engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Storefront builder</title>
+    <meta
+      name="description"
+      content="Build a commission page, a price list, or an art showcase, and get Markdown you can paste straight into rentry and similar sites. No Markdown knowledge needed."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <!--
+      A skip link, first in the tab order. Every section list on a built page
+      can grow long, and without this a keyboard user tabs through every
+      section control before reaching the editor.
+    -->
+    <a class="skip" href="#surface">Skip to the editor</a>
+
+    <div id="app"></div>
+
+    <!--
+      Announcements for assistive technology. Saving, a section moving, and a
+      warning appearing all happen away from where the user is looking, and are
+      silent without this.
+    -->
+    <div id="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <noscript>
+      <p style="padding: 1rem">
+        This editor needs JavaScript to run. Everything happens in your browser, and nothing is
+        sent anywhere.
+      </p>
+    </noscript>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
