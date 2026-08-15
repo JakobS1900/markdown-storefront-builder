@@ -46,6 +46,17 @@ export default tseslint.config(
     },
   },
   {
+    // Non-null assertions stay forbidden in engine/src, where one can hide a
+    // real null from a real user at runtime. In tests the assertion is made
+    // against a fixture the test itself built, and a wrong one fails that test
+    // immediately and visibly. The rule buys nothing there and costs a lot of
+    // noise, given `noUncheckedIndexedAccess` makes every array index optional.
+    files: ["engine/tests/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
+  {
     files: ["scripts/**/*.mjs"],
     languageOptions: {
       globals: {
