@@ -80,7 +80,7 @@ carrying, not as a step that was unnecessary.
 - [x] Git repository initialized
 - [x] Spec-Kit initialized (`specify` 0.7.5.dev0, claude integration, ps scripts)
 - [x] Project rules written
-- [ ] Constitution ratified (`/speckit-constitution`)
+- [x] Constitution ratified v1.0.0 (`.specify/memory/constitution.md`)
 - [ ] Roadmap and workflow docs written
 - [ ] Toolchain bootstrapped: build, test, lint, a11y, secret scan
 - [ ] Empty end-to-end skeleton builds, tests, and runs clean
