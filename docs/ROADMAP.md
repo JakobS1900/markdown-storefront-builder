@@ -65,23 +65,23 @@ change it.
 
 ## Phase 2: The app
 
-- [ ] **2.1 App shell and persistence.** The three surfaces, routing, IndexedDB
+- [x] **2.1 App shell and persistence.** The three surfaces, routing, IndexedDB
       storage, export and import, and the schema migration path. Carries FR-018
       from feature 001: a page that fails to load MUST still be retrievable as
       its raw stored content, and the failure message MUST offer that action.
       Raised by review R-4, because refusing to open a page is only recoverable
       if the artist can still get their work out.
-- [ ] **2.2 The block editor.** Add, edit, reorder, and delete blocks. Mobile
+- [x] **2.2 The block editor.** Add, edit, reorder, and delete blocks. Mobile
       sheet and desktop card forms. Accessibility gates enforced from the first
       control, not retrofitted.
-- [ ] **2.3 Preview and diagnostics.** Rendering compiled output through the
+- [x] **2.3 Preview and diagnostics.** Rendering compiled output through the
       sanitizer, surfacing lint results against the offending block, and the
       target switcher. Carries the preview sanitizer and its XSS corpus, which
       were originally scoped to 1.3 and moved here because a sanitizer with no
       preview to protect is a capability with no consumer. The emitted-text
       escaper, which protects the artist's page on the host, shipped in 002 and
       003 and is a different gate.
-- [ ] **2.4 Export and handoff.** Copy, download, and the host-specific paste
+- [x] **2.4 Export and handoff.** Copy, download, and the host-specific paste
       walkthrough.
 - [ ] **2.5 PWA.** Service worker, offline app shell, installability.
 
