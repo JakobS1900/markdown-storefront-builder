@@ -37,7 +37,7 @@ change it.
       its name/type/order parity test. Lands FIRST and ALONE per the
       constitution, in its own commit, before anything consumes it. Includes the
       lossless JSON round-trip test.
-- [ ] **1.2 The compile skeleton and golden harness.** `compile(doc, targetId)`
+- [x] **1.2 The compile skeleton and golden harness.** `compile(doc, targetId)`
       returning markdown plus diagnostics, the target record type, both target
       records (`rentry` and `portable`), the byte-comparing golden fixture
       harness, and the determinism property test. Carries one decision already

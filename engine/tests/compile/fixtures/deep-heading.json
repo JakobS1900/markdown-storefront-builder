@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "target": "portable",
+  "blocks": [
+    {
+      "id": "dh",
+      "kind": "heading",
+      "text": "Too deep",
+      "level": 6
+    }
+  ]
+}

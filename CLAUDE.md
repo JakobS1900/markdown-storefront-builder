@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/001-document-contract/plan.md`
+`specs/002-compile-skeleton/plan.md`
 <!-- SPECKIT END -->
 
 # Project Rules
@@ -91,7 +91,7 @@ Constitution Principle I is enforced by ESLint, not by review:
 `engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,
 `Math.random`, or `new Date`. Verified firing on 2026-08-15.
 
-<!-- ACTIVE FEATURE: none. 001-document-contract complete, awaiting merge. -->
+<!-- ACTIVE FEATURE: none. 002-compile-skeleton complete, awaiting merge. -->
 
 ## Bootstrap status
 

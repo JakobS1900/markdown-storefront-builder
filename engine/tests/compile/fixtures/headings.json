@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "target": "portable",
+  "title": "Headings",
+  "blocks": [
+    {
+      "id": "h1",
+      "kind": "heading",
+      "text": "Commissions",
+      "level": 1
+    },
+    {
+      "id": "h2",
+      "kind": "heading",
+      "text": "What I draw",
+      "level": 2
+    },
+    {
+      "id": "h3",
+      "kind": "heading",
+      "text": "Characters",
+      "level": 3
+    },
+    {
+      "id": "h6",
+      "kind": "heading",
+      "text": "Fine print",
+      "level": 6
+    }
+  ]
+}
