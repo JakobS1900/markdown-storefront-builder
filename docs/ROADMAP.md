@@ -33,7 +33,7 @@ change it.
 
 ## Phase 1: The engine
 
-- [ ] **1.1 The `Document` contract.** The versioned schema, its validator, and
+- [x] **1.1 The `Document` contract.** The versioned schema, its validator, and
       its name/type/order parity test. Lands FIRST and ALONE per the
       constitution, in its own commit, before anything consumes it. Includes the
       lossless JSON round-trip test.

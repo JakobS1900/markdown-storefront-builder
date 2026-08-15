@@ -8,6 +8,7 @@
  * It walks the descriptor rather than knowing the schema itself, so a field
  * added to `descriptor.ts` is validated with no change to this file.
  */
+import { ordered } from "./canonical.js";
 import {
   BLOCK_FIELDS,
   BLOCK_KINDS,
@@ -235,7 +236,12 @@ function checkBlocks(blocks: readonly unknown[], basePath: string, c: Collector)
       // Without a known kind there is no field list to check against, so the
       // rest of this block cannot be judged. Reported and skipped, never
       // ignored: dropping it silently would lose a section of their page.
-      checkFields(COMMON_BLOCK_FIELDS, block, path, c, blockId);
+      //
+      // Holistic review H-1: only `id` is checked here, and the unknown-field
+      // sweep is deliberately NOT run. Every field of an unrecognised block
+      // looks unknown, so sweeping would bury the one issue that matters under
+      // a list telling the artist to fix fields that are probably fine.
+      checkField(COMMON_BLOCK_FIELDS[0], block, path, c, blockId);
       c.add(
         "unknown_kind",
         join(path, "kind"),
@@ -325,7 +331,13 @@ export function validateDocument(input: unknown): ValidationResult {
   checkFields(DOCUMENT_FIELDS, candidate, "", c);
 
   if (c.issues.length > 0) return { ok: false, issues: c.issues };
-  return { ok: true, document: candidate as unknown as Document };
+
+  // Holistic review H-3: the accepted page is a copy, never the caller's own
+  // object. The editor validates a draft it is still holding, and handing back
+  // that same object would make the app's saved page and the draft the artist
+  // keeps typing into one thing, so the saved copy would change underneath it.
+  // Returning a copy also strips any unknown key that survived to here.
+  return { ok: true, document: ordered(DOCUMENT_FIELDS, candidate) as unknown as Document };
 }
 
 /**

@@ -91,7 +91,7 @@ Constitution Principle I is enforced by ESLint, not by review:
 `engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,
 `Math.random`, or `new Date`. Verified firing on 2026-08-15.
 
-<!-- ACTIVE FEATURE: 001-document-contract -->
+<!-- ACTIVE FEATURE: none. 001-document-contract complete, awaiting merge. -->
 
 ## Bootstrap status
 

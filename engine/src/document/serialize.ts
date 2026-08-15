@@ -6,61 +6,13 @@
  * which process is writing. That is what lets two exports of one page be
  * compared, and what makes a stored page diffable.
  *
- * Review R-3: it emits keys the descriptor names, in descriptor order, and
- * never enumerates the value it is given. JavaScript reorders integer-like
- * string keys, and an unknown key would otherwise land wherever iteration found
- * it, so enumerating the input would quietly break the guarantee.
+ * The ordering itself lives in `canonical.ts`, because the validator needs the
+ * same operation to return a copy rather than the caller's own object.
  */
-import {
-  BLOCK_FIELDS,
-  COMMON_BLOCK_FIELDS,
-  DOCUMENT_FIELDS,
-  type BlockKind,
-  type FieldSpec,
-} from "./descriptor.js";
+import { ordered } from "./canonical.js";
+import { DOCUMENT_FIELDS } from "./descriptor.js";
 import type { Document } from "./types.js";
 import { validateDocument } from "./validate.js";
-
-function has(obj: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-/**
- * Rebuilds a value with its keys in descriptor order.
- *
- * Absent optional fields stay absent. They are never written as null and never
- * defaulted, so the distinction between absent and empty survives (FR-010).
- */
-function ordered(specs: readonly FieldSpec[], source: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-
-  for (const spec of specs) {
-    if (!has(source, spec.name)) continue;
-    const value = source[spec.name];
-    if (value === undefined) continue;
-
-    switch (spec.type) {
-      case "objectArray":
-        out[spec.name] = (value as Record<string, unknown>[]).map((entry) => ordered(spec.of, entry));
-        break;
-      case "blockArray":
-        out[spec.name] = (value as Record<string, unknown>[]).map(orderedBlock);
-        break;
-      case "stringArray":
-        out[spec.name] = [...(value as readonly string[])];
-        break;
-      default:
-        out[spec.name] = value;
-    }
-  }
-
-  return out;
-}
-
-function orderedBlock(block: Record<string, unknown>): Record<string, unknown> {
-  const kind = block["kind"] as BlockKind;
-  return ordered([...COMMON_BLOCK_FIELDS, ...BLOCK_FIELDS[kind]], block);
-}
 
 /**
  * Serializes a page canonically.
@@ -85,5 +37,8 @@ export function serializeDocument(doc: Document): string {
     );
   }
 
-  return JSON.stringify(ordered(DOCUMENT_FIELDS, doc as unknown as Record<string, unknown>), null, 2);
+  // The validated result is already a descriptor-ordered copy, so ordering it
+  // again would be redundant. Ordering the ORIGINAL would be wrong, since it
+  // may carry values the copy normalised away.
+  return JSON.stringify(ordered(DOCUMENT_FIELDS, result.document as unknown as Record<string, unknown>), null, 2);
 }
