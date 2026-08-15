@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "target": "rentry",
+  "title": "Ari's Commissions",
+  "blocks": [
+    { "id": "h1", "kind": "heading", "text": "Commissions", "level": 1 },
+    { "id": "p1", "kind": "profile", "displayName": "Ari", "avatarUrl": "https://example.test/me.png", "tagline": "Character artist", "status": "open", "links": [{ "label": "Bluesky", "url": "https://example.test/ari" }], "paymentMethods": ["PayPal", "Ko-fi"] },
+    { "id": "d1", "kind": "divider" },
+    { "id": "m1", "kind": "menu", "heading": "Menu", "currency": "USD", "tiers": [{ "name": "Bust", "price": "from 45", "blurb": "Head and shoulders", "includes": ["1 revision", "PNG"], "imageUrl": "https://example.test/bust.png" }, { "name": "Full body", "price": "DM me" }], "addOns": [{ "name": "Extra character", "price": "20" }] },
+    { "id": "g1", "kind": "gallery", "heading": "Recent work", "layout": "grid", "items": [{ "imageUrl": "https://example.test/a.png", "caption": "Sketch", "linkUrl": "https://example.test/post" }, { "imageUrl": "https://example.test/b.png" }] },
+    { "id": "t1", "kind": "prose", "heading": "Terms", "text": "Half up front. No refunds after lineart." }
+  ]
+}

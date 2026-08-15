@@ -9,15 +9,18 @@
   ],
   "scripts": {
     "build": "tsc --build",
-    "typecheck": "tsc --build --force",
+    "typecheck": "tsc --build --force && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "lint": "eslint .",
     "secretscan": "node scripts/secret-scan.mjs",
     "a11y": "node scripts/a11y.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run a11y"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run dashscan && npm run a11y",
+    "dashscan": "node scripts/dash-scan.mjs",
+    "snapshot": "node scripts/write-parity-snapshot.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@types/node": "^26.2.0",
     "eslint": "^9.0.0",
     "typescript": "^5.4.0",
     "typescript-eslint": "^8.0.0",

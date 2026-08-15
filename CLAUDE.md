@@ -1,6 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+shell commands, and other important information, read the current plan:
+`specs/001-document-contract/plan.md`
 <!-- SPECKIT END -->
 
 # Project Rules
@@ -50,7 +51,7 @@ carrying, not as a step that was unnecessary.
 
 - **The cross-boundary contract lands FIRST, alone, with a parity test.** In
   this project that is the `Document` JSON schema, which crosses the engine, the
-  app, IndexedDB, the URL fragment, and the export file. Grow it in its own
+  app, IndexedDB, and the export file. Grow it in its own
   isolated chunk guarded by a name, type, and order parity test.
 - **Chunk the implementation.** Group tasks into coherent chunks aligned to
   phases. One fresh implementer subagent per chunk, then a fresh spec-compliance
@@ -90,7 +91,7 @@ Constitution Principle I is enforced by ESLint, not by review:
 `engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,
 `Math.random`, or `new Date`. Verified firing on 2026-08-15.
 
-<!-- ACTIVE FEATURE: none -->
+<!-- ACTIVE FEATURE: none. 001-document-contract complete, awaiting merge. -->
 
 ## Bootstrap status
 

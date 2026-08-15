@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "target": "rentry",
+  "title": "🎨 コミッション",
+  "blocks": [
+    {
+      "id": "u1",
+      "kind": "prose",
+      "heading": "Élève",
+      "text": "Emoji 😀👩‍🎨, accents café naïve, RTL שלום مرحبا, markdown *stars* _unders_ `tick` [x](y) # hash > quote | pipe, backslash \\ quote \" tab\there, zero width​join, combining é, and a lone surrogate: ���"
+    },
+    {
+      "id": "u2",
+      "kind": "heading",
+      "text": "Symbols → ≠ ± § … kept verbatim",
+      "level": 3
+    }
+  ]
+}

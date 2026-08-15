@@ -57,7 +57,8 @@ compile(doc: Document, targetId: TargetId): { markdown: string; diagnostics: Dia
 
 Plain JSON: a `schemaVersion`, page metadata, and an ordered list of blocks.
 Every block is a tagged union member. Because it is plain data it serializes to
-storage, exports to a file, and round-trips through a URL fragment for free. No
+storage and exports to a file. Sharing a page by link is out of scope, decided
+2026-08-15, so nothing in the contract is shaped by URL length. No
 editor state leaks into it.
 
 ### Targets are data, not code

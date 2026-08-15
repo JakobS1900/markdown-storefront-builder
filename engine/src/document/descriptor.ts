@@ -1,0 +1,130 @@
+﻿/**
+ * The schema descriptor. This IS the schema.
+ *
+ * Three things read it and nothing else defines the shape of a page:
+ *   - the validator walks it,
+ *   - the canonical writer emits keys in its order,
+ *   - the parity test snapshots it.
+ *
+ * The types in `types.ts` are DERIVED from what is here, so a field added below
+ * appears in the types automatically. If you find yourself hand editing a type
+ * to make something compile, the derivation is broken and that is the bug.
+ *
+ * ORDER IS NORMATIVE. The sequence of fields in each array below is the order
+ * the writer emits and the order the parity test guards. Reordering is a schema
+ * change, not a tidy-up.
+ */
+
+export const SCHEMA_VERSION = 1;
+
+export const BLOCK_KINDS = [
+  "heading",
+  "divider",
+  "prose",
+  "menu",
+  "gallery",
+  "profile",
+] as const;
+
+export type BlockKind = (typeof BLOCK_KINDS)[number];
+
+/**
+ * Field kinds the descriptor can express.
+ *
+ * `integer` means a finite integer. Review finding R-2: NaN and Infinity
+ * stringify to null, and null is never valid here, so a page containing one
+ * would be written in a state that cannot be read back.
+ */
+export type FieldSpec =
+  | { readonly name: string; readonly type: "string"; readonly required: boolean; readonly nonEmpty?: boolean }
+  | { readonly name: string; readonly type: "integer"; readonly required: boolean; readonly min?: number; readonly max?: number }
+  | { readonly name: string; readonly type: "enum"; readonly required: boolean; readonly values: readonly string[] }
+  | { readonly name: string; readonly type: "stringArray"; readonly required: boolean }
+  | { readonly name: string; readonly type: "objectArray"; readonly required: boolean; readonly of: readonly FieldSpec[] }
+  | { readonly name: string; readonly type: "blockArray"; readonly required: boolean };
+
+export const MENU_TIER_FIELDS = [
+  { name: "name", type: "string", required: true, nonEmpty: true },
+  // A string, not a number. Artists write "45", "from 45", "45+", and "DM me".
+  // A numeric type would either reject real prices or discard what they wrote.
+  { name: "price", type: "string", required: true },
+  { name: "blurb", type: "string", required: false },
+  { name: "includes", type: "stringArray", required: false },
+  { name: "imageUrl", type: "string", required: false, nonEmpty: true },
+] as const satisfies readonly FieldSpec[];
+
+export const MENU_ADDON_FIELDS = [
+  { name: "name", type: "string", required: true, nonEmpty: true },
+  { name: "price", type: "string", required: true },
+] as const satisfies readonly FieldSpec[];
+
+export const GALLERY_ITEM_FIELDS = [
+  { name: "imageUrl", type: "string", required: true, nonEmpty: true },
+  { name: "caption", type: "string", required: false },
+  { name: "linkUrl", type: "string", required: false, nonEmpty: true },
+] as const satisfies readonly FieldSpec[];
+
+export const PROFILE_LINK_FIELDS = [
+  { name: "label", type: "string", required: true, nonEmpty: true },
+  { name: "url", type: "string", required: true, nonEmpty: true },
+] as const satisfies readonly FieldSpec[];
+
+/**
+ * Present on every block, in this order, before that block's own fields.
+ * `id` first so a validation issue can always name the block it came from.
+ */
+export const COMMON_BLOCK_FIELDS = [
+  { name: "id", type: "string", required: true, nonEmpty: true },
+  { name: "kind", type: "enum", required: true, values: BLOCK_KINDS },
+] as const satisfies readonly FieldSpec[];
+
+export const BLOCK_FIELDS = {
+  heading: [
+    { name: "text", type: "string", required: true },
+    { name: "level", type: "integer", required: true, min: 1, max: 6 },
+  ],
+  divider: [],
+  prose: [
+    { name: "heading", type: "string", required: false },
+    // Stored verbatim. Its inline grammar is defined in 1.3 with the
+    // sanitizer, not here.
+    { name: "text", type: "string", required: true },
+  ],
+  menu: [
+    { name: "heading", type: "string", required: false },
+    { name: "currency", type: "string", required: false },
+    { name: "tiers", type: "objectArray", required: true, of: MENU_TIER_FIELDS },
+    { name: "addOns", type: "objectArray", required: false, of: MENU_ADDON_FIELDS },
+  ],
+  gallery: [
+    { name: "heading", type: "string", required: false },
+    { name: "layout", type: "enum", required: true, values: ["grid", "list", "single"] },
+    { name: "items", type: "objectArray", required: true, of: GALLERY_ITEM_FIELDS },
+  ],
+  profile: [
+    { name: "displayName", type: "string", required: true, nonEmpty: true },
+    { name: "avatarUrl", type: "string", required: false, nonEmpty: true },
+    { name: "tagline", type: "string", required: false },
+    { name: "status", type: "enum", required: false, values: ["open", "closed", "waitlist"] },
+    { name: "links", type: "objectArray", required: false, of: PROFILE_LINK_FIELDS },
+    { name: "paymentMethods", type: "stringArray", required: false },
+  ],
+} as const satisfies Record<BlockKind, readonly FieldSpec[]>;
+
+/**
+ * `schemaVersion` is first so the version gate can read it before anything
+ * else is inspected. Guarantee G6: a page from a future version is refused
+ * without its contents being read.
+ *
+ * `target` is a plain string and is deliberately NOT checked against a list of
+ * known hosts. Research D5: enumerating hosts here would mean adding a host
+ * required editing this contract and regenerating the parity snapshot, which is
+ * exactly the coupling Principle II forbids.
+ */
+export const DOCUMENT_FIELDS = [
+  { name: "schemaVersion", type: "integer", required: true, min: 1 },
+  { name: "target", type: "string", required: true, nonEmpty: true },
+  { name: "title", type: "string", required: false },
+  { name: "blocks", type: "blockArray", required: true },
+] as const satisfies readonly FieldSpec[];
+

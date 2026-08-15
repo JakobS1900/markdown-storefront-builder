@@ -33,14 +33,16 @@ change it.
 
 ## Phase 1: The engine
 
-- [ ] **1.1 The `Document` contract.** The versioned schema, its validator, and
+- [x] **1.1 The `Document` contract.** The versioned schema, its validator, and
       its name/type/order parity test. Lands FIRST and ALONE per the
       constitution, in its own commit, before anything consumes it. Includes the
       lossless JSON round-trip test.
 - [ ] **1.2 The compile skeleton and golden harness.** `compile(doc, targetId)`
       returning markdown plus diagnostics, the target record type, both target
       records (`rentry` and `portable`), the byte-comparing golden fixture
-      harness, and the determinism property test. Emitters for the two trivial
+      harness, and the determinism property test. Carries one decision already
+      made in review R-4: an unknown target falls back to `portable` and raises a
+      diagnostic naming it. Emitters for the two trivial
       blocks only, `heading` and `divider`, so the whole pipeline is proved end
       to end on the smallest possible surface.
 - [ ] **1.3 The `prose` emitter and the narrow gate.** Bold, italic, lists,
@@ -59,7 +61,11 @@ change it.
 ## Phase 2: The app
 
 - [ ] **2.1 App shell and persistence.** The three surfaces, routing, IndexedDB
-      storage, export and import, and the schema migration path.
+      storage, export and import, and the schema migration path. Carries FR-018
+      from feature 001: a page that fails to load MUST still be retrievable as
+      its raw stored content, and the failure message MUST offer that action.
+      Raised by review R-4, because refusing to open a page is only recoverable
+      if the artist can still get their work out.
 - [ ] **2.2 The block editor.** Add, edit, reorder, and delete blocks. Mobile
       sheet and desktop card forms. Accessibility gates enforced from the first
       control, not retrofitted.

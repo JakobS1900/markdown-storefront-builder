@@ -1,0 +1,243 @@
+{
+  "blockFields": {
+    "divider": [],
+    "gallery": [
+      {
+        "name": "heading",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "name": "layout",
+        "required": true,
+        "type": "enum",
+        "values": [
+          "grid",
+          "list",
+          "single"
+        ]
+      },
+      {
+        "name": "items",
+        "of": [
+          {
+            "name": "imageUrl",
+            "nonEmpty": true,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "caption",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "linkUrl",
+            "nonEmpty": true,
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "required": true,
+        "type": "objectArray"
+      }
+    ],
+    "heading": [
+      {
+        "name": "text",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "max": 6,
+        "min": 1,
+        "name": "level",
+        "required": true,
+        "type": "integer"
+      }
+    ],
+    "menu": [
+      {
+        "name": "heading",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "name": "currency",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "name": "tiers",
+        "of": [
+          {
+            "name": "name",
+            "nonEmpty": true,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "price",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "blurb",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "includes",
+            "required": false,
+            "type": "stringArray"
+          },
+          {
+            "name": "imageUrl",
+            "nonEmpty": true,
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "required": true,
+        "type": "objectArray"
+      },
+      {
+        "name": "addOns",
+        "of": [
+          {
+            "name": "name",
+            "nonEmpty": true,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "price",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "required": false,
+        "type": "objectArray"
+      }
+    ],
+    "profile": [
+      {
+        "name": "displayName",
+        "nonEmpty": true,
+        "required": true,
+        "type": "string"
+      },
+      {
+        "name": "avatarUrl",
+        "nonEmpty": true,
+        "required": false,
+        "type": "string"
+      },
+      {
+        "name": "tagline",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "name": "status",
+        "required": false,
+        "type": "enum",
+        "values": [
+          "open",
+          "closed",
+          "waitlist"
+        ]
+      },
+      {
+        "name": "links",
+        "of": [
+          {
+            "name": "label",
+            "nonEmpty": true,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "url",
+            "nonEmpty": true,
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "required": false,
+        "type": "objectArray"
+      },
+      {
+        "name": "paymentMethods",
+        "required": false,
+        "type": "stringArray"
+      }
+    ],
+    "prose": [
+      {
+        "name": "heading",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "name": "text",
+        "required": true,
+        "type": "string"
+      }
+    ]
+  },
+  "blockKinds": [
+    "heading",
+    "divider",
+    "prose",
+    "menu",
+    "gallery",
+    "profile"
+  ],
+  "commonBlockFields": [
+    {
+      "name": "id",
+      "nonEmpty": true,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "kind",
+      "required": true,
+      "type": "enum",
+      "values": [
+        "heading",
+        "divider",
+        "prose",
+        "menu",
+        "gallery",
+        "profile"
+      ]
+    }
+  ],
+  "documentFields": [
+    {
+      "min": 1,
+      "name": "schemaVersion",
+      "required": true,
+      "type": "integer"
+    },
+    {
+      "name": "target",
+      "nonEmpty": true,
+      "required": true,
+      "type": "string"
+    },
+    {
+      "name": "title",
+      "required": false,
+      "type": "string"
+    },
+    {
+      "name": "blocks",
+      "required": true,
+      "type": "blockArray"
+    }
+  ],
+  "schemaVersion": 1
+}

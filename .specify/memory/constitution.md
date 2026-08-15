@@ -1,5 +1,11 @@
 <!--
 Sync Impact Report
+Version change: 1.0.0 -> 1.0.1
+Bump rationale (1.0.1): PATCH. Clarification only, no rule added, removed, or redefined.
+  Sharing a page by link was decided out of scope on 2026-08-15, so the URL fragment was
+  removed from the list of boundaries the schema crosses in the Principle III rationale,
+  and the exclusion was recorded in Additional Constraints. No principle changed meaning.
+
 Version change: none -> 1.0.0
 Bump rationale: initial ratification, all placeholders replaced with concrete rules.
 Modified principles: none (first ratification)
@@ -66,7 +72,7 @@ Three tests are structurally required and MUST exist before the code they guard:
 2. A lossless round-trip test for `Document` to JSON and back.
 3. A parity test on the `Document` schema asserting field names, types, and order.
 
-Rationale: the schema crosses the engine, the app, IndexedDB, the URL fragment, and the
+Rationale: the schema crosses the engine, the app, IndexedDB, and the
 export file. On prior projects, a schema that crossed a boundary at multiple sites was
 the single most fragile thing in the codebase, and only a parity test stopped silent
 corruption each time a field was added.
@@ -143,6 +149,11 @@ Out of scope for v1 and requiring an amendment to introduce: accounts, cloud syn
 publish via host APIs, custom CSS on output, collaboration, a templates marketplace, and
 internationalization.
 
+Sharing a page by link is out of scope, decided 2026-08-15. Nothing in the `Document`
+schema may be shaped by URL length. If link sharing is introduced later it MUST be a
+separate encoding layer above the contract, never a compaction of the contract itself,
+so that the stored format stays readable and debuggable.
+
 ## Development Workflow
 
 The `Document` schema lands FIRST, alone, in its own commit, with its parity test, before
@@ -185,4 +196,4 @@ does not require an amendment.
 
 Runtime development guidance lives in `CLAUDE.md`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-15
+**Version**: 1.0.1 | **Ratified**: 2026-08-15 | **Last Amended**: 2026-08-15
