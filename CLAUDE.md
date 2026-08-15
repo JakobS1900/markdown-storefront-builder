@@ -73,6 +73,12 @@ carrying, not as a step that was unnecessary.
 - `specify` crashes with `UnicodeEncodeError` drawing its banner unless
   `PYTHONIOENCODING=utf-8` is exported first.
 - Spec-Kit scripts here are PowerShell (`.specify/scripts/powershell`).
+- **`Select-Object -First N` corrupts the exit code you are reading.** Piping a
+  command through it terminates the pipeline early, and PowerShell reports that
+  as a non-zero exit (seen as 255). A gate can print entirely green and still
+  appear to have failed. Check a gate's real status by running it alone, not
+  through a truncating pipe. Diagnosed 2026-08-15 after `npm run verify` seemed
+  to fail while every one of its steps passed.
 - **`npm install` MUST be run from PowerShell, not the Bash tool.** Under msys2
   Git Bash it fails with `ERR_INVALID_ARG_TYPE` plus `EPERM` cleanup errors,
   because it picks up the msys2 npm cache. The same command succeeds in
