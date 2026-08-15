@@ -19,7 +19,7 @@ npm test            # tests alone, while iterating
 engine/
   src/document/
     descriptor.ts     the ordered schema descriptor, the single source of truth
-    types.ts          TypeScript types, kept in step with the descriptor
+    types.ts          types derived FROM the descriptor via `as const`
     validate.ts       validateDocument, parseDocument
     serialize.ts      serializeDocument, canonical key order
     migrate.ts        the forward migration registry, empty at version 1
@@ -48,7 +48,10 @@ and the writer will not agree with it, and the tests will say so.
 ## Adding a field, the whole procedure
 
 1. Add it to `descriptor.ts` in the position it should occupy.
-2. Add it to the matching type in `types.ts`.
+2. Nothing to do in `types.ts`. The types are derived from the descriptor, so
+   the new field appears in them automatically. If you find yourself editing a
+   type by hand to make something compile, the derivation is broken and that is
+   the bug to fix.
 3. Run `npm test`. The parity test fails, because that is its entire job.
 4. Read the diff it prints. Confirm the change is what you meant.
 5. Update `parity.snapshot.json`.

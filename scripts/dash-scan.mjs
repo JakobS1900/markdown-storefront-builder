@@ -11,8 +11,10 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const EM_DASH = "—";
-const EN_DASH = "–";
+// Built from code points deliberately, so this file does not trip its own scan.
+// U+2014 EM DASH, U+2013 EN DASH.
+const EM_DASH = String.fromCharCode(0x2014);
+const EN_DASH = String.fromCharCode(0x2013);
 
 // Vendored by tooling, not authored here.
 const VENDORED = [/^\.claude\/skills\//, /^\.specify\//, /^package-lock\.json$/];

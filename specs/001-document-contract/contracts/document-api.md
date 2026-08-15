@@ -25,6 +25,7 @@ export type IssueCode =
   | "duplicate_id"
   | "empty_string_not_allowed"
   | "out_of_range"
+  | "not_finite"
   | "not_in_enum"
   | "version_missing"
   | "version_malformed"
@@ -81,6 +82,16 @@ during validation.
 **G6. A future version is refused, not guessed.** A page whose `schemaVersion`
 exceeds `SCHEMA_VERSION` produces exactly one issue with code `version_too_new`,
 and no attempt is made to read its contents.
+
+**G7. The writer never produces an unreadable page.** `serializeDocument`
+validates its input first. `NaN` and `Infinity` stringify to `null`, and `null`
+is never valid, so without this check a page could be written to disk in a state
+that cannot be read back. Raised by architecture review finding R-2.
+
+**G8. Output depends on content alone.** The writer emits only descriptor-named
+keys in descriptor order and never enumerates its input, so key insertion order
+and JavaScript's reordering of integer-like keys cannot affect the bytes. Raised
+by architecture review finding R-3.
 
 ## Consumers, and what they may assume
 

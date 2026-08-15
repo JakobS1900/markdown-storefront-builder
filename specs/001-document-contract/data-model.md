@@ -143,6 +143,12 @@ Derived from the requirements, each one testable.
     throws. (FR-002)
 17. Every issue carries a path, the enclosing block identifier when there is
     one, a stable code, and a human sentence. (FR-003, SC-006)
+18. Every number is a finite integer. `NaN`, `Infinity`, `-Infinity`, and
+    non-integer values are refused, naming the value. (FR-019, review R-2)
+19. `serializeDocument` refuses to write a document that would not validate, so
+    an unreadable page can never reach disk. (FR-019, review R-2)
+20. The writer emits only keys named by the descriptor, in descriptor order, and
+    never enumerates the keys of the value it is given. (Review R-3)
 
 ## What is deliberately not here
 

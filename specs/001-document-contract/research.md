@@ -45,6 +45,23 @@ a hand-written validator. Rejected because the two drift, and the parity test
 then guards the snapshot rather than the schema. Deriving the descriptor from
 types via a build step was rejected as a toolchain dependency for no gain.
 
+**Amended 2026-08-15 by architecture review finding R-1.** The original plan kept
+the TypeScript types in `types.ts` by hand alongside the descriptor. That is two
+hand-maintained artifacts that must agree, which is the same drift the descriptor
+was introduced to remove, and nothing would have failed when they disagreed.
+
+The types are now DERIVED from the descriptor. The descriptor is declared
+`as const` and `Document` and `Block` are computed from it with mapped and
+conditional types. TypeScript does this natively, so it adds no runtime
+dependency and no codegen step.
+
+What this closes completely: field names, optionality, primitive types, and
+string-literal enums, because all four are recoverable from a literal type.
+
+What it does not close, recorded so nobody believes the types prove more than
+they do: cross-field rules such as identifier uniqueness and the numeric range on
+`level`. Those stay the validator's job and keep their own tests.
+
 ## D3. Canonical serialization, not `JSON.stringify` of whatever we hold
 
 **Decision**: The writer emits keys in descriptor order, always.
@@ -141,3 +158,38 @@ boundary.
 
 None. No NEEDS CLARIFICATION markers remain in the spec, and both clarification
 questions were answered on 2026-08-15 and recorded in the spec.
+
+## D9. Numbers must be finite integers, checked before writing
+
+**Decision**: The validator rejects any number that is not a finite integer,
+naming `NaN`, `Infinity`, `-Infinity`, and non-integer values explicitly.
+`serializeDocument` asserts its input is valid before producing output.
+
+**Rationale**: Architecture review finding R-2, a real bug that would have
+shipped. `JSON.stringify(NaN)` and `JSON.stringify(Infinity)` both produce
+`null`. Neither value can arrive through `parseDocument`, because neither is
+valid JSON, but both can arrive in an in-memory document handed to the writer by
+the editor, for example from a numeric field computed as `parseInt("")`.
+
+The failure that produces is the worst kind. A page containing `NaN` writes as a
+page containing `null`, and `null` is never valid, so the page is written to disk
+in a state that cannot be read back. Work is destroyed by the writer rather than
+by any cleanup path, which is exactly what Principle V exists to prevent.
+
+## D10. The writer emits descriptor keys only, and never enumerates its input
+
+**Decision**: `serializeDocument` walks the descriptor and emits the keys it
+names, in its order. It MUST NOT iterate the keys of the value it is given.
+
+**Rationale**: Architecture review finding R-3. Descriptor order alone is
+necessary but not sufficient for byte-identical output. JavaScript objects
+reorder integer-like string keys to the front in ascending numeric order
+regardless of insertion order, and any key present in the value but absent from
+the descriptor would land wherever iteration happened to find it. The design was
+already safe, but only accidentally, so the rule is now stated and tested.
+
+Two related concerns were checked and are not problems. `JSON.stringify` has been
+well formed since ES2019, so lone surrogates are escaped rather than emitted as
+invalid UTF-8 and survive a round trip. Duplicate keys in an input file are
+resolved by `JSON.parse` keeping the last, which cannot be detected afterwards.
+That is an accepted limit of parsing JSON at all, not a defect we introduced.

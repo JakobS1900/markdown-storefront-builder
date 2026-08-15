@@ -40,7 +40,9 @@ change it.
 - [ ] **1.2 The compile skeleton and golden harness.** `compile(doc, targetId)`
       returning markdown plus diagnostics, the target record type, both target
       records (`rentry` and `portable`), the byte-comparing golden fixture
-      harness, and the determinism property test. Emitters for the two trivial
+      harness, and the determinism property test. Carries one decision already
+      made in review R-4: an unknown target falls back to `portable` and raises a
+      diagnostic naming it. Emitters for the two trivial
       blocks only, `heading` and `divider`, so the whole pipeline is proved end
       to end on the smallest possible surface.
 - [ ] **1.3 The `prose` emitter and the narrow gate.** Bold, italic, lists,

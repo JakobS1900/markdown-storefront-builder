@@ -72,6 +72,7 @@ specs/001-document-contract/
 ├── quickstart.md        # Phase 1 output
 ├── contracts/
 │   └── document-api.md  # Phase 1 output, the public surface and six guarantees
+├── eng-review.md        # Architecture review gate, two HIGH findings folded back
 ├── checklists/
 │   └── requirements.md  # Spec quality validation
 └── tasks.md             # Phase 2 output, created by /speckit-tasks
@@ -86,7 +87,7 @@ engine/
 │   └── document/
 │       ├── index.ts           # the public surface
 │       ├── descriptor.ts      # the ordered schema descriptor, source of truth
-│       ├── types.ts           # TypeScript types, kept in step with descriptor
+│       ├── types.ts           # types DERIVED from the descriptor, see review R-1
 │       ├── validate.ts        # validateDocument, parseDocument
 │       ├── serialize.ts       # serializeDocument, canonical key order
 │       ├── migrate.ts         # forward migration registry, empty at v1

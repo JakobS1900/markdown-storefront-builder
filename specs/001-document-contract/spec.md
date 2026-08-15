@@ -193,6 +193,16 @@ confirm it is refused without modification.
 - **FR-017**: The system MUST reject a page containing any field it does not
   recognize, naming the offending field and the block it appears in, and MUST
   NOT modify the stored page when doing so.
+- **FR-018**: A page that cannot be loaded, for any reason, MUST still be
+  retrievable by the artist as its raw stored content, and the failure message
+  MUST offer that action. Implemented at the storage layer in roadmap item 2.1,
+  recorded here because the requirement arises from this feature's refusal
+  behaviour and would otherwise be forgotten. Raised by architecture review
+  finding R-4: refusing to open is only recoverable if the artist can still get
+  their work out.
+- **FR-019**: The system MUST reject any number that is not a finite integer,
+  naming the value. Writing MUST NOT be possible for a page that would not
+  validate. Raised by architecture review finding R-2.
 
 ### Key Entities
 
