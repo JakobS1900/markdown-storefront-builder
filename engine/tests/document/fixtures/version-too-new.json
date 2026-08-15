@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 99,
+  "target": "rentry",
+  "title": "Made by a newer version",
+  "blocks": [
+    { "id": "x1", "kind": "somethingFromTheFuture", "mystery": true }
+  ]
+}

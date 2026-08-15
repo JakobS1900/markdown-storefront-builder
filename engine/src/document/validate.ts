@@ -17,6 +17,7 @@ import {
   type BlockKind,
   type FieldSpec,
 } from "./descriptor.js";
+import { migrate } from "./migrate.js";
 import type { Document, Issue, IssueCode, ValidationResult } from "./types.js";
 
 /** Own-property test that cannot be fooled by anything on the prototype. */
@@ -313,10 +314,18 @@ export function validateDocument(input: unknown): ValidationResult {
     return { ok: false, issues: c.issues };
   }
 
-  checkFields(DOCUMENT_FIELDS, input, "", c);
+  // FR-005. A page from an older version is brought forward before its fields
+  // are checked, because those fields are validated against the CURRENT shape.
+  // At version 1 this is a no-op, since no older version exists. It is wired up
+  // now rather than when it is first needed: the day a second version ships,
+  // pages saved by version 1 already exist and cannot be reached retroactively.
+  const stored = input["schemaVersion"] as number;
+  const candidate = stored < SCHEMA_VERSION ? migrate(input, stored) : input;
+
+  checkFields(DOCUMENT_FIELDS, candidate, "", c);
 
   if (c.issues.length > 0) return { ok: false, issues: c.issues };
-  return { ok: true, document: input as unknown as Document };
+  return { ok: true, document: candidate as unknown as Document };
 }
 
 /**
