@@ -8,9 +8,8 @@ describe("engine skeleton", () => {
   });
 
   it("has no runtime dependencies, as the constitution requires", async () => {
-    const manifest = await import("../package.json", {
-      with: { type: "json" },
-    });
-    expect(manifest.default.dependencies).toBeUndefined();
+    const loaded = await import("../package.json", { with: { type: "json" } });
+    const manifest = loaded.default as Record<string, unknown>;
+    expect(manifest["dependencies"]).toBeUndefined();
   });
 });
