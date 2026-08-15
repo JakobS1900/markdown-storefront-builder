@@ -7,3 +7,6 @@ coverage/
 temp/
 dist-types/
 .gstack/
+
+# The original idea notes. Kept on disk, deliberately not published.
+idea.txt
