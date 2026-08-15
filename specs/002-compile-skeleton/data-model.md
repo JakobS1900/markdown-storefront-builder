@@ -22,7 +22,7 @@ the ones it needs, together with the fixtures that prove its fallback.
 | Capability | Type | Meaning | Fallback when absent or lower |
 |---|---|---|---|
 | `maxHeadingLevel` | integer 1 to 6 | Deepest heading level the host renders | Emit at the deepest supported level, warn (research D3) |
-| `thematicBreak` | string | The exact text this host renders as a separator | None needed. Every Markdown renderer supports one form |
+| `thematicBreak` | string | The exact text this host renders as a separator. `***`, not `---`, see review R-1 | None needed. Every Markdown renderer supports one form |
 | `escapeStyle` | enum `commonmark` | Which escaping rules apply to artist text | Not optional. Text is always escaped |
 | `maxBytes` | integer or absent | Stated size limit for one page | Warn when exceeded, return output in full (research D7) |
 
@@ -37,7 +37,7 @@ offline.
 | Capability | Value | Source |
 |---|---|---|
 | `maxHeadingLevel` | 6 | CommonMark specification, ATX headings are 1 to 6 |
-| `thematicBreak` | `---` | CommonMark specification, thematic break |
+| `thematicBreak` | `***` | CommonMark specification, thematic break. `***` over `---` per review R-1: it can never form a setext heading and can never be read as front matter |
 | `escapeStyle` | `commonmark` | CommonMark specification, backslash escapes |
 | `maxBytes` | absent | Not a property of a specification |
 
@@ -46,7 +46,7 @@ offline.
 | Capability | Value | Source |
 |---|---|---|
 | `maxHeadingLevel` | 6 | rentry.co/how, documents `#` through `######` |
-| `thematicBreak` | `---` | Standard Markdown, unchanged by rentry |
+| `thematicBreak` | `***` | Standard Markdown, unchanged by rentry. `***` per review R-1 |
 | `escapeStyle` | `commonmark` | No documented divergence from standard escaping |
 | `maxBytes` | absent | rentry.co/how documents no limit. Recorded as unknown rather than guessed |
 
@@ -88,14 +88,23 @@ by eye.
 2. The document ends with exactly one newline. An empty page compiles to an
    empty string. (Research D4)
 3. `heading` emits `#` repeated to its level, a space, then its escaped text.
+   A heading whose text is empty emits the hashes alone, with no trailing
+   space. Review R-3: trailing whitespace is invisible, is stripped by many
+   editors, and would break byte comparison with an unreadable diff.
 4. A heading deeper than `maxHeadingLevel` emits at `maxHeadingLevel` and raises
    `heading_level_reduced`. (FR-012)
 5. Heading text has newlines collapsed to spaces, because a newline would end
    the heading and turn the rest into body text.
-6. `divider` emits the target's `thematicBreak`.
+6. `divider` emits the target's `thematicBreak`, which is `***`. Review R-1:
+   `---` forms a setext heading when it follows a line of text, and is read as
+   front matter at the start of a document. `***` can do neither.
 7. All artist text is escaped per `escapeStyle` before emission. (FR-009)
 8. Escaping MUST make it impossible for artist text to alter the structure of
    the surrounding page. (FR-010, SC-006)
+8a. Escaping MUST cover `<` and `&` as well as Markdown punctuation, so no HTML
+   tag and no entity can be formed from artist text. Review R-2: CommonMark
+   permits raw HTML, and this text is emitted onto a host we do not control,
+   whose sanitizer is not ours to rely on.
 9. An unknown target compiles against `portable` and raises `unknown_target`.
    (FR-008)
 10. Output exceeding `maxBytes` raises `size_limit_exceeded` and is returned in
