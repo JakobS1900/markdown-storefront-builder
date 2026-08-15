@@ -268,6 +268,98 @@ fieldset.sub > * + * {
   margin-top: 0.75rem;
 }
 
+/* Preview */
+
+.rendered {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow-wrap: break-word;
+}
+
+.rendered img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* A wide table scrolls inside itself rather than pushing the page sideways. */
+.rendered table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.rendered th,
+.rendered td {
+  border: 1px solid var(--line);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rendered hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.5rem 0;
+}
+
+.warnings {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.warnings h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.warnings ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diagnostic + .diagnostic {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid currentColor;
+}
+
+.diagnostic p {
+  margin: 0 0 0.5rem;
+}
+
+.caveat {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Export */
+
+#output {
+  width: 100%;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.steps {
+  padding-left: 1.25rem;
+}
+
+.steps li + li {
+  margin-top: 0.5rem;
+}
+
 /* Tab bar, within thumb reach on a phone. */
 
 .tabs {

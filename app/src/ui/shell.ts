@@ -11,6 +11,8 @@ import { TARGETS } from "@mdsb/engine";
 import { getState, setSurface, setTarget, type Surface } from "../store.js";
 import { announce, button, el, render, select } from "./dom.js";
 import { buildSurface } from "./build.js";
+import { exportSurface } from "./export.js";
+import { previewSurface } from "./preview.js";
 
 const SURFACES: { id: Surface; label: string }[] = [
   { id: "build", label: "Build" },
@@ -18,13 +20,14 @@ const SURFACES: { id: Surface; label: string }[] = [
   { id: "export", label: "Copy" },
 ];
 
-/** Rendered by later features. Placeholders keep the shell honest meanwhile. */
 type SurfaceRenderer = (container: HTMLElement) => void;
-const renderers: Partial<Record<Surface, SurfaceRenderer>> = { build: buildSurface };
 
-export function registerSurface(id: Surface, renderer: SurfaceRenderer): void {
-  renderers[id] = renderer;
-}
+/** All three surfaces exist as of feature 004. There is no placeholder left. */
+const renderers: Record<Surface, SurfaceRenderer> = {
+  build: buildSurface,
+  preview: previewSurface,
+  export: exportSurface,
+};
 
 function statusLine(): HTMLElement {
   const { status } = getState();
@@ -79,12 +82,7 @@ export function renderShell(root: HTMLElement): void {
   );
 
   const panel = el("div", { id: "surface", class: "surface", role: "tabpanel", "aria-label": "Editor" });
-  const renderer = renderers[state.surface];
-  if (renderer === undefined) {
-    render(panel, el("p", { class: "empty" }, ["This part of the editor is not built yet."]));
-  } else {
-    renderer(panel);
-  }
+  renderers[state.surface](panel);
 
   render(
     root,

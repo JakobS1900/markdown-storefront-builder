@@ -73,6 +73,11 @@ carrying, not as a step that was unnecessary.
 - `specify` crashes with `UnicodeEncodeError` drawing its banner unless
   `PYTHONIOENCODING=utf-8` is exported first.
 - Spec-Kit scripts here are PowerShell (`.specify/scripts/powershell`).
+- **Do NOT append to files with `cat >>` through the Bash tool.** It corrupted
+  two files here, `app/src/styles.css` and `app/tests/a11y.test.ts`, in both
+  cases writing partway through the file and destroying what was already there.
+  Use the Write or Edit tools instead. The same applies to multi-line `node -e`
+  string surgery: backticks and template literals do not survive the shell.
 - **`Select-Object -First N` corrupts the exit code you are reading.** Piping a
   command through it terminates the pipeline early, and PowerShell reports that
   as a non-zero exit (seen as 255). A gate can print entirely green and still
