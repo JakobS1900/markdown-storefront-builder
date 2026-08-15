@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "target": "portable",
+  "blocks": [
+    {
+      "id": "p",
+      "kind": "profile",
+      "displayName": "<script>alert(1)</script>",
+      "tagline": "| pipe | table |",
+      "status": "open",
+      "links": [
+        {
+          "label": "safe",
+          "url": "https://example.test/ok"
+        },
+        {
+          "label": "unsafe",
+          "url": "javascript:alert(1)"
+        }
+      ],
+      "paymentMethods": [
+        "a|b",
+        "<b>c</b>"
+      ]
+    },
+    {
+      "id": "m",
+      "kind": "menu",
+      "heading": "# not a heading",
+      "tiers": [
+        {
+          "name": "A|B",
+          "price": "1|2",
+          "blurb": "line\nbreak",
+          "includes": [
+            "***",
+            "```"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "g",
+      "kind": "gallery",
+      "layout": "grid",
+      "items": [
+        {
+          "imageUrl": "data:text/html,<script>alert(1)</script>"
+        },
+        {
+          "imageUrl": "https://example.test/ok.png",
+          "caption": "] escape ["
+        }
+      ]
+    },
+    {
+      "id": "t",
+      "kind": "prose",
+      "text": "](evil) [\n\n***\n\n<img src=x onerror=alert(1)>"
+    }
+  ]
+}

@@ -13,7 +13,8 @@ export type DiagnosticCode =
   | "unknown_target"
   | "heading_level_reduced"
   | "size_limit_exceeded"
-  | "block_not_supported";
+  | "table_unsupported"
+  | "link_scheme_refused";
 
 export type DiagnosticSeverity = "info" | "warning";
 

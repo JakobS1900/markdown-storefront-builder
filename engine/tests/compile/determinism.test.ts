@@ -88,11 +88,13 @@ describe("SC-007: adding a host changes no compiler logic", () => {
       capabilities: {
         maxHeadingLevel: 3,
         thematicBreak: "___",
+        tables: false,
         escapeStyle: "commonmark",
       },
       sources: {
         maxHeadingLevel: "invented",
         thematicBreak: "invented",
+        tables: "invented",
         escapeStyle: "invented",
         maxBytes: "invented",
       },
