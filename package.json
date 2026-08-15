@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "secretscan": "node scripts/secret-scan.mjs",
     "a11y": "node scripts/a11y.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run a11y"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run dashscan && npm run a11y",
+    "dashscan": "node scripts/dash-scan.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
