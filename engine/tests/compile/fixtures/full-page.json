@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "target": "rentry",
+  "title": "Ari's Commissions",
+  "blocks": [
+    {
+      "id": "prof",
+      "kind": "profile",
+      "displayName": "Ari",
+      "avatarUrl": "https://example.test/me.png",
+      "tagline": "Character artist, mostly fantasy",
+      "status": "open",
+      "links": [
+        {
+          "label": "Bluesky",
+          "url": "https://example.test/ari"
+        },
+        {
+          "label": "Ko-fi",
+          "url": "https://example.test/kofi"
+        }
+      ],
+      "paymentMethods": [
+        "PayPal",
+        "Ko-fi"
+      ]
+    },
+    {
+      "id": "d1",
+      "kind": "divider"
+    },
+    {
+      "id": "h1",
+      "kind": "heading",
+      "text": "What I draw",
+      "level": 2
+    },
+    {
+      "id": "menu",
+      "kind": "menu",
+      "heading": "Prices",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Bust",
+          "price": "45",
+          "blurb": "Head and shoulders",
+          "includes": [
+            "1 revision",
+            "PNG at 2000px"
+          ],
+          "imageUrl": "https://example.test/bust.png"
+        },
+        {
+          "name": "Half body",
+          "price": "80",
+          "includes": [
+            "2 revisions"
+          ]
+        },
+        {
+          "name": "Full body",
+          "price": "DM me",
+          "blurb": "Depends on detail"
+        }
+      ],
+      "addOns": [
+        {
+          "name": "Extra character",
+          "price": "20"
+        },
+        {
+          "name": "Simple background",
+          "price": "15"
+        }
+      ]
+    },
+    {
+      "id": "gal",
+      "kind": "gallery",
+      "heading": "Recent work",
+      "layout": "grid",
+      "items": [
+        {
+          "imageUrl": "https://example.test/a.png",
+          "caption": "Sketch commission"
+        },
+        {
+          "imageUrl": "https://example.test/b.png",
+          "caption": "Full body",
+          "linkUrl": "https://example.test/post"
+        },
+        {
+          "imageUrl": "https://example.test/c.png"
+        }
+      ]
+    },
+    {
+      "id": "d2",
+      "kind": "divider"
+    },
+    {
+      "id": "tos",
+      "kind": "prose",
+      "heading": "Terms",
+      "text": "Half up front, half on completion.\n\nI will not draw hate symbols, real people without consent, or anything involving minors.\n\nRevisions are included as listed above. Extra revisions are USD 10 each.\nRefunds are available until lineart begins."
+    }
+  ]
+}

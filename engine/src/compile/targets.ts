@@ -26,10 +26,12 @@ export const PORTABLE: Target = {
   capabilities: {
     maxHeadingLevel: 6,
     thematicBreak: "***",
+    tables: true,
     escapeStyle: "commonmark",
   },
   sources: {
     maxHeadingLevel: "CommonMark specification, ATX headings are levels 1 to 6",
+    tables: "GFM specification, pipe tables. Part of the declared portable baseline",
     thematicBreak: "CommonMark specification, thematic break. Chosen over --- per review R-1",
     escapeStyle: "CommonMark specification, backslash escapes for ASCII punctuation",
     maxBytes: "Not applicable. A specification has no page size limit",
@@ -52,10 +54,12 @@ export const RENTRY: Target = {
   capabilities: {
     maxHeadingLevel: 6,
     thematicBreak: "***",
+    tables: true,
     escapeStyle: "commonmark",
   },
   sources: {
     maxHeadingLevel: "rentry.co/how documents # through ###### , six levels",
+    tables: "rentry.co/how documents pipe tables, with --: and :--: alignment",
     thematicBreak: "Standard Markdown, no documented divergence. *** per review R-1",
     escapeStyle: "rentry.co/how documents no divergence from standard escaping",
     maxBytes: "rentry.co/how documents no limit. Recorded as unknown, not as unlimited",

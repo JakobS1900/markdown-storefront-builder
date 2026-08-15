@@ -35,7 +35,7 @@ describe("H-2: every declared capability must be consulted by something", () => 
     // A capability nothing consults is a guess written down, and the data model
     // says so explicitly. If one is added without a consumer, this fails.
     const declared = Object.keys(PORTABLE.capabilities).sort();
-    expect(declared).toEqual(["escapeStyle", "maxHeadingLevel", "thematicBreak"]);
+    expect(declared).toEqual(["escapeStyle", "maxHeadingLevel", "tables", "thematicBreak"]);
   });
 
   it("cites a source for every capability, including absent ones", () => {
@@ -58,8 +58,13 @@ describe("H-3: escapeStyle is declared but never actually branched on", () => {
   });
 });
 
-describe("H-4: a page of only unimplemented blocks must not look like success", () => {
-  it("produces empty output for a page whose every block awaits an emitter", () => {
+describe("H-4: a filled-in page must never compile to silence", () => {
+  it("emits content for every section an artist filled in", () => {
+    // Feature 002 shipped four kinds with no emitter, so a page made of them
+    // compiled to an empty string with no warning at all: the artist would copy
+    // nothing, paste nothing, and be told nothing. Feature 003 removed that
+    // possibility by implementing every kind, and the switch has no default
+    // branch, so adding a kind without an emitter now fails to compile.
     const out = compile(
       page(
         { id: "p", kind: "prose", text: "Terms and conditions" },
@@ -67,11 +72,12 @@ describe("H-4: a page of only unimplemented blocks must not look like success", 
       ),
       "portable",
     );
-    // Empty output for a page the artist filled in is dangerous: they would
-    // copy nothing and paste nothing, believing it worked. Until every emitter
-    // exists, this must be visible rather than silent.
+    expect(out.markdown).toContain("Terms and conditions");
+  });
+
+  it("emits nothing only for sections that genuinely contain nothing", () => {
+    const out = compile(page({ id: "g", kind: "gallery", layout: "grid", items: [] }), "portable");
     expect(out.markdown).toBe("");
-    expect(out.diagnostics.length).toBeGreaterThan(0);
   });
 });
 

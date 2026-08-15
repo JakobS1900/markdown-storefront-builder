@@ -45,17 +45,22 @@ change it.
       diagnostic naming it. Emitters for the two trivial
       blocks only, `heading` and `divider`, so the whole pipeline is proved end
       to end on the smallest possible surface.
-- [ ] **1.3 The `prose` emitter and the narrow gate.** Bold, italic, lists,
-      links, nothing else. Normalization and escaping. The sanitizer and its XSS
-      corpus test. This is the first block carrying real user text, so the gate
-      lands with it.
-- [ ] **1.4 The `menu` emitter and table degradation.** Tiers, pricing, add-ons.
+- [x] **1.3 The `prose` emitter.** Paragraphs of plain text, escaped so
+      nothing an artist writes can become structure. PARTIAL against the
+      original scope, and deliberately so, see 1.7 and 2.3 below.
+- [ ] **1.7 Inline formatting in prose.** Bold, italic, lists, and links inside
+      a text section. Deferred out of 1.3 because the contract stores
+      `prose.text` as one string and the compiler escapes every Markdown
+      character, so a subset grammar needs either a parser with a whitelist or a
+      change to the contract's shape. Both are real decisions that deserve a
+      cycle rather than being smuggled into an emitter.
+- [x] **1.4 The `menu` emitter and table degradation.** Tiers, pricing, add-ons.
       The first capability that genuinely diverges between targets, so the
       fallback path and the diagnostics it emits are proved here.
-- [ ] **1.5 The `gallery` emitter and image capabilities.** Grid, list, and
+- [x] **1.5 The `gallery` emitter and image capabilities.** Grid, list, and
       single layouts. rentry image sizing versus the portable baseline, which is
       the clearest demonstration of why the compiler exists.
-- [ ] **1.6 The `profile` emitter.** Avatar, name, tagline, status, links,
+- [x] **1.6 The `profile` emitter.** Avatar, name, tagline, status, links,
       payment methods.
 
 ## Phase 2: The app
@@ -71,7 +76,11 @@ change it.
       control, not retrofitted.
 - [ ] **2.3 Preview and diagnostics.** Rendering compiled output through the
       sanitizer, surfacing lint results against the offending block, and the
-      target switcher.
+      target switcher. Carries the preview sanitizer and its XSS corpus, which
+      were originally scoped to 1.3 and moved here because a sanitizer with no
+      preview to protect is a capability with no consumer. The emitted-text
+      escaper, which protects the artist's page on the host, shipped in 002 and
+      003 and is a different gate.
 - [ ] **2.4 Export and handoff.** Copy, download, and the host-specific paste
       walkthrough.
 - [ ] **2.5 PWA.** Service worker, offline app shell, installability.

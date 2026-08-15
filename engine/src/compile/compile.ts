@@ -16,52 +16,40 @@ import type { Block, Document } from "../document/types.js";
 import type { Target } from "./capabilities.js";
 import { DiagnosticSink, type CompileResult } from "./diagnostics.js";
 import { emitDivider } from "./emit/divider.js";
+import { emitGallery } from "./emit/gallery.js";
 import { emitHeading } from "./emit/heading.js";
+import { emitMenu } from "./emit/menu.js";
+import { emitProfile } from "./emit/profile.js";
+import { emitProse } from "./emit/prose.js";
 import { FALLBACK_TARGET, findTarget } from "./targets.js";
 
 /**
  * Emits one block.
  *
- * Every kind the descriptor declares must be handled. The four not yet
- * implemented return undefined, which the caller skips, so a page containing
- * one compiles to the parts that do exist rather than crashing. They arrive in
- * roadmap items 1.3 to 1.6.
+ * Every kind the descriptor declares is handled and there is no default branch,
+ * so adding a kind to the contract without writing its emitter fails to compile
+ * rather than silently producing a page with a section missing.
+ *
+ * An emitter may return an empty string, which the caller drops. That happens
+ * when a section has nothing in it yet, for instance a gallery with no images.
+ * FR-007: an empty collection produces no output rather than an empty table.
  */
-function emitBlock(block: Block, target: Target, sink: DiagnosticSink): string | undefined {
+function emitBlock(block: Block, target: Target, sink: DiagnosticSink): string {
   switch (block.kind) {
     case "heading":
       return emitHeading(block, target, sink);
     case "divider":
       return emitDivider(target);
     case "prose":
+      return emitProse(block, target);
     case "menu":
+      return emitMenu(block, target, sink);
     case "gallery":
+      return emitGallery(block, target, sink);
     case "profile":
-      // Roadmap 1.3 to 1.6. Skipped rather than half emitted: a partial
-      // rendering of an artist's commission menu is worse than its absence,
-      // because they would paste it believing it complete.
-      //
-      // Holistic review H-4: skipping SILENTLY is worse still. A page whose
-      // every section was one of these compiled to an empty string with no
-      // warning at all, so the artist would copy nothing, paste nothing, and
-      // believe it had worked. Every skipped section now says so.
-      sink.add({
-        code: "block_not_supported",
-        severity: "warning",
-        blockId: block.id,
-        message: `This version cannot lay out a ${KIND_NAMES[block.kind]} section yet, so it has been left out. Nothing in your page has been changed.`,
-      });
-      return undefined;
+      return emitProfile(block, target, sink);
   }
 }
-
-/** Section names as an artist would recognise them, not as the code names them. */
-const KIND_NAMES: Record<"prose" | "menu" | "gallery" | "profile", string> = {
-  prose: "text",
-  menu: "pricing menu",
-  gallery: "gallery",
-  profile: "profile",
-};
 
 /**
  * Compiles a page for a host.
@@ -109,7 +97,9 @@ function compileForTarget(
   const parts: string[] = [];
   for (const block of doc.blocks) {
     const emitted = emitBlock(block, target, sink);
-    if (emitted !== undefined) parts.push(emitted);
+    // An empty section contributes nothing. Pushing it would produce a stray
+    // blank line, since parts are joined by a blank line.
+    if (emitted !== "") parts.push(emitted);
   }
 
   // Research D4. Blocks are joined by exactly one blank line, which is also

@@ -49,17 +49,20 @@ describe("FR-002: compile never throws", () => {
     },
   );
 
-  it("skips a block kind that has no emitter yet, rather than failing", () => {
-    // prose, menu, gallery, and profile arrive in roadmap 1.3 to 1.6.
+  it("emits every block kind, since feature 003 completed the set", () => {
+    // This test previously asserted that prose was SKIPPED, which was true
+    // while its emitter did not exist. It now asserts the opposite, which is
+    // the point of feature 003.
     const out = compile(
       page(
         { id: "h", kind: "heading", text: "Kept", level: 2 },
-        { id: "p", kind: "prose", text: "Not emitted yet" },
+        { id: "p", kind: "prose", text: "Also kept" },
         { id: "d", kind: "divider" },
       ),
       "portable",
     );
-    expect(out.markdown).toBe("## Kept\n\n***\n");
+    expect(out.markdown).toBe("## Kept\n\nAlso kept\n\n***\n");
+    expect(out.diagnostics).toEqual([]);
   });
 });
 
@@ -109,10 +112,11 @@ describe("FR-012: a heading too deep for the host degrades, with a warning", () 
   const shallow: Target = {
     id: "shallow-test-host",
     name: "Shallow Test Host",
-    capabilities: { maxHeadingLevel: 2, thematicBreak: "***", escapeStyle: "commonmark" },
+    capabilities: { maxHeadingLevel: 2, thematicBreak: "***", tables: true, escapeStyle: "commonmark" },
     sources: {
       maxHeadingLevel: "test fixture",
       thematicBreak: "test fixture",
+      tables: "test fixture",
       escapeStyle: "test fixture",
       maxBytes: "test fixture",
     },
@@ -161,12 +165,14 @@ describe("FR-015: output over a host's limit warns and is returned in full", () 
     capabilities: {
       maxHeadingLevel: 6,
       thematicBreak: "***",
+      tables: true,
       escapeStyle: "commonmark",
       maxBytes: 20,
     },
     sources: {
       maxHeadingLevel: "test fixture",
       thematicBreak: "test fixture",
+      tables: "test fixture",
       escapeStyle: "test fixture",
       maxBytes: "test fixture",
     },

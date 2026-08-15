@@ -21,6 +21,14 @@ export interface Capabilities {
    * read as front matter by several renderers. `***` can do neither.
    */
   readonly thematicBreak: string;
+  /**
+   * Whether this host renders GFM pipe tables.
+   *
+   * A menu of tiers and prices reads far better as a table. Where a host lacks
+   * them the menu degrades to a definition style list, which is readable but
+   * loses the column alignment that makes prices scannable.
+   */
+  readonly tables: boolean;
   /** Which escaping rules apply to artist text. Never optional. */
   readonly escapeStyle: "commonmark";
   /**
