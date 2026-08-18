@@ -10,3 +10,6 @@ dist-types/
 
 # The original idea notes. Kept on disk, deliberately not published.
 idea.txt
+
+# Local upload proxy scratch
+proxy/.dev-uploads/

@@ -404,6 +404,12 @@ fieldset.sub > * + * {
   display: block;
 }
 
+/* Upload control, present only when a proxy is configured. */
+
+.uploader {
+  margin-top: 0.5rem;
+}
+
 /* Tab bar, within thumb reach on a phone. */
 
 .tabs {

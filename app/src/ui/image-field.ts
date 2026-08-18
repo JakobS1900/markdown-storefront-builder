@@ -16,7 +16,8 @@
  */
 import { isSafeUrl } from "@mdsb/engine";
 
-import { announce, el } from "./dom.js";
+import { uploadConfigured, uploadImage } from "../upload.js";
+import { announce, button, el } from "./dom.js";
 
 type Status = "empty" | "unsafe" | "checking" | "ok" | "broken";
 
@@ -124,6 +125,58 @@ export function imageField(opts: {
 
   if (opts.value !== "") check();
 
+  /**
+   * The upload control, or nothing.
+   *
+   * Absent entirely when this build has no proxy configured, rather than present
+   * and broken. Roadmap 3.1 shipped address entry first precisely so this could
+   * be optional.
+   */
+  const uploader: Node[] = [];
+  if (uploadConfigured()) {
+    const picker = el("input", {
+      id: `${id}-file`,
+      type: "file",
+      accept: "image/png,image/jpeg,image/gif,image/webp",
+      class: "sr-only",
+    }) as HTMLInputElement;
+
+    const pick = button({
+      label: "Upload an image instead",
+      onClick: () => picker.click(),
+    });
+
+    picker.addEventListener("change", () => {
+      const file = picker.files?.[0];
+      if (file === undefined) return;
+
+      paint("checking", false);
+      status.textContent = "Uploading your image.";
+      announce("Uploading your image.");
+      pick.disabled = true;
+
+      void uploadImage(file)
+        .then((outcome) => {
+          if (outcome.ok && outcome.url !== undefined) {
+            input.value = outcome.url;
+            opts.onInput(outcome.url);
+            check();
+          } else {
+            paint("broken", false);
+            status.textContent = outcome.message ?? "That upload did not work.";
+            announce(status.textContent);
+          }
+        })
+        .finally(() => {
+          pick.disabled = false;
+          // Cleared so choosing the same file again still fires a change event.
+          picker.value = "";
+        });
+    });
+
+    uploader.push(el("div", { class: "uploader" }, [pick, picker]));
+  }
+
   return el("div", { class: "field image-field" }, [
     el("label", { for: id }, [opts.label]),
     el("p", { class: "hint", id: hintId }, [
@@ -131,6 +184,7 @@ export function imageField(opts: {
         "Paste the address of an image already online. Your page links to it, so if it is deleted or moved, it stops showing.",
     ]),
     input,
+    ...uploader,
     status,
     frame,
   ]);
