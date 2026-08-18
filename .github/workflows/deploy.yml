@@ -1,0 +1,59 @@
+# Publishes the app to GitHub Pages.
+#
+# Runs only after `verify` has passed on master, so a broken build cannot become
+# the live site. That ordering is the whole point of having it as a separate
+# workflow rather than another job in the same one.
+name: deploy
+
+on:
+  workflow_run:
+    workflows: ["verify"]
+    branches: [master]
+    types: [completed]
+  # Available by hand for a re-deploy that does not need a new commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one in flight. Interrupting a
+# deploy can leave the site serving half of two builds.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Only when verify actually succeeded. A workflow_run fires on failure too.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      # No VITE_UPLOAD_URL is set, so this build ships without uploads and the
+      # upload control is simply not offered. Address entry is the whole
+      # feature, exactly as roadmap 3.1 intended. Set the variable here once a
+      # proxy is deployed.
+      - run: npm run build:app
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
