@@ -2,6 +2,7 @@ import type { Block } from "../../document/types.js";
 import type { Target } from "../capabilities.js";
 import type { DiagnosticSink } from "../diagnostics.js";
 import { escapeText } from "../escape.js";
+import { encodeAddress, isSafeUrl } from "../link.js";
 import { bulletList, cell, joinParts, sectionHeading } from "./shared.js";
 
 type Menu = Extract<Block, { kind: "menu" }>;
@@ -20,6 +21,20 @@ type Tier = Menu["tiers"][number];
  */
 export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): string {
   const parts: (string | undefined)[] = [sectionHeading(block.heading, target)];
+
+  // Holistic review HB-6 established that a refused address must never be
+  // dropped in silence, wherever it appears. This is the third such place.
+  for (const t of block.tiers) {
+    if (t.imageUrl !== undefined && t.imageUrl !== "" && !isSafeUrl(t.imageUrl)) {
+      sink.add({
+        code: "link_scheme_refused",
+        severity: "warning",
+        blockId: block.id,
+        message:
+          "One of your example images does not have an http:// or https:// address, so it has been left out. Images need a web address to show on your page.",
+      });
+    }
+  }
 
   if (block.tiers.length > 0) {
     parts.push(
@@ -60,16 +75,38 @@ function withCurrency(price: string, currency: string | undefined): string {
   return isBareNumber ? `${currency} ${price}` : price;
 }
 
+/**
+ * An example image for a tier, or nothing.
+ *
+ * An unsafe address is dropped here rather than emitted, matching the gallery.
+ * The caller raises the warning, because it holds the block id.
+ */
+function tierImage(t: Tier): string {
+  if (t.imageUrl === undefined || t.imageUrl === "" || !isSafeUrl(t.imageUrl)) return "";
+  return `![${cell(t.name)}](${encodeAddress(t.imageUrl)})`;
+}
+
 function tierTable(tiers: readonly Tier[], currency: string | undefined): string {
+  // The Example column appears only when at least one tier has a usable image.
+  // An empty column on every row would be a worse table for everyone who does
+  // not use the feature.
+  const withImages = tiers.some((t) => tierImage(t) !== "");
+
   const rows = tiers.map((t) => {
     const includes = t.includes === undefined ? "" : t.includes.map(cell).join(", ");
     const detail = [t.blurb === undefined ? "" : cell(t.blurb), includes]
       .filter((s) => s !== "")
       .join(". ");
-    return `| ${cell(t.name)} | ${cell(withCurrency(t.price, currency))} | ${detail} |`;
+    const cells = [cell(t.name), cell(withCurrency(t.price, currency)), detail];
+    if (withImages) cells.push(tierImage(t));
+    return `| ${cells.join(" | ")} |`;
   });
 
-  return ["| Tier | Price | What you get |", "| --- | --- | --- |", ...rows].join("\n");
+  const head = withImages
+    ? ["| Tier | Price | What you get | Example |", "| --- | --- | --- | --- |"]
+    : ["| Tier | Price | What you get |", "| --- | --- | --- |"];
+
+  return [...head, ...rows].join("\n");
 }
 
 function tierList(
@@ -93,6 +130,8 @@ function tierList(
         `**${escapeText(t.name)}**: ${escapeText(withCurrency(t.price, currency))}`,
       ];
       if (t.blurb !== undefined && t.blurb !== "") lines.push(escapeText(t.blurb));
+      const image = tierImage(t);
+      if (image !== "") lines.push(image);
       const includes = t.includes === undefined ? undefined : bulletList(t.includes.map(escapeText));
       if (includes !== undefined) lines.push(includes);
       return lines.join("\n\n");

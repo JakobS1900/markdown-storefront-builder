@@ -87,7 +87,7 @@ change it.
 
 ## Phase 3: Images
 
-- [ ] **3.1 URL image entry.** Validation, preview, and broken-link detection.
+- [x] **3.1 URL image entry.** Validation, preview, and broken-link detection.
       Ships before upload so the gallery is usable with no server at all.
 - [ ] **3.2 The upload proxy.** The serverless function, magic-byte sniffing,
       byte ceiling, per-IP rate limiting, and the server-held key.

@@ -7,6 +7,16 @@
  * module should be producing Markdown by hand.
  */
 export { compile } from "./compile.js";
+
+/**
+ * Exported so the editor can warn about an address BEFORE compiling, using the
+ * same definition of safe that the compiler enforces.
+ *
+ * If the app had its own copy of this check the two could disagree, and the
+ * failure would be the app telling an artist their image is fine while the
+ * compiler silently drops it. One definition, one answer.
+ */
+export { isSafeUrl } from "./link.js";
 export { TARGETS, PORTABLE, RENTRY, FALLBACK_TARGET, findTarget } from "./targets.js";
 export type { Capabilities, Target } from "./capabilities.js";
 export type {

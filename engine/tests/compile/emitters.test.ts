@@ -320,3 +320,44 @@ describe("SC-002: nothing an artist writes escapes its section", () => {
     }
   });
 });
+
+describe("menu tier sample images (roadmap 3.1)", () => {
+  const withImage = [
+    { name: "Bust", price: "45", imageUrl: "https://e.test/bust.png" },
+    { name: "Full body", price: "80" },
+  ];
+
+  it("adds an Example column only when a tier actually has an image", () => {
+    const out = md({ id: "m", kind: "menu", tiers: withImage });
+    expect(out).toContain("| Tier | Price | What you get | Example |");
+    expect(out).toContain("![Bust](https://e.test/bust.png)");
+  });
+
+  it("omits the column entirely when no tier has one", () => {
+    const out = md({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1" }] });
+    expect(out).toContain("| Tier | Price | What you get |");
+    expect(out).not.toContain("Example");
+  });
+
+  it("leaves the cell empty for a tier without an image, keeping the table square", () => {
+    const out = md({ id: "m", kind: "menu", tiers: withImage });
+    const rows = out.split("\n").filter((l) => l.startsWith("|"));
+    const counts = rows.map((r) => r.match(/(?<!\\)\|/g)?.length ?? 0);
+    expect(new Set(counts).size).toBe(1);
+  });
+
+  it("shows the image under the tier when the host has no tables", () => {
+    const out = compile(page({ id: "m", kind: "menu", tiers: withImage }), NO_TABLES);
+    expect(out.markdown).toContain("![Bust](https://e.test/bust.png)");
+  });
+
+  it("refuses an unsafe example address and warns rather than dropping it silently", () => {
+    const out = compile(
+      page({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1", imageUrl: "javascript:alert(1)" }] }),
+      "portable",
+    );
+    expect(out.markdown).not.toContain("javascript");
+    const warning = out.diagnostics.find((d) => d.code === "link_scheme_refused");
+    expect(warning?.blockId).toBe("m");
+  });
+});
