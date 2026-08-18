@@ -9,6 +9,6 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["engine/tests/**/*.test.ts", "app/tests/**/*.test.ts"],
+    include: ["engine/tests/**/*.test.ts", "app/tests/**/*.test.ts", "proxy/tests/**/*.test.ts"],
   },
 });

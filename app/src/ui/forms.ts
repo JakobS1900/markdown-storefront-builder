@@ -8,6 +8,7 @@
 import type { Block } from "@mdsb/engine";
 
 import { button, el, field, select } from "./dom.js";
+import { imageField } from "./image-field.js";
 import { newId } from "../store.js";
 
 type OnChange = (next: Block) => void;
@@ -145,6 +146,16 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
           onChange({ ...block, tiers: block.tiers.map((t, j) => (i === j ? (next as typeof t) : t)) });
         },
       }),
+      imageField({
+        label: "Sample image (optional)",
+        value: tier.imageUrl ?? "",
+        hint: "An example of this option, if you have one online.",
+        onInput: (v) =>
+          onChange({
+            ...block,
+            tiers: block.tiers.map((t, j) => (i === j ? withOptional(t, "imageUrl", v) : t)),
+          }),
+      }),
       button({
         label: `Remove option ${i + 1}`,
         variant: "danger",
@@ -178,11 +189,9 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
   const items = block.items.map((item, i) =>
     el("fieldset", { class: "sub" }, [
       el("legend", {}, [`Image ${i + 1}`]),
-      field({
+      imageField({
         label: "Image address",
         value: item.imageUrl,
-        inputMode: "url",
-        hint: "Must start with https://. Your page links to the image, it does not store it.",
         onInput: (imageUrl) =>
           onChange({ ...block, items: block.items.map((it, j) => (i === j ? { ...it, imageUrl } : it)) }),
       }),
@@ -268,11 +277,10 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
       value: block.tagline ?? "",
       onInput: (v) => onChange(withOptional(block, "tagline", v)),
     }),
-    field({
+    imageField({
       label: "Profile picture address (optional)",
       value: block.avatarUrl ?? "",
-      inputMode: "url",
-      hint: "Must start with https://",
+      hint: "Paste the address of a picture already online. Leave it blank if you would rather not have one.",
       onInput: (v) => onChange(withOptional(block, "avatarUrl", v)),
     }),
     select({

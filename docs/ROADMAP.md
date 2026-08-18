@@ -87,11 +87,11 @@ change it.
 
 ## Phase 3: Images
 
-- [ ] **3.1 URL image entry.** Validation, preview, and broken-link detection.
+- [x] **3.1 URL image entry.** Validation, preview, and broken-link detection.
       Ships before upload so the gallery is usable with no server at all.
-- [ ] **3.2 The upload proxy.** The serverless function, magic-byte sniffing,
+- [x] **3.2 The upload proxy.** The serverless function, magic-byte sniffing,
       byte ceiling, per-IP rate limiting, and the server-held key.
-- [ ] **3.3 Client upload path.** Canvas downscale and re-encode, the upload UI,
+- [x] **3.3 Client upload path.** Canvas downscale and re-encode, the upload UI,
       and graceful degradation to URL mode when the proxy is unavailable.
 
 ## Phase 4: Ship

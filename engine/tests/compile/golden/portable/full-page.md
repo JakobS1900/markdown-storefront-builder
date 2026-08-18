@@ -17,11 +17,11 @@ Payment: PayPal, Ko\-fi
 
 ### Prices
 
-| Tier | Price | What you get |
-| --- | --- | --- |
-| Bust | USD 45 | Head and shoulders. 1 revision, PNG at 2000px |
-| Half body | USD 80 | 2 revisions |
-| Full body | DM me | Depends on detail |
+| Tier | Price | What you get | Example |
+| --- | --- | --- | --- |
+| Bust | USD 45 | Head and shoulders. 1 revision, PNG at 2000px | ![Bust](https://example.test/bust.png) |
+| Half body | USD 80 | 2 revisions |  |
+| Full body | DM me | Depends on detail |  |
 
 - Extra character: USD 20
 - Simple background: USD 15

@@ -72,6 +72,25 @@ export default tseslint.config(
     },
   },
   {
+    // The proxy dev server is a Node script that also uses the Web platform's
+    // Request and Response, because that is what the handler it runs expects.
+    files: ["proxy/*.mjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        URL: "readonly",
+        Buffer: "readonly",
+        Request: "readonly",
+        Response: "readonly",
+      },
+    },
+    rules: {
+      // It reports the port it is listening on, which is its whole interface.
+      "no-console": "off",
+    },
+  },
+  {
     files: ["scripts/**/*.mjs"],
     languageOptions: {
       globals: {

@@ -360,6 +360,56 @@ fieldset.sub > * + * {
   margin-top: 0.5rem;
 }
 
+/* Image address fields */
+
+.img-status {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.img-status.unsafe,
+.img-status.broken {
+  color: var(--warn-ink);
+  background: var(--warn-bg);
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius);
+}
+
+.img-status.ok {
+  color: var(--muted);
+}
+
+.thumb-frame {
+  margin-top: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+  /* A tall image must not push the form off the screen. */
+  max-height: 9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-frame[hidden] {
+  display: none;
+}
+
+.thumb {
+  max-width: 100%;
+  max-height: 9rem;
+  height: auto;
+  display: block;
+}
+
+/* Upload control, present only when a proxy is configured. */
+
+.uploader {
+  margin-top: 0.5rem;
+}
+
 /* Tab bar, within thumb reach on a phone. */
 
 .tabs {
