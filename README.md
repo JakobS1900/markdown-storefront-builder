@@ -7,6 +7,10 @@ who has. This turns that into a compiler problem.
 A block document goes in. Host-correct Markdown comes out, along with a warning
 for every compromise made on the way.
 
+**Try it:** [jakobs1900.github.io/markdown-storefront-builder](https://jakobs1900.github.io/markdown-storefront-builder/)
+Works on a phone, installs to a home screen, and runs with no network. Nothing
+is sent anywhere: storage, compilation, and preview are all local.
+
 **Case study:** [jakobs1900.github.io/portfolio/storefront-builder.html](https://jakobs1900.github.io/portfolio/storefront-builder.html)
 
 ## Running it
