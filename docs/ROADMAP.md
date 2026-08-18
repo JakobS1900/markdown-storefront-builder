@@ -96,7 +96,7 @@ change it.
 
 ## Phase 4: Ship
 
-- [ ] **4.1 CI.** Build, test, lint, a11y, and secret scan as required checks.
+- [x] **4.1 CI.** Build, test, lint, a11y, and secret scan as required checks.
 - [ ] **4.2 Manual host verification pass.** Fixtures pasted into the live hosts
       and compared, per the checklist. Not automatable, and not skippable.
 - [ ] **4.3 Deploy.** Static app and the proxy.
