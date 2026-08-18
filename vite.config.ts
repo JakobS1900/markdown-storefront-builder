@@ -1,6 +1,33 @@
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+
+/**
+ * Stamps the service worker with an identifier derived from the build output.
+ *
+ * The worker's cache name has to change when the app changes, or returning
+ * visitors keep the old shell forever. A timestamp would do that and would also
+ * make every build differ from the last for no reason, which this project cares
+ * about elsewhere. Hashing the emitted asset filenames gives the same property
+ * and stays reproducible: identical input, identical build id.
+ */
+function stampServiceWorker(): Plugin {
+  return {
+    name: "stamp-service-worker",
+    closeBundle() {
+      const dist = fileURLToPath(new URL("./app/dist", import.meta.url));
+      const assets = readdirSync(`${dist}/assets`).sort().join("|");
+      const id = createHash("sha256").update(assets).digest("hex").slice(0, 12);
+
+      const swPath = `${dist}/sw.js`;
+      const source = readFileSync(swPath, "utf8");
+      writeFileSync(swPath, source.replace("__BUILD_ID__", id), "utf8");
+      this.info?.(`service worker stamped with build id ${id}`);
+    },
+  };
+}
 
 /**
  * The app is a static site. No server, no bundler magic beyond what is needed
@@ -13,6 +40,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   root: fileURLToPath(new URL("./app", import.meta.url)),
   base: "./",
+  plugins: [stampServiceWorker()],
   resolve: {
     alias: {
       "@mdsb/engine": fileURLToPath(new URL("./engine/src/index.ts", import.meta.url)),

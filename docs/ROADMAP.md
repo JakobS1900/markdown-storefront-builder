@@ -83,7 +83,7 @@ change it.
       003 and is a different gate.
 - [x] **2.4 Export and handoff.** Copy, download, and the host-specific paste
       walkthrough.
-- [ ] **2.5 PWA.** Service worker, offline app shell, installability.
+- [x] **2.5 PWA.** Service worker, offline app shell, installability.
 
 ## Phase 3: Images
 
