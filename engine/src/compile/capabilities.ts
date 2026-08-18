@@ -29,6 +29,19 @@ export interface Capabilities {
    * loses the column alignment that makes prices scannable.
    */
   readonly tables: boolean;
+  /**
+   * How this host writes a line break inside a paragraph.
+   *
+   * `backslash` is the CommonMark form. `spaces` is two trailing spaces, which
+   * predates it and is what Python-Markdown implements.
+   *
+   * This capability exists because of a real failure. The compiler emitted the
+   * backslash form everywhere, and on rentry it produced no line break AND
+   * swallowed the character, so "each." and "Refunds" rendered as
+   * "each.Refunds". Found by pasting real output into rentry's preview, not by
+   * any test, because every test encoded the same assumption as the emitter.
+   */
+  readonly hardBreak: "backslash" | "spaces";
   /** Which escaping rules apply to artist text. Never optional. */
   readonly escapeStyle: "commonmark";
   /**

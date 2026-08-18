@@ -15,10 +15,16 @@ import { joinParts, sectionHeading } from "./shared.js";
  * What it does support is what a terms and conditions section actually needs,
  * which is paragraphs.
  *
- * A single newline inside a paragraph becomes a hard line break, written as a
- * trailing backslash rather than two trailing spaces. Trailing whitespace is
- * invisible, is stripped on save by many editors, and would break byte
- * comparison, which is feature 002's review finding R-3 arriving in a new place.
+ * A single newline inside a paragraph becomes a hard line break, in whichever
+ * form the host actually implements.
+ *
+ * The backslash form is cleaner, since trailing whitespace is invisible and
+ * gets stripped on save by many editors. It is also not universal: rentry runs
+ * Python-Markdown, which does not implement it, and emitted no break there
+ * while swallowing the character, so two lines ran together with no space.
+ *
+ * So the form is a capability now rather than a preference. This is the first
+ * place the two shipped hosts produce genuinely different output.
  */
 export function emitProse(block: Extract<Block, { kind: "prose" }>, target: Target): string {
   const paragraphs = block.text
@@ -29,7 +35,7 @@ export function emitProse(block: Extract<Block, { kind: "prose" }>, target: Targ
       p
         .split(/\r?\n/)
         .map((line) => escapeText(line.trim()))
-        .join("\\\n"),
+        .join(target.capabilities.hardBreak === "spaces" ? "  \n" : "\\\n"),
     );
 
   return joinParts([sectionHeading(block.heading, target), ...paragraphs]);
