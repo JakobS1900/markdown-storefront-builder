@@ -57,12 +57,28 @@ export default tseslint.config(
     },
   },
   {
+    // The service worker runs in its own global scope, which has neither the
+    // window globals nor the Node ones. It ships to the browser verbatim from
+    // public/, so it is plain JavaScript rather than TypeScript.
+    files: ["app/public/sw.js"],
+    languageOptions: {
+      globals: {
+        self: "readonly",
+        caches: "readonly",
+        fetch: "readonly",
+        URL: "readonly",
+        Promise: "readonly",
+      },
+    },
+  },
+  {
     files: ["scripts/**/*.mjs"],
     languageOptions: {
       globals: {
         console: "readonly",
         process: "readonly",
         URL: "readonly",
+        Buffer: "readonly",
       },
     },
     rules: {
