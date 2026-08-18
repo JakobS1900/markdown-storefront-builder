@@ -14,7 +14,7 @@ for every compromise made on the way.
 ```powershell
 npm install     # from PowerShell, not Git Bash. See CLAUDE.md for why
 npm run dev     # the app
-npm run verify  # typecheck, lint, 441 tests, secret scan, dash scan, accessibility
+npm run verify  # typecheck, lint, 490 tests, secret scan, dash scan, accessibility
 ```
 
 ## What is where
@@ -70,15 +70,18 @@ Each gate was verified by making it fail on purpose, not by assuming it works.
 
 ## Known limitations, stated rather than buried
 
-**The two shipped hosts produce identical output.** `rentry` and `portable` both
-support six heading levels and both support tables, so nothing in the current
-section types distinguishes them. The compatibility machinery is real and proved
-by synthetic hosts in the tests, and its payoff is deferred until a third host
-or a section type that uses rentry's own extensions.
+**The two hosts barely differ, though they no longer agree entirely.** They
+diverge on exactly one thing: the hard line break, where rentry needs two
+trailing spaces and the portable baseline uses the CommonMark backslash. That
+divergence exists because live verification found the backslash form silently
+broken on rentry, not because it was designed in. Everything else in the current
+section types renders the same on both, so the compatibility machinery is still
+mostly proved by synthetic hosts in the tests.
 
-**Nobody has pasted the output into live rentry.** Every capability value cites
-their published documentation. That is evidence, and it is not the same as
-having tried it. The manual checklist is in `docs/WORKFLOW.md`.
+**The image host hop has never run.** `proxy/src/worker.ts` is written from
+catbox.moe's documented API and has not been executed against it. Everything
+else in the proxy is tested, and the client upload path was verified end to end
+against a local instance. See `proxy/README.md`.
 
 **Inline formatting in prose is not supported.** Bold, italic, and lists inside
 a text section need either a parser with a whitelist or a change to the contract,

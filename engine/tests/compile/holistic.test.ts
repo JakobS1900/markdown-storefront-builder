@@ -35,7 +35,13 @@ describe("H-2: every declared capability must be consulted by something", () => 
     // A capability nothing consults is a guess written down, and the data model
     // says so explicitly. If one is added without a consumer, this fails.
     const declared = Object.keys(PORTABLE.capabilities).sort();
-    expect(declared).toEqual(["escapeStyle", "maxHeadingLevel", "tables", "thematicBreak"]);
+    expect(declared).toEqual([
+      "escapeStyle",
+      "hardBreak",
+      "maxHeadingLevel",
+      "tables",
+      "thematicBreak",
+    ]);
   });
 
   it("cites a source for every capability, including absent ones", () => {
@@ -81,13 +87,26 @@ describe("H-4: a filled-in page must never compile to silence", () => {
   });
 });
 
-describe("H-5: the two shipped hosts are currently indistinguishable", () => {
-  it("produces identical output for every fixture, which is expected today", () => {
+describe("H-5: the two shipped hosts, and where they now differ", () => {
+  it("still agrees on everything the hosts have in common", () => {
     const doc = page(
       { id: "h", kind: "heading", text: "Commissions", level: 1 },
       { id: "d", kind: "divider" },
     );
     expect(compile(doc, RENTRY.id).markdown).toBe(compile(doc, PORTABLE.id).markdown);
+  });
+
+  it("differs on the hard line break, which live verification forced", () => {
+    // Until 2026-08-18 the two hosts produced identical output for every
+    // fixture, and the README and case study both said so. Pasting real output
+    // into rentry showed the CommonMark backslash break producing no break at
+    // all there, and swallowing the character so two sentences ran together.
+    // This is the first genuine divergence between the shipped hosts.
+    const doc = page({ id: "t", kind: "prose", text: "one\ntwo" });
+
+    expect(compile(doc, RENTRY.id).markdown).toBe("one  \ntwo\n");
+    expect(compile(doc, PORTABLE.id).markdown).toBe("one\\\ntwo\n");
+    expect(compile(doc, RENTRY.id).markdown).not.toBe(compile(doc, PORTABLE.id).markdown);
   });
 
   it("differs the moment a capability differs, proving the mechanism works", () => {

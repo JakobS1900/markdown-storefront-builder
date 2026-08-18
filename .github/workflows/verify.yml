@@ -1,0 +1,62 @@
+# The verification gate, run on every push and pull request.
+#
+# This is the same `npm run verify` a person runs locally, in the same order,
+# with nothing added and nothing skipped. A CI that checks something different
+# from what the developer checks is a CI that teaches people to distrust it.
+#
+# The one thing CI does that a laptop does not: it runs on a machine that has
+# never seen this project, so it catches the class of bug where something only
+# works because of a file that was never committed.
+name: verify
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# A new push to the same branch cancels the run in flight. The old result is
+# about code nobody is looking at any more.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      # `ci` rather than `install`: it installs exactly the lockfile and fails
+      # if package.json and the lock have drifted, which is the point of having
+      # a lockfile at all.
+      - run: npm ci
+
+      - name: Verify
+        run: npm run verify
+
+      # Building the app is not part of `verify`, because a developer running
+      # the tests does not need a bundle. CI does, because a build that only
+      # works on one machine is worth finding here.
+      - name: Build the app
+        run: npm run build:app
+
+      # The service worker's cache name is stamped from the built assets. If the
+      # placeholder survives the build, every returning visitor keeps the old
+      # shell and nobody finds out for weeks.
+      - name: Check the service worker was stamped
+        run: |
+          if grep -q "__BUILD_ID__" app/dist/sw.js; then
+            echo "The service worker still contains __BUILD_ID__. The build did not stamp it."
+            exit 1
+          fi
+          echo "Service worker stamped: $(grep -o 'VERSION = "[^"]*"' app/dist/sw.js)"

@@ -87,13 +87,18 @@ describe("SC-001: output renders as Markdown, not as broken text", () => {
     }
   });
 
-  it.each(fixtureNames)("%s has no trailing whitespace on any line", (name) => {
-    // Review R-3. Trailing whitespace is invisible, is stripped on save by many
-    // editors, and would break byte comparison with an unreadable diff.
+  it.each(fixtureNames)("%s has no trailing whitespace except a hard break", (name) => {
+    // Review R-3. Trailing whitespace is invisible and gets stripped on save by
+    // many editors, so it stays forbidden with exactly one exception: the two
+    // space hard break, which is the only form rentry implements. Anything else
+    // trailing, a single space, a tab, or three spaces, is still a failure.
     const doc = loadFixture(name);
     for (const target of TARGETS) {
       const { markdown } = compile(doc, target.id);
+      const breakAllowed = target.capabilities.hardBreak === "spaces";
+
       for (const line of markdown.split("\n")) {
+        if (breakAllowed && /[^ ] {2}$/.test(line)) continue;
         expect(line).toBe(line.replace(/[ \t]+$/, ""));
       }
     }
