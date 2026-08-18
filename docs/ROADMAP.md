@@ -99,8 +99,8 @@ change it.
 - [x] **4.1 CI.** Build, test, lint, a11y, and secret scan as required checks.
 - [x] **4.2 Manual host verification pass.** Fixtures pasted into the live hosts
       and compared, per the checklist. Not automatable, and not skippable.
-- [ ] **4.3 Deploy.** Static app and the proxy.
-- [ ] **4.4 The case study.** The portfolio write-up. The engine and its golden
+- [x] **4.3 Deploy.** Static app and the proxy.
+- [x] **4.4 The case study.** The portfolio write-up. The engine and its golden
       tests are public and readable, which is the entire point of building it
       this way.
 
