@@ -66,11 +66,48 @@ describe("prose", () => {
     expect(md({ id: "p", kind: "prose", text: "   \n\n  " })).toBe("");
   });
 
-  it("escapes text so it cannot become structure", () => {
+  it("escapes everything outside the inline grammar", () => {
+    // A bullet is now a real bullet, since roadmap 1.7. A heading is not in the
+    // grammar and stays text, and HTML is still entity encoded.
     const out = md({ id: "p", kind: "prose", text: "# Heading\n\n- item\n\n<script>x</script>" });
     expect(out).not.toContain("<");
     expect(out).toContain("\\# Heading");
-    expect(out).toContain("\\- item");
+    expect(out).toContain("- item");
+  });
+
+  it("emits a bullet list when every line in a chunk is a bullet", () => {
+    const out = md({ id: "p", kind: "prose", text: "- one\n- two\n- three" });
+    expect(out).toBe("- one\n- two\n- three\n");
+  });
+
+  it("keeps an intro line as prose and the bullets under it as a list", () => {
+    // The shape artists actually write. An earlier version required every line
+    // in the chunk to be a bullet, which turned this into escaped text with a
+    // visible backslash in front of every dash.
+    const out = md({ id: "p", kind: "prose", text: "I will not draw:\n- hate symbols\n- minors" });
+    expect(out).toBe("I will not draw:\n\n- hate symbols\n- minors\n");
+  });
+
+  it("formats bold, italic, and links inside a paragraph", () => {
+    const out = md({
+      id: "p",
+      kind: "prose",
+      text: "**Half** up front. See *terms* at [my page](https://e.test/tos).",
+    });
+    expect(out).toContain("**Half**");
+    expect(out).toContain("*terms*");
+    expect(out).toContain("[my page](https://e.test/tos)");
+  });
+
+  it("formats inside list items too", () => {
+    const out = md({ id: "p", kind: "prose", text: "- **one**\n- [two](https://e.test)" });
+    expect(out).toBe("- **one**\n- [two](https://e.test)\n");
+  });
+
+  it("still refuses an unsafe link inside prose", () => {
+    const out = md({ id: "p", kind: "prose", text: "[click](javascript:alert(1))" });
+    expect(out).not.toMatch(/\]\(javascript/i);
+    expect(out).toContain("click");
   });
 });
 

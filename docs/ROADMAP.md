@@ -46,9 +46,9 @@ change it.
       blocks only, `heading` and `divider`, so the whole pipeline is proved end
       to end on the smallest possible surface.
 - [x] **1.3 The `prose` emitter.** Paragraphs of plain text, escaped so
-      nothing an artist writes can become structure. PARTIAL against the
-      original scope, and deliberately so, see 1.7 and 2.3 below.
-- [ ] **1.7 Inline formatting in prose.** Bold, italic, lists, and links inside
+      nothing an artist writes can become structure. The formatting deferred
+      from here landed in 1.7.
+- [x] **1.7 Inline formatting in prose.** Bold, italic, lists, and links inside
       a text section. Deferred out of 1.3 because the contract stores
       `prose.text` as one string and the compiler escapes every Markdown
       character, so a subset grammar needs either a parser with a whitelist or a

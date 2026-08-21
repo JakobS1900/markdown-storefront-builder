@@ -37,9 +37,13 @@ Payment: PayPal, Ko\-fi
 
 ### Terms
 
-Half up front, half on completion\.
+**Half up front**, half on completion\.
 
-I will not draw hate symbols, real people without consent, or anything involving minors\.
+I will not draw:
+
+- hate symbols
+- real people without consent
+- anything involving minors
 
 Revisions are included as listed above\. Extra revisions are USD 10 each\.\
-Refunds are available until lineart begins\.
+Refunds are available until lineart begins\. Full terms at [my page](https://example.test/terms)\.

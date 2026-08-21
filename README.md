@@ -18,7 +18,7 @@ is sent anywhere: storage, compilation, and preview are all local.
 ```powershell
 npm install     # from PowerShell, not Git Bash. See CLAUDE.md for why
 npm run dev     # the app
-npm run verify  # typecheck, lint, 490 tests, secret scan, dash scan, accessibility
+npm run verify  # typecheck, lint, 529 tests, secret scan, dash scan, accessibility
 ```
 
 ## What is where
@@ -86,10 +86,6 @@ mostly proved by synthetic hosts in the tests.
 catbox.moe's documented API and has not been executed against it. Everything
 else in the proxy is tested, and the client upload path was verified end to end
 against a local instance. See `proxy/README.md`.
-
-**Inline formatting in prose is not supported.** Bold, italic, and lists inside
-a text section need either a parser with a whitelist or a change to the contract,
-and both deserve their own cycle rather than being smuggled into an emitter.
 
 ## Licence
 

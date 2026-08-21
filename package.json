@@ -18,8 +18,8 @@
     "a11y": "vitest run app/tests/a11y.test.ts",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run dashscan && npm run a11y",
     "dashscan": "node scripts/dash-scan.mjs",
-    "snapshot": "node scripts/write-parity-snapshot.mjs",
-    "golden": "npm run build && node scripts/write-golden.mjs",
+    "snapshot": "tsc --build --force && node scripts/write-parity-snapshot.mjs",
+    "golden": "tsc --build --force && node scripts/write-golden.mjs",
     "dev": "vite",
     "build:app": "vite build"
   },
