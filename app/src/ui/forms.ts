@@ -103,7 +103,7 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
       label: "Text",
       value: block.text,
       multiline: true,
-      hint: "Leave a blank line between paragraphs. Formatting like bold and lists is not supported yet.",
+      hint: "Blank line between paragraphs. **bold**, *italic*, [text](https://address) for a link, and lines starting with a dash for a list.",
       onInput: (text) => onChange({ ...block, text }),
     }),
   ]);
