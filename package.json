@@ -20,9 +20,15 @@
     "snapshot": "tsc --build --force && node scripts/write-parity-snapshot.mjs",
     "golden": "tsc --build --force && node scripts/write-golden.mjs",
     "dev": "vite",
-    "build:app": "vite build"
+    "build:app": "vite build",
+    "android:sync": "npm run build:app && cap sync android",
+    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:open": "cap open android"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@eslint/js": "^9.0.0",
     "@types/node": "^26.2.0",
     "axe-core": "^4.13.0",
