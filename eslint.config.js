@@ -3,7 +3,16 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/coverage/**", "temp/**"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/coverage/**",
+      "temp/**",
+      // Capacitor generates the native bridge and copies our built assets in.
+      // Neither is ours to lint, and rewriting either would be undone by the
+      // next `cap sync`.
+      "android/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
