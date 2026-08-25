@@ -1,71 +1,63 @@
 /**
- * The client side of uploading an image.
+ * Uploading an image to Imgur, straight from the browser.
  *
- * Roadmap 3.3. Two jobs: shrink the file before sending it, and degrade cleanly
- * to address entry when there is no proxy to send it to.
+ * There is no server. An earlier version routed uploads through a proxy so a
+ * key could stay server side, which was the wrong shape for this host: Imgur's
+ * anonymous upload uses a Client-ID, and a Client-ID is a public identifier by
+ * design. It is meant to be sent from a browser, so hiding it behind a server
+ * protected nothing and cost the artist a service that could go down.
  *
- * The degradation is the part that matters. An artist whose upload button does
- * nothing has been failed twice, once by the outage and once by us not saying so.
- * If `VITE_UPLOAD_URL` is not configured, or the proxy does not answer, the
- * upload control is simply not offered and address entry is all there is. The
- * gallery was built to work that way first, in 3.1, precisely so this could be
- * optional.
+ * The tradeoff that IS real, recorded rather than glossed: a public Client-ID
+ * can be copied out of the bundle, and someone could spend the daily anonymous
+ * quota attached to it. That is a rate limit annoyance, not a credential leak,
+ * and the fix is to rotate the ID. Nothing an attacker gets access to belongs
+ * to an artist.
+ *
+ * Set `VITE_IMGUR_CLIENT_ID` at build time. Without it the upload control is
+ * not offered at all and pasting an address is the whole feature, which is how
+ * the gallery was built in the first place.
  */
 
-/**
- * Where the proxy lives, or undefined when this build has no upload support.
- *
- * Read through a narrow declaration rather than by pulling in Vite's whole
- * client type surface, since one string is all that is needed and the engine's
- * zero-dependency discipline is worth extending to types where it is cheap.
- */
-const ENDPOINT: string | undefined = (
+const CLIENT_ID: string | undefined = (
   import.meta as unknown as { env?: Record<string, string | undefined> }
-).env?.["VITE_UPLOAD_URL"];
+).env?.["VITE_IMGUR_CLIENT_ID"];
+
+const ENDPOINT = "https://api.imgur.com/3/image";
 
 export function uploadConfigured(): boolean {
-  return ENDPOINT !== undefined && ENDPOINT !== "";
+  return CLIENT_ID !== undefined && CLIENT_ID !== "";
 }
 
 /**
  * The longest edge we send. 1600 pixels is larger than any of these hosts
- * displays and small enough that a phone photo stops being four megabytes.
- *
- * Shrinking client-side is not a substitute for the server's limit, which is
- * still enforced. It is what stops the artist hitting that limit at all.
+ * displays and small enough that a phone photo stops being several megabytes.
  */
 const MAX_EDGE = 1600;
 const QUALITY = 0.85;
 
+/** Imgur's own ceiling for anonymous uploads. Checked here so the artist gets
+ * a sentence they can act on rather than a rejection from someone else's API. */
+const MAX_BYTES = 10 * 1024 * 1024;
+
 export interface UploadOutcome {
   readonly ok: boolean;
-  /** Present on success. */
   readonly url?: string;
-  /** Present on failure, written for the artist. */
   readonly message?: string;
 }
 
 /**
  * Re-encodes an image through a canvas, capping its longest edge.
  *
- * Named for what it does rather than for what it usually achieves. It normally
+ * Named for what it does rather than what it usually achieves. It normally
  * makes a file much smaller, because most uploads are phone photos. It can also
- * make one LARGER: re-encoding an already well-optimised PNG through a canvas
- * loses whatever compression tuning it had. Measured here at 3.4 kB in, 7.2 kB
- * out on a hand-optimised icon.
+ * make one larger: re-encoding an already well-optimised PNG through a canvas
+ * loses whatever compression tuning it had.
  *
- * That trade is accepted deliberately, because the metadata stripping below is
- * worth more than a few kilobytes, and because the server still enforces the
- * real ceiling either way.
- *
- * The reason it always re-encodes, even an image that needs no resizing: a
- * canvas only knows about pixels, so everything else in the file is discarded,
+ * It always re-encodes, even an image that needs no resizing, because a canvas
+ * only knows about pixels and therefore discards everything else in the file,
  * including any GPS coordinates a phone camera wrote into it. An artist
  * uploading a photo of their own work should not be publishing their home
  * address alongside it, and almost none of them would think to check.
- *
- * Re-encoding only oversized files would have meant the smallest images, which
- * are the most likely to be straight off a phone, kept their location data.
  */
 async function normalise(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -82,8 +74,9 @@ async function normalise(file: File): Promise<Blob> {
     if (context === null) throw new Error("no 2d context");
     context.drawImage(bitmap, 0, 0, width, height);
 
-    // PNG for anything with transparency, JPEG otherwise. Guessing wrong on a
-    // transparent image produces a black background, which looks like damage.
+    // PNG for anything that may carry transparency, JPEG otherwise. Guessing
+    // wrong on a transparent image produces a black background, which looks
+    // like damage rather than a compression choice.
     const type = file.type === "image/png" || file.type === "image/webp" ? "image/png" : "image/jpeg";
 
     const blob = await new Promise<Blob | null>((resolve) => {
@@ -97,14 +90,14 @@ async function normalise(file: File): Promise<Blob> {
 }
 
 /**
- * Uploads a file and returns its address.
+ * Uploads to Imgur and returns the address of the image.
  *
- * Never throws. Every failure is an outcome with a message an artist can act on,
- * for the same reason the validator never throws: a refused upload is an ordinary
- * event, not an exceptional one.
+ * Never throws. Every failure is an outcome with a message an artist can act
+ * on, because a refused upload is an ordinary event rather than an exceptional
+ * one, and the alternative is always available: paste an address instead.
  */
 export async function uploadImage(file: File): Promise<UploadOutcome> {
-  if (ENDPOINT === undefined || ENDPOINT === "") {
+  if (CLIENT_ID === undefined || CLIENT_ID === "") {
     return { ok: false, message: "This version cannot upload images. Paste a web address instead." };
   }
 
@@ -118,34 +111,53 @@ export async function uploadImage(file: File): Promise<UploadOutcome> {
     };
   }
 
+  if (body.size > MAX_BYTES) {
+    return { ok: false, message: "That image is too large for Imgur, which accepts up to 10 MB." };
+  }
+
+  const form = new FormData();
+  form.set("image", body);
+  form.set("type", "file");
+
   try {
     const response = await fetch(ENDPOINT, {
       method: "POST",
-      body,
-      headers: { "content-type": body.type },
+      headers: { Authorization: `Client-ID ${CLIENT_ID}` },
+      body: form,
     });
 
-    if (!response.ok) {
-      // The proxy writes messages for artists, so its text is shown as given.
-      // Anything unparseable falls back to something honest rather than a code.
-      const stated = (await response.json().catch(() => null)) as { error?: string } | null;
+    const payload = (await response.json().catch(() => null)) as
+      | { data?: { link?: string; error?: unknown }; success?: boolean }
+      | null;
+
+    if (!response.ok || payload?.success !== true) {
+      // 429 is the one an artist can actually do something about, so it gets
+      // its own sentence rather than a generic failure.
+      if (response.status === 429) {
+        return {
+          ok: false,
+          message: "Imgur is rate limiting uploads right now. Wait a few minutes, or paste a web address instead.",
+        };
+      }
       return {
         ok: false,
-        message:
-          stated?.error ??
-          "The upload was refused. You can paste a web address instead, or try again shortly.",
+        message: "Imgur would not accept that image. You can paste a web address instead, or try again shortly.",
       };
     }
 
-    const result = (await response.json()) as { url?: string };
-    if (typeof result.url !== "string") {
+    const link = payload.data?.link;
+    if (typeof link !== "string" || link === "") {
       return { ok: false, message: "The upload finished but no address came back. Try again." };
     }
-    return { ok: true, url: result.url };
+
+    // Imgur answers with http on some accounts. The page will be served over
+    // https, and a mixed-content image is silently blocked by the browser, so
+    // the artist would see a working upload and a missing picture.
+    return { ok: true, url: link.replace(/^http:\/\//i, "https://") };
   } catch {
     return {
       ok: false,
-      message: "Could not reach the upload service. Check your connection, or paste a web address instead.",
+      message: "Could not reach Imgur. Check your connection, or paste a web address instead.",
     };
   }
 }

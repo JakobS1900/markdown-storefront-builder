@@ -22,7 +22,6 @@
   "include": [
     "engine/tests/**/*.ts",
     "app/tests/**/*.ts",
-    "proxy/tests/**/*.ts",
     "scripts/**/*.mjs",
     "vite.config.ts",
     "vitest.config.ts"

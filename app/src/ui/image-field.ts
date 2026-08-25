@@ -128,9 +128,9 @@ export function imageField(opts: {
   /**
    * The upload control, or nothing.
    *
-   * Absent entirely when this build has no proxy configured, rather than present
-   * and broken. Roadmap 3.1 shipped address entry first precisely so this could
-   * be optional.
+   * Absent entirely when this build has no Imgur Client-ID, rather than present
+   * and broken. Address entry shipped first precisely so this could be
+   * optional.
    */
   const uploader: Node[] = [];
   if (uploadConfigured()) {
@@ -142,7 +142,7 @@ export function imageField(opts: {
     }) as HTMLInputElement;
 
     const pick = button({
-      label: "Upload an image instead",
+      label: "Upload a picture from this device",
       onClick: () => picker.click(),
     });
 
@@ -151,8 +151,8 @@ export function imageField(opts: {
       if (file === undefined) return;
 
       paint("checking", false);
-      status.textContent = "Uploading your image.";
-      announce("Uploading your image.");
+      status.textContent = "Uploading to Imgur.";
+      announce("Uploading to Imgur.");
       pick.disabled = true;
 
       void uploadImage(file)
@@ -181,7 +181,7 @@ export function imageField(opts: {
     el("label", { for: id }, [opts.label]),
     el("p", { class: "hint", id: hintId }, [
       opts.hint ??
-        "Paste the address of an image already online. Your page links to it, so if it is deleted or moved, it stops showing.",
+        "Upload a picture, or paste the address of one already online. Your page links to the image, so if it is deleted or moved, it stops showing.",
     ]),
     input,
     ...uploader,

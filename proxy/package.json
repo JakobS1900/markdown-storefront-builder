@@ -1,7 +1,0 @@
-{
-  "name": "@mdsb/proxy",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "description": "The image upload proxy. Exists so the image host key never reaches a browser."
-}

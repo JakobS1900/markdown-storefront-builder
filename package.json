@@ -6,8 +6,7 @@
   "description": "Compiles a block document model into host-correct Markdown for people who do not know Markdown.",
   "workspaces": [
     "engine",
-    "app",
-    "proxy"
+    "app"
   ],
   "scripts": {
     "build": "tsc --build",
