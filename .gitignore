@@ -13,3 +13,11 @@ idea.txt
 
 # Local upload proxy scratch
 proxy/.dev-uploads/
+
+# Android build output and local toolchain paths
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json

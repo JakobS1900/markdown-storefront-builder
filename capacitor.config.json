@@ -1,0 +1,11 @@
+{
+  "appId": "com.rade.storefrontbuilder",
+  "appName": "Storefront Builder",
+  "webDir": "app/dist",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

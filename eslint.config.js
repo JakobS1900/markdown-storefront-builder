@@ -3,7 +3,16 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/coverage/**", "temp/**"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/coverage/**",
+      "temp/**",
+      // Capacitor generates the native bridge and copies our built assets in.
+      // Neither is ours to lint, and rewriting either would be undone by the
+      // next `cap sync`.
+      "android/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -69,25 +78,6 @@ export default tseslint.config(
         URL: "readonly",
         Promise: "readonly",
       },
-    },
-  },
-  {
-    // The proxy dev server is a Node script that also uses the Web platform's
-    // Request and Response, because that is what the handler it runs expects.
-    files: ["proxy/*.mjs"],
-    languageOptions: {
-      globals: {
-        console: "readonly",
-        process: "readonly",
-        URL: "readonly",
-        Buffer: "readonly",
-        Request: "readonly",
-        Response: "readonly",
-      },
-    },
-    rules: {
-      // It reports the port it is listening on, which is its whole interface.
-      "no-console": "off",
     },
   },
   {

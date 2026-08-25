@@ -43,11 +43,13 @@ jobs:
 
       - run: npm ci
 
-      # No VITE_UPLOAD_URL is set, so this build ships without uploads and the
-      # upload control is simply not offered. Address entry is the whole
-      # feature, exactly as roadmap 3.1 intended. Set the variable here once a
-      # proxy is deployed.
+      # Uploads need an Imgur Client-ID. It is a public identifier, not a
+      # secret, so it lives in repository variables rather than secrets. Without
+      # it the upload button is not shown and pasting an address is the whole
+      # feature, which is how the gallery was built in the first place.
       - run: npm run build:app
+        env:
+          VITE_IMGUR_CLIENT_ID: ${{ vars.IMGUR_CLIENT_ID }}
 
       - uses: actions/configure-pages@v5
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Storefront Builder</string>
+    <string name="title_activity_main">Storefront Builder</string>
+    <string name="package_name">com.rade.storefrontbuilder</string>
+    <string name="custom_url_scheme">com.rade.storefrontbuilder</string>
+</resources>

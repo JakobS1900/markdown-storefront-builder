@@ -82,10 +82,18 @@ broken on rentry, not because it was designed in. Everything else in the current
 section types renders the same on both, so the compatibility machinery is still
 mostly proved by synthetic hosts in the tests.
 
-**The image host hop has never run.** `proxy/src/worker.ts` is written from
-catbox.moe's documented API and has not been executed against it. Everything
-else in the proxy is tested, and the client upload path was verified end to end
-against a local instance. See `proxy/README.md`.
+**Uploading needs an Imgur Client-ID.** Register one at
+[api.imgur.com/oauth2/addclient](https://api.imgur.com/oauth2/addclient) as
+"Anonymous usage without user authorisation", then set `VITE_IMGUR_CLIENT_ID`.
+See `.env.example`.
+
+It is a public identifier and Imgur intends it to be sent from a browser, so it
+ships in the bundle. That is not a leak, and it is worth knowing what it does
+mean: anyone can copy it and spend the daily anonymous quota attached to it. If
+that happens, register a new one and rebuild.
+
+Without it the upload button is not shown and pasting an image address is the
+whole feature.
 
 ## Licence
 
