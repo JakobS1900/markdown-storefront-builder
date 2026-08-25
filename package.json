@@ -22,7 +22,7 @@
     "dev": "vite",
     "build:app": "vite build",
     "android:sync": "npm run build:app && cap sync android",
-    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:apk": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug",
     "android:open": "cap open android"
   },
   "devDependencies": {

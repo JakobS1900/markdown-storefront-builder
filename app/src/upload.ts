@@ -133,10 +133,19 @@ export async function uploadImage(file: File): Promise<UploadOutcome> {
     if (!response.ok || payload?.success !== true) {
       // 429 is the one an artist can actually do something about, so it gets
       // its own sentence rather than a generic failure.
+      //
+      // It cannot only mean rate limiting, though. Verified against the live
+      // API on 2026-08-25: an invalid or revoked Client-ID makes POST /3/image
+      // answer 429 "Too Many Requests", byte for byte the same as a genuine
+      // limit, while GET /3/credits answers 403 "Invalid client_id". The two
+      // cases are indistinguishable here, so the message must not promise that
+      // waiting fixes it. An artist whose build has a dead key would otherwise
+      // be told to be patient, forever, on every single upload.
       if (response.status === 429) {
         return {
           ok: false,
-          message: "Imgur is rate limiting uploads right now. Wait a few minutes, or paste a web address instead.",
+          message:
+            "Imgur would not take that upload just now. Usually that is a busy period and passes within a few minutes. If it keeps happening, this copy of the app may need a new Imgur key. Pasting a web address always works.",
         };
       }
       return {

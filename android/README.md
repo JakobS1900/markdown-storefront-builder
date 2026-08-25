@@ -46,10 +46,30 @@ with WebView 150, driven over adb. The whole loop an artist actually performs:
 So the IndexedDB question this section used to raise is answered: storage
 survives a cold start inside the WebView.
 
-**Still not verified**: the file picker, and therefore whether an image chosen
-on a phone is something `createImageBitmap` can read. That path needs an Imgur
-Client-ID at build time, and this build has none, so the upload control is not
-rendered at all and there was nothing to tap.
+The picture path was checked the same day, with a placeholder Client-ID set so
+the upload control would render:
+
+| Step | Evidence |
+|---|---|
+| Upload control appears once a Client-ID is set | "Upload a picture from this device", one `input[type=file]` |
+| The button opens the real Android picker | `com.android.documentsui/.picker.PickActivity` came to the foreground |
+| The picker hands back a file | Selecting a pushed test PNG returned control to the app and an upload was attempted |
+| `createImageBitmap` reads what the WebView is given | PNG 512x512 decoded and re-encoded; a JPEG round tripped; four garbage bytes rejected as `InvalidStateError` rather than hanging |
+| The request reaches Imgur | A real HTTP response came back, so the failure was authentication and nothing before it |
+
+**Still not verified**: one successful upload, end to end, with a real
+Client-ID. Everything up to and including the HTTP round trip is proved; only
+the credential is missing.
+
+Worth knowing before you debug that: an invalid Client-ID makes
+`POST /3/image` answer **429 Too Many Requests**, identical to a genuine rate
+limit, while `GET /3/credits` answers 403 "Invalid client_id". So a bad key
+looks exactly like a busy period. The upload message is worded to allow for
+both, because the app cannot tell them apart.
+
+Note also that re-encoding can make a file bigger: the 3414 byte test PNG came
+out at 7235 bytes. That is the documented cost of stripping EXIF by pushing
+every image through a canvas, and it is measured here rather than assumed.
 
 ### The trap, if you test this yourself
 

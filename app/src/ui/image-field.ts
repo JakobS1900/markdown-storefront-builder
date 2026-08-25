@@ -134,11 +134,23 @@ export function imageField(opts: {
    */
   const uploader: Node[] = [];
   if (uploadConfigured()) {
+    // Hidden from assistive technology and from the tab order, deliberately
+    // and as a pair. The button below is the real control: it is what has a
+    // name, what takes focus, and what a screen reader announces. This input
+    // exists only because a file dialog cannot be opened any other way.
+    //
+    // Leaving it exposed would offer two controls for one action, the second
+    // of them unlabelled. Hiding it from the a11y tree while leaving it
+    // tabbable would be worse still: focus would land on something a screen
+    // reader refuses to describe. So both attributes go on together, and the
+    // a11y gate enforces that pairing rather than trusting this comment.
     const picker = el("input", {
       id: `${id}-file`,
       type: "file",
       accept: "image/png,image/jpeg,image/gif,image/webp",
       class: "sr-only",
+      "aria-hidden": "true",
+      tabindex: "-1",
     }) as HTMLInputElement;
 
     const pick = button({

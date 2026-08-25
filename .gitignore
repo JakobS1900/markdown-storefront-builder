@@ -14,6 +14,14 @@ idea.txt
 # Local upload proxy scratch
 proxy/.dev-uploads/
 
+# Local environment. The Imgur Client-ID inside is a public identifier rather
+# than a secret, so this is tidiness and not a security boundary. It is here
+# because .env.example tells you to copy it to .env.local, and a file created
+# by following the instructions should not then show up in git status.
+.env
+.env.local
+.env.*.local
+
 # Android build output and local toolchain paths
 android/app/build/
 android/build/

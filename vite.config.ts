@@ -39,6 +39,12 @@ function stampServiceWorker(): Plugin {
  */
 export default defineConfig({
   root: fileURLToPath(new URL("./app", import.meta.url)),
+  // Env files live beside .env.example at the project root, not under app/.
+  // Without this they would have to sit in app/, which is not where
+  // .env.example tells you to put them. Getting that wrong is silent: the
+  // variable is simply undefined, so the upload button is not rendered, which
+  // looks exactly like not having configured one at all.
+  envDir: fileURLToPath(new URL(".", import.meta.url)),
   base: "./",
   plugins: [stampServiceWorker()],
   resolve: {

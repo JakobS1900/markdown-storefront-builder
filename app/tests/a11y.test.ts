@@ -150,9 +150,33 @@ describe("every control can be named and reached", () => {
     renderShell(root);
 
     for (const control of document.querySelectorAll("input, textarea, select")) {
+      // A control hidden from assistive technology is exempt, because it is
+      // not a control as far as a screen reader is concerned. The exemption is
+      // not free: the test below requires anything claiming it to also be out
+      // of the tab order, so this cannot be used to smuggle a real control
+      // past the label rule.
+      if (control.getAttribute("aria-hidden") === "true") continue;
       const id = control.getAttribute("id");
       expect(id).toBeTruthy();
       expect(document.querySelector(`label[for="${id}"]`)).not.toBeNull();
+    }
+  });
+
+  it("keeps anything hidden from screen readers out of the tab order too", () => {
+    const root = mount();
+    addBlock(blankBlock("profile"));
+    selectBlock(getState().doc.blocks[0]?.id);
+    renderShell(root);
+
+    // The pairing that makes the exemption above safe. Focus landing on an
+    // element a screen reader refuses to describe is a dead end: the user is
+    // somewhere with no name, no role, and no way to know what happened.
+    const hidden = document.querySelectorAll(
+      "[aria-hidden='true']:is(button, input, textarea, select, a[href])",
+    );
+    expect(hidden.length).toBeGreaterThan(0);
+    for (const node of hidden) {
+      expect(node.getAttribute("tabindex")).toBe("-1");
     }
   });
 
@@ -174,7 +198,11 @@ describe("every control can be named and reached", () => {
 
     for (const node of document.querySelectorAll("button, input, textarea, select, a[href]")) {
       // A positive tabindex reorders the tab sequence and breaks it for
-      // everyone. A negative one on a control removes it from the sequence.
+      // everyone. A negative one removes the element from the sequence, which
+      // is only acceptable when it is hidden from assistive technology as
+      // well, so that nothing is offering itself to one kind of user and not
+      // the other.
+      if (node.getAttribute("aria-hidden") === "true") continue;
       const tabindex = node.getAttribute("tabindex");
       if (tabindex !== null) expect(Number(tabindex)).toBe(0);
     }
