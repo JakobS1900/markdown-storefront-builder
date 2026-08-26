@@ -82,18 +82,35 @@ broken on rentry, not because it was designed in. Everything else in the current
 section types renders the same on both, so the compatibility machinery is still
 mostly proved by synthetic hosts in the tests.
 
-**Uploading needs an Imgur Client-ID.** Register one at
-[api.imgur.com/oauth2/addclient](https://api.imgur.com/oauth2/addclient) as
-"Anonymous usage without user authorisation", then set `VITE_IMGUR_CLIENT_ID`.
-See `.env.example`.
+**The published build has no image uploading, on purpose.** There is no upload
+button. The image field takes a web address, and tells an artist to upload at
+imgur.com, which needs no account, and paste the address it gives back. That is
+the flow people already use, and it is verified on a phone.
 
-It is a public identifier and Imgur intends it to be sent from a browser, so it
-ships in the bundle. That is not a leak, and it is worth knowing what it does
-mean: anyone can copy it and spend the daily anonymous quota attached to it. If
-that happens, register a new one and rebuild.
+The alternative was one Imgur Client-ID baked into the bundle and shared by
+every artist. It is a better experience, and it was rejected for a specific
+reason rather than a vague one. A Client-ID identifies the application, not a
+user, so anonymous uploads made with it belong to no account and never appear
+in the owner's gallery. But the registration is the owner's, and so is the
+responsibility: one artist uploading something against Imgur's rules gets the
+**application** banned, and uploads then break for every user at once, with no
+warning. The daily quota is shared the same way.
 
-Without it the upload button is not shown and pasting an image address is the
-whole feature.
+The obvious fix, asking each artist to register their own, is worse than the
+problem. Registering an API application is harder than learning the Markdown
+this whole project exists to remove, so that path fails Principle VI before it
+starts.
+
+The upload code is still there and still tested, for anyone building their own
+copy. Set `VITE_IMGUR_CLIENT_ID` and the button appears. See `.env.example`.
+Be aware of what you are taking on: the key is a public identifier that ships
+in the bundle, anyone can copy it out and spend your quota, and the answer to
+that is to register a new one and rebuild.
+
+One trap worth knowing if you do. An invalid or revoked Client-ID makes
+`POST /3/image` answer 429 "Too Many Requests", which is indistinguishable from
+a real rate limit, while `GET /3/credits` answers 403 "Invalid client_id". A
+dead key looks exactly like a busy afternoon.
 
 ## Licence
 

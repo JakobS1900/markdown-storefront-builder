@@ -12,7 +12,26 @@
  * actually met, and that nothing depends on a pointing device.
  */
 import axe from "axe-core";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * Whether this build has an Imgur Client-ID is mocked rather than inherited.
+ *
+ * It decides whether the upload control exists at all, so it decides what this
+ * gate is even looking at. Left to the environment it came from .env.local,
+ * which meant CI and a contributor's machine checked different DOMs, and an
+ * unlabelled file input sat in the shipped build for weeks because the gate
+ * that would have caught it never rendered the control.
+ *
+ * Default true, so the assertions below see the larger of the two UIs. The
+ * build that actually ships has no key, and axe is run against that shape too.
+ */
+const mocks = vi.hoisted(() => ({ uploads: true }));
+
+vi.mock("../src/upload.js", () => ({
+  uploadConfigured: () => mocks.uploads,
+  uploadImage: vi.fn(),
+}));
 
 import { addBlock, getState, init, selectBlock, setSurface } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
@@ -75,6 +94,24 @@ describe("the shell is accessible", () => {
     selectBlock(getState().doc.blocks[0]?.id);
     renderShell(root);
     expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations in the build that actually ships, which has no uploading", async () => {
+    // The published site carries no Imgur Client-ID, so this is the DOM real
+    // artists meet. Checking only the richer build would leave the common one
+    // unexamined, which is how the upload control went unchecked to begin with.
+    mocks.uploads = false;
+    try {
+      const root = mount();
+      addBlock(blankBlock("profile"));
+      addBlock(blankBlock("gallery"));
+      selectBlock(getState().doc.blocks[0]?.id);
+      renderShell(root);
+      expect((await violations()).map((v) => v.id)).toEqual([]);
+      expect(document.querySelector("input[type=file]")).toBeNull();
+    } finally {
+      mocks.uploads = true;
+    }
   });
 });
 

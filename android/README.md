@@ -57,9 +57,15 @@ the upload control would render:
 | `createImageBitmap` reads what the WebView is given | PNG 512x512 decoded and re-encoded; a JPEG round tripped; four garbage bytes rejected as `InvalidStateError` rather than hanging |
 | The request reaches Imgur | A real HTTP response came back, so the failure was authentication and nothing before it |
 
-**Still not verified**: one successful upload, end to end, with a real
-Client-ID. Everything up to and including the HTTP round trip is proved; only
-the credential is missing.
+**Not verified, and now deliberately out of scope**: one successful upload,
+end to end, with a real Client-ID. Everything up to and including the HTTP
+round trip is proved; only the credential was ever missing.
+
+It stays unproved because the decision went the other way. The shipped build
+has no Client-ID and therefore no upload button at all, so this is not a gap in
+anything that reaches an artist. See the README for why a single shared key was
+rejected. Anyone building their own copy with a key can finish this last step
+in about a minute, and everything it depends on is already checked above.
 
 Worth knowing before you debug that: an invalid Client-ID makes
 `POST /3/image` answer **429 Too Many Requests**, identical to a genuine rate

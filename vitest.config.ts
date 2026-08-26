@@ -10,16 +10,15 @@ export default defineConfig({
   },
   test: {
     include: ["engine/tests/**/*.test.ts", "app/tests/**/*.test.ts"],
-    // Pinned so the upload control is always built, and always tested.
+    // No VITE_IMGUR_CLIENT_ID pin here, deliberately, and it is worth saying
+    // why so nobody adds one back.
     //
-    // Without this the tests inherit whatever Client-ID the machine happens to
-    // have: a contributor with a .env.local exercises the upload path, CI does
-    // not, and the same commit is checked differently in the two places. That
-    // is not hypothetical. It is how an unlabelled file input survived the a11y
-    // gate, which cannot fail a control it never renders.
+    // Pinning it in this file does not work: a .env.local takes precedence
+    // over `test.env`, so the value silently depends on the machine anyway.
+    // Emptying .env.local turned the a11y gate's upload assertions back off
+    // without failing anything, which is the same class of bug twice.
     //
-    // A fixed fake value is correct here. No test performs a real upload, and
-    // the only thing this switches on is whether the control exists.
-    env: { VITE_IMGUR_CLIENT_ID: "test-client-id-not-used-for-real-uploads" },
+    // Tests that care now mock ../src/upload.js and state which build they are
+    // checking. That is deterministic everywhere and readable in the test.
   },
 });

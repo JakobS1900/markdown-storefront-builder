@@ -29,6 +29,35 @@ const MESSAGE: Record<Status, string> = {
   broken: "This address did not load an image. It may have been moved or deleted, or the site may block other pages from showing it.",
 };
 
+/**
+ * The consequence of an image living somewhere else, which is true in every
+ * build and is the thing most likely to bite an artist months later.
+ */
+const LINK_CAVEAT =
+  "Your page links to the image, so if it is deleted or moved, it stops showing.";
+
+/**
+ * The default hint, which has to describe the controls that are actually there.
+ *
+ * Without a Client-ID there is no upload button, and the public deploy ships
+ * without one deliberately: a single shared key means one artist's upload can
+ * get the application banned for everybody, and asking an artist to register
+ * their own is harder than the Markdown this app exists to remove.
+ *
+ * So the keyless build is the normal build, and it used to tell every artist
+ * to "upload a picture" while showing them nowhere to do it. Telling someone
+ * to press a control that does not exist is worse than saying nothing at all.
+ *
+ * imgur.com is named rather than linked, following the export surface, which
+ * spells out "Open rentry.co in a new tab" instead of offering an anchor. A
+ * real link here would navigate the Android WebView away from the app itself.
+ */
+function defaultHint(): string {
+  return uploadConfigured()
+    ? `Upload a picture, or paste the address of one already online. ${LINK_CAVEAT}`
+    : `Paste the web address of a picture that is already online. If yours is not online yet, upload it at imgur.com, which needs no account, and copy the address it gives you. ${LINK_CAVEAT}`;
+}
+
 let counter = 0;
 
 export function imageField(opts: {
@@ -191,10 +220,7 @@ export function imageField(opts: {
 
   return el("div", { class: "field image-field" }, [
     el("label", { for: id }, [opts.label]),
-    el("p", { class: "hint", id: hintId }, [
-      opts.hint ??
-        "Upload a picture, or paste the address of one already online. Your page links to the image, so if it is deleted or moved, it stops showing.",
-    ]),
+    el("p", { class: "hint", id: hintId }, [opts.hint ?? defaultHint()]),
     input,
     ...uploader,
     status,

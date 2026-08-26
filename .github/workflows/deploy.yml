@@ -43,10 +43,19 @@ jobs:
 
       - run: npm ci
 
-      # Uploads need an Imgur Client-ID. It is a public identifier, not a
-      # secret, so it lives in repository variables rather than secrets. Without
-      # it the upload button is not shown and pasting an address is the whole
-      # feature, which is how the gallery was built in the first place.
+      # Expected to be unset, and the deploy is correct that way.
+      #
+      # IMGUR_CLIENT_ID is deliberately not configured on this repository, so
+      # this resolves to empty, no upload button is built, and the image field
+      # asks for a web address instead. One shared key would make a single
+      # artist's upload able to get the whole application banned, taking
+      # uploads down for every user at once. The README has the full reasoning.
+      #
+      # Setting the repository variable turns uploading on for everybody who
+      # uses the published site. That is a deliberate choice with a real cost,
+      # not a configuration step someone should complete because it looks
+      # unfinished. It is a variable rather than a secret because a Client-ID
+      # is a public identifier that ships in the bundle either way.
       - run: npm run build:app
         env:
           VITE_IMGUR_CLIENT_ID: ${{ vars.IMGUR_CLIENT_ID }}
