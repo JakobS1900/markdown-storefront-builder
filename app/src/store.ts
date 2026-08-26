@@ -91,6 +91,67 @@ export function subscribe(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+/**
+ * Repainting is deferred while the shape of the page is holding still.
+ *
+ * The app rebuilds its entire interface whenever state changes, and a keystroke
+ * is a state change. On a Moto G7 one rebuild measured 37ms, and a keystroke
+ * caused two of them, because saving reports "Saved" and that is a state change
+ * too. So every character cost roughly 75ms of blocked main thread, and
+ * anything typed faster than that was dropped by the WebView outright. Typing
+ * "Ari" on the device produced "Ar".
+ *
+ * Nothing needs repainting while someone types. The field already shows what
+ * they typed; the DOM is ahead of the state, not behind it. What does need to
+ * catch up is peripheral: the collapsed summary of a section, the saved
+ * indicator, the preview on another tab. None of that is worth a rebuild per
+ * character, and all of it can wait for the typist to pause.
+ *
+ * A change that alters the shape of the page is different. Adding a section or
+ * an image row has to appear at once, or a button press feels ignored.
+ */
+const QUIET_MS = 200;
+let pendingRepaint: ReturnType<typeof setTimeout> | undefined;
+
+function repaint(): void {
+  if (pendingRepaint !== undefined) {
+    clearTimeout(pendingRepaint);
+    pendingRepaint = undefined;
+  }
+  for (const listener of listeners) listener(state);
+}
+
+function repaintSoon(): void {
+  if (pendingRepaint !== undefined) clearTimeout(pendingRepaint);
+  pendingRepaint = setTimeout(() => {
+    pendingRepaint = undefined;
+    repaint();
+  }, QUIET_MS);
+}
+
+/**
+ * What the interface is built out of, ignoring anything a person types.
+ *
+ * Two documents with the same signature produce the same controls in the same
+ * order, so only their contents differ and the existing DOM is still correct.
+ * Ids, kinds, and row counts are included because each one changes what is on
+ * screen. The target is included because it changes which warnings appear.
+ */
+function shapeOf(doc: Document): string {
+  const blocks = doc.blocks
+    .map((block) => {
+      const rows =
+        "items" in block && Array.isArray(block.items)
+          ? block.items.length
+          : "tiers" in block && Array.isArray(block.tiers)
+            ? block.tiers.length
+            : 0;
+      return `${block.id}:${block.kind}:${String(rows)}`;
+    })
+    .join("|");
+  return `${doc.target}#${blocks}`;
+}
+
 function set(next: Patch): void {
   // Spreading the patch would widen every field to include undefined, because
   // a patch is allowed to clear one. Copying key by key keeps State exact:
@@ -101,7 +162,18 @@ function set(next: Patch): void {
     else merged[key] = value;
   }
   state = merged as unknown as State;
-  for (const listener of listeners) listener(state);
+  repaint();
+}
+
+/** As `set`, but lets the current paint stand until typing stops. */
+function setQuietly(next: Patch): void {
+  const merged: Record<string, unknown> = { ...state };
+  for (const [key, value] of Object.entries(next)) {
+    if (value === undefined) delete merged[key];
+    else merged[key] = value;
+  }
+  state = merged as unknown as State;
+  repaintSoon();
 }
 
 export function setSurface(surface: Surface): void {
@@ -123,7 +195,11 @@ export function setTarget(target: string): void {
  * to storage. That is what stops the saved copy and the edited copy diverging.
  */
 export function update(doc: Document): void {
-  set({ doc });
+  // Only the contents changed, so what is on screen is still the right set of
+  // controls and the one being typed into is already correct. Anything that
+  // adds, removes, reorders, or retargets repaints at once.
+  if (shapeOf(doc) === shapeOf(state.doc)) setQuietly({ doc });
+  else set({ doc });
   void save();
 }
 
@@ -174,7 +250,10 @@ async function save(): Promise<void> {
       title: state.doc.title === undefined || state.doc.title === "" ? "Untitled page" : state.doc.title,
       updatedAt: Date.now(),
     });
-    set({ status: { kind: "saved" } });
+    // Quietly: this fires on every keystroke and only changes one word in the
+    // status line. Repainting the whole interface to announce it was half of
+    // the cost of typing a character.
+    setQuietly({ status: { kind: "saved" } });
   } catch (error) {
     set({
       status: {

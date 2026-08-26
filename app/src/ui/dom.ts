@@ -74,7 +74,37 @@ export function button(opts: {
   return node;
 }
 
+/**
+ * Ids for form controls, numbered per render rather than for the life of the
+ * page.
+ *
+ * They used to climb forever, so every repaint renamed every field: `f7`
+ * became `f19` became `f31`. Within one render that is invisible, because the
+ * label and its control are minted together and agree, which is why the
+ * accessibility gate never objected. Across a render it means no control can
+ * be followed. The app rebuilds its whole DOM on every keystroke, so after the
+ * first character the field being typed into no longer exists and nothing can
+ * work out where it went. Focus was lost, and on a phone the keyboard closed
+ * with it: a person typed one letter, reopened the field, and typed the next.
+ *
+ * Resetting per render makes an id a function of the shape of the page, so the
+ * same field keeps the same id for as long as the shape holds still, which is
+ * exactly the case that matters. Typing changes values, never structure.
+ *
+ * The shape can change, and then an id can legitimately refer to a different
+ * field. Restoring focus therefore checks the label as well as the id, and
+ * declines rather than guessing.
+ */
 let fieldCounter = 0;
+
+export function resetFieldIds(): void {
+  fieldCounter = 0;
+}
+
+export function nextFieldId(): string {
+  fieldCounter += 1;
+  return `f${fieldCounter}`;
+}
 
 /**
  * A labelled text field.
@@ -91,8 +121,7 @@ export function field(opts: {
   hint?: string;
   inputMode?: string;
 }): HTMLElement {
-  fieldCounter += 1;
-  const id = `f${fieldCounter}`;
+  const id = nextFieldId();
   const hintId = `${id}-hint`;
 
   const control = opts.multiline === true
@@ -123,8 +152,7 @@ export function select(opts: {
   options: readonly { value: string; label: string }[];
   onChange: (value: string) => void;
 }): HTMLElement {
-  fieldCounter += 1;
-  const id = `f${fieldCounter}`;
+  const id = nextFieldId();
 
   const control = el(
     "select",

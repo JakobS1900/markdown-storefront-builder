@@ -17,7 +17,7 @@
 import { isSafeUrl } from "@mdsb/engine";
 
 import { uploadConfigured, uploadImage } from "../upload.js";
-import { announce, button, el } from "./dom.js";
+import { announce, button, el, nextFieldId } from "./dom.js";
 
 type Status = "empty" | "unsafe" | "checking" | "ok" | "broken";
 
@@ -67,16 +67,13 @@ function guidance(): string {
     : `If it is not online yet, upload it at imgur.com, which needs no account, and copy the address it gives you. ${LINK_CAVEAT}`;
 }
 
-let counter = 0;
-
 export function imageField(opts: {
   label: string;
   value: string;
   hint?: string;
   onInput: (value: string) => void;
 }): HTMLElement {
-  counter += 1;
-  const id = `img${counter}`;
+  const id = nextFieldId();
   const statusId = `${id}-status`;
   const hintId = `${id}-hint`;
 

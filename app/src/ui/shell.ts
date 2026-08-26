@@ -9,7 +9,7 @@
 import { TARGETS } from "@mdsb/engine";
 
 import { getState, setSurface, setTarget, type Surface } from "../store.js";
-import { announce, button, el, render, select } from "./dom.js";
+import { announce, button, el, render, resetFieldIds, select } from "./dom.js";
 import { buildSurface } from "./build.js";
 import { exportSurface } from "./export.js";
 import { previewSurface } from "./preview.js";
@@ -64,8 +64,74 @@ function statusLine(): HTMLElement {
   ]);
 }
 
+/**
+ * Where the caret was, so a repaint can put it back.
+ *
+ * The label is carried alongside the id because an id only identifies a field
+ * for as long as the page keeps its shape. Adding or removing a section
+ * renumbers everything after it, and restoring by id alone would then drop the
+ * caret into a different field, which is a worse failure than losing it: the
+ * next thing typed would silently edit the wrong thing.
+ */
+interface CaretPosition {
+  readonly id: string;
+  readonly label: string;
+  readonly start: number | null;
+  readonly end: number | null;
+}
+
+function labelFor(id: string): string {
+  return document.querySelector(`label[for="${id}"]`)?.textContent ?? "";
+}
+
+function captureCaret(): CaretPosition | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) return null;
+  if (active.id === "") return null;
+
+  // Selection is unavailable on some input types and throws rather than
+  // returning null. The field is still worth refocusing without it.
+  let start: number | null = null;
+  let end: number | null = null;
+  try {
+    start = active.selectionStart;
+    end = active.selectionEnd;
+  } catch {
+    start = null;
+    end = null;
+  }
+
+  return { id: active.id, label: labelFor(active.id), start, end };
+}
+
+function restoreCaret(caret: CaretPosition | null): void {
+  if (caret === null) return;
+
+  const next = document.getElementById(caret.id);
+  if (!(next instanceof HTMLInputElement || next instanceof HTMLTextAreaElement)) return;
+  // The id came back as a different field. Better to lose the caret than to
+  // start typing into something the artist is not looking at.
+  if (labelFor(caret.id) !== caret.label) return;
+  if (document.activeElement === next) return;
+
+  // preventScroll because a repaint should not also move the page. Without it
+  // the view jumps to the focused field on every keystroke.
+  next.focus({ preventScroll: true });
+  if (caret.start !== null && caret.end !== null) {
+    try {
+      next.setSelectionRange(caret.start, caret.end);
+    } catch {
+      // Same input types as above. Focus alone is the useful part.
+    }
+  }
+}
+
 export function renderShell(root: HTMLElement): void {
   const state = getState();
+  // Taken before anything is rebuilt, because the node holding the caret is
+  // about to be thrown away.
+  const caret = captureCaret();
+  resetFieldIds();
 
   const tabs = el(
     "nav",
@@ -102,4 +168,6 @@ export function renderShell(root: HTMLElement): void {
     el("main", {}, [panel]),
     tabs,
   );
+
+  restoreCaret(caret);
 }
