@@ -24,9 +24,14 @@ vi.mock("../src/upload.js", () => ({
 
 const { imageField } = await import("../src/ui/image-field.js");
 
-function render(): HTMLElement {
+function render(hint?: string): HTMLElement {
   document.body.innerHTML = '<div id="live-region" class="sr-only"></div>';
-  const node = imageField({ label: "Profile picture", value: "", onInput: () => {} });
+  const node = imageField({
+    label: "Profile picture",
+    value: "",
+    ...(hint === undefined ? {} : { hint }),
+    onInput: () => {},
+  });
   document.body.append(node);
   return node;
 }
@@ -64,6 +69,16 @@ describe("the image field without an upload key", () => {
   it("still warns that the page only links to the image", () => {
     expect(hint(render())).toContain("stops showing");
   });
+
+  it("tells an artist where an address comes from even when the caller wrote its own hint", () => {
+    // Every real call site passes a hint saying what its field is for, and not
+    // one of them said where to get an address. The guidance is appended
+    // rather than replaced so a specific field cannot silently lose it.
+    const text = hint(render("An example of this option, if you have one online."));
+    expect(text).toContain("An example of this option");
+    expect(text).toContain("imgur.com");
+    expect(text).toContain("stops showing");
+  });
 });
 
 describe("the image field with an upload key", () => {
@@ -79,7 +94,11 @@ describe("the image field with an upload key", () => {
   });
 
   it("offers the upload in the hint, because now there is one to offer", () => {
-    expect(hint(render())).toMatch(/^Upload a picture/);
+    expect(hint(render()).toLowerCase()).toContain("upload a picture from this device");
+  });
+
+  it("does not send the artist to imgur.com when there is a button right there", () => {
+    expect(hint(render())).not.toContain("imgur.com");
   });
 
   it("still warns that the page only links to the image", () => {
