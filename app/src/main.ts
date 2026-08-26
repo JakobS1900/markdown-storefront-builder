@@ -7,14 +7,14 @@
  */
 import { listPages, init, openPage, subscribe } from "./store.js";
 import { storageAvailable } from "./db.js";
-import { registerServiceWorker } from "./register-sw.js";
+import { setUpServiceWorker } from "./register-sw.js";
 import { renderShell } from "./ui/shell.js";
 
 async function start(): Promise<void> {
   const root = document.getElementById("app");
   if (root === null) throw new Error("missing #app");
 
-  registerServiceWorker();
+  setUpServiceWorker();
 
   const storageOk = await storageAvailable();
   init(storageOk);

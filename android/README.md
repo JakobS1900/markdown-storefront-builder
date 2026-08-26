@@ -77,6 +77,37 @@ Note also that re-encoding can make a file bigger: the 3414 byte test PNG came
 out at 7235 bytes. That is the documented cost of stripping EXIF by pushing
 every image through a canvas, and it is measured here rather than assumed.
 
+### No service worker in here
+
+The web build registers one. This one tears it down, and the difference is
+deliberate.
+
+Inside the APK every asset is already on local disk, so there is no network to
+be offline from and nothing a cache can save. What the worker did instead was
+shadow the APK's own files with an older copy of itself, so a freshly installed
+update served the previous build until the app was launched a second time.
+Observed on the Moto G7: an APK containing `index-YhjZ9Qvr.js` served
+`index-DLEgKBr_.js`, the bundle from the build before it.
+
+Declining to register is not enough on its own, because an app that has already
+been installed carries a live registration and a populated cache which both
+outlive the update. So the native path actively unregisters and clears. The
+handover takes three launches once, and never again:
+
+| Launch | Bundle | Registrations | Caches | Controller |
+|---|---|---|---|---|
+| 1, old code still cached | old | 1 | none | |
+| 2, new code runs the teardown | new | 0 | none | still controlled |
+| 3 | new | 0 | none | none |
+
+The page that runs the teardown keeps its existing controller until it next
+loads, which is why launch 2 is still controlled. After that the APK's own
+files are authoritative and an update appears on the first launch.
+
+Detection asks Capacitor (`isNativePlatform()`), not the address. The app is
+served from `https://localhost` in the WebView, which is indistinguishable from
+a developer running the site on localhost in a browser.
+
 ### The trap, if you test this yourself
 
 Android freezes a WebView whose screen is off. While the phone was dozing,
