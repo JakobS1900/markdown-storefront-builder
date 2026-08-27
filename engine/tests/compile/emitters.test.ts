@@ -168,6 +168,60 @@ describe("menu", () => {
     expect(md({ id: "m", kind: "menu", tiers: [] })).toBe("");
   });
 
+  /**
+   * An item with neither a name nor a price is not an item.
+   *
+   * Pressing "Add another item" and then leaving it produced a row of empty
+   * cells in the pasted page: `|  |  |  |`. A client reading the page sees a
+   * gap in the price list and no way to know what it was meant to be. Found by
+   * pasting a real export off the phone.
+   */
+  it("leaves out an item that has neither a name nor a price, and says so", () => {
+    const out = compile(
+      page({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }, { name: "", price: "" }] }),
+      "portable",
+    );
+    expect(out.markdown).toContain("| Bust | 45 |");
+    expect(out.markdown).not.toMatch(/^\|\s+\|\s+\|/m);
+
+    const warning = out.diagnostics.find((d) => d.code === "item_omitted");
+    expect(warning?.blockId).toBe("m");
+    expect(warning?.severity).toBe("warning");
+  });
+
+  it("keeps an item that has only a price, and one that has only a name", () => {
+    const out = md({
+      id: "m",
+      kind: "menu",
+      tiers: [{ name: "Sketch", price: "" }, { name: "", price: "DM me" }],
+    });
+    expect(out).toContain("| Sketch |  |");
+    expect(out).toContain("|  | DM me |");
+  });
+
+  it("drops the empty item from the list form too, where there are no tables", () => {
+    const out = compile(
+      page({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }, { name: "", price: "" }] }),
+      NO_TABLES,
+    );
+    expect(out.markdown).toContain("**Bust**: 45");
+    expect(out.markdown).not.toContain("****");
+  });
+
+  it("emits nothing at all when every item is empty", () => {
+    const out = compile(page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }] }), "portable");
+    expect(out.markdown).toBe("");
+    expect(out.diagnostics.some((d) => d.code === "item_omitted")).toBe(true);
+  });
+
+  it("warns once however many empty items there are", () => {
+    const out = compile(
+      page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }, { name: "", price: "" }] }),
+      "portable",
+    );
+    expect(out.diagnostics.filter((d) => d.code === "item_omitted")).toHaveLength(1);
+  });
+
   it("emits add ons as a list", () => {
     const out = md({
       id: "m",

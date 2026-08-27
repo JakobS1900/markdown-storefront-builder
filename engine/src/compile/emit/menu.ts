@@ -22,9 +22,33 @@ type Tier = Menu["tiers"][number];
 export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): string {
   const parts: (string | undefined)[] = [sectionHeading(block.heading, target)];
 
+  /**
+   * An item with neither a name nor a price is not an item.
+   *
+   * Adding one and leaving it produced a row of empty cells in the pasted page,
+   * `|  |  |  |`, which a client reads as a gap in the price list with no way
+   * to tell what belonged there. Either half is enough to keep the row: "Sketch"
+   * with the price still to come is a real line, and so is a blank name against
+   * "DM me". Only having neither means nothing was entered.
+   *
+   * Dropped rather than emitted, and warned about rather than dropped in
+   * silence, which is the rule the refused addresses below already follow.
+   */
+  const tiers = block.tiers.filter((t) => t.name.trim() !== "" || t.price.trim() !== "");
+
+  if (tiers.length !== block.tiers.length) {
+    sink.add({
+      code: "item_omitted",
+      severity: "warning",
+      blockId: block.id,
+      message:
+        "One of your items has no name and no price, so it has been left out. Fill in either one and it will appear.",
+    });
+  }
+
   // Holistic review HB-6 established that a refused address must never be
   // dropped in silence, wherever it appears. This is the third such place.
-  for (const t of block.tiers) {
+  for (const t of tiers) {
     if (t.imageUrl !== undefined && t.imageUrl !== "" && !isSafeUrl(t.imageUrl)) {
       sink.add({
         code: "link_scheme_refused",
@@ -36,11 +60,11 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
     }
   }
 
-  if (block.tiers.length > 0) {
+  if (tiers.length > 0) {
     parts.push(
       target.capabilities.tables
-        ? tierTable(block.tiers, block.currency)
-        : tierList(block.tiers, block.currency, block.id, target, sink),
+        ? tierTable(tiers, block.currency)
+        : tierList(tiers, block.currency, block.id, target, sink),
     );
   }
 
