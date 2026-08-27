@@ -54,6 +54,14 @@ export function button(opts: {
   glyph?: string;
   variant?: "primary" | "ghost" | "danger";
   pressed?: boolean;
+  /**
+   * For a button that shows and hides a region, rather than one that is on or
+   * off. The two are announced differently and are not interchangeable:
+   * "expanded" tells someone the thing they are looking for is now on screen,
+   * "pressed" tells them a setting changed. Pass `controls` with it, naming the
+   * region, or the announcement has nothing to point at.
+   */
+  expanded?: boolean;
   disabled?: boolean;
   controls?: string;
 }): HTMLButtonElement {
@@ -63,6 +71,7 @@ export function button(opts: {
       type: "button",
       class: `btn ${opts.variant ?? "ghost"}${opts.glyph !== undefined ? " icon" : ""}`,
       "aria-pressed": opts.pressed === undefined ? undefined : String(opts.pressed),
+      "aria-expanded": opts.expanded === undefined ? undefined : String(opts.expanded),
       "aria-controls": opts.controls,
       "aria-label": opts.glyph !== undefined ? opts.label : undefined,
       disabled: opts.disabled,

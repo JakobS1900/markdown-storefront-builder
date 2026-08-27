@@ -56,6 +56,8 @@ export function buildSurface(container: HTMLElement): void {
       const selected = state.selectedBlockId === block.id;
       const kind = KIND_LABEL[block.kind];
       const asking = state.pendingDeleteId === block.id;
+      // Prefixed because a block id is a UUID and may start with a digit.
+      const editorId = `editor-${block.id}`;
 
       // While a section is being asked about, its row holds the question and
       // nothing else. The move controls sit either side of the delete control
@@ -84,10 +86,19 @@ export function buildSurface(container: HTMLElement): void {
             ]),
           ])
         : el("div", { class: "block-row" }, [
+            // It says which way it will go. It used to read "Edit" whether the
+            // section was open or shut, so the button offering to edit was the
+            // one that took the editor away, and the only sign it was already
+            // open was a border colour.
             button({
-              label: `Edit ${kind}: ${summarise(block)}`,
+              label: `${selected ? "Close" : "Open"} ${kind}: ${summarise(block)}`,
               variant: "ghost",
-              pressed: selected,
+              expanded: selected,
+              // Only while the region is there to point at. The form is not
+              // rendered when the section is shut, and an aria-controls naming
+              // an element that does not exist is a dangling reference, not a
+              // hint about one that might appear later.
+              ...(selected ? { controls: editorId } : {}),
               onClick: () => selectBlock(selected ? undefined : block.id),
             }),
             el("div", { class: "block-tools" }, [
@@ -124,7 +135,11 @@ export function buildSurface(container: HTMLElement): void {
       return el("li", { class: `block${selected ? " selected" : ""}` }, [
         row,
         ...(selected
-          ? [el("div", { class: "block-editor" }, [blockForm(block, (next) => updateBlock(block.id, next))])]
+          ? [
+              el("div", { class: "block-editor", id: editorId }, [
+                blockForm(block, (next) => updateBlock(block.id, next)),
+              ]),
+            ]
           : []),
       ]);
     }),
