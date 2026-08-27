@@ -125,13 +125,25 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
  * arrives with one empty item already open, so there is nothing to press
  * before typing, and the shape of the thing is legible at a glance: item,
  * price, another item.
+ *
+ * BLANK_ROW. Seeding a new section was not enough. A section saved before that
+ * change, or one whose last row has just been removed, holds no rows at all,
+ * and it showed a button offering "another" item beside a folded settings
+ * group: nothing to type into, and a button naming something that did not
+ * exist. So an empty section now draws one blank row that is not in the
+ * document. Typing into it appends the row; leaving it alone writes nothing,
+ * which keeps "no items" a state the document can still honestly hold.
  */
 function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): HTMLElement {
   const withTiers = (tiers: typeof block.tiers): void => onChange({ ...block, tiers });
+  // A row past the end is the placeholder, so typing into it appends rather
+  // than editing nothing. See BLANK_ROW above.
   const replaceTier = (i: number, next: (typeof block.tiers)[number]): void =>
-    withTiers(block.tiers.map((t, j) => (i === j ? next : t)));
+    withTiers(i < block.tiers.length ? block.tiers.map((t, j) => (i === j ? next : t)) : [...block.tiers, next]);
 
-  const tiers = block.tiers.map((tier, i) =>
+  const shown = block.tiers.length > 0 ? block.tiers : [{ name: "", price: "" }];
+
+  const tiers = shown.map((tier, i) =>
     el("fieldset", { class: "sub item" }, [
       el("legend", {}, [`Item ${i + 1}`]),
       field({
@@ -174,12 +186,17 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
           }),
         ],
       }),
-      button({
-        label: `Remove item ${i + 1}`,
-        glyph: "×",
-        variant: "danger",
-        onClick: () => withTiers(block.tiers.filter((_, j) => j !== i)),
-      }),
+      // Nothing to remove on the placeholder row, so it does not offer to.
+      ...(i < block.tiers.length
+        ? [
+            button({
+              label: `Remove item ${i + 1}`,
+              glyph: "×",
+              variant: "danger",
+              onClick: () => withTiers(block.tiers.filter((_, j) => j !== i)),
+            }),
+          ]
+        : []),
     ]),
   );
 
@@ -210,30 +227,38 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
 }
 
 function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnChange): HTMLElement {
-  const items = block.items.map((item, i) =>
+  // Same placeholder row as the price list. See BLANK_ROW on menuForm.
+  const replaceItem = (i: number, next: (typeof block.items)[number]): void =>
+    onChange({
+      ...block,
+      items: i < block.items.length ? block.items.map((it, j) => (i === j ? next : it)) : [...block.items, next],
+    });
+
+  const shown = block.items.length > 0 ? block.items : [{ imageUrl: "" }];
+
+  const items = shown.map((item, i) =>
     el("fieldset", { class: "sub" }, [
       el("legend", {}, [`Image ${i + 1}`]),
       imageField({
         label: "Image address",
         value: item.imageUrl,
-        onInput: (imageUrl) =>
-          onChange({ ...block, items: block.items.map((it, j) => (i === j ? { ...it, imageUrl } : it)) }),
+        onInput: (imageUrl) => replaceItem(i, { ...item, imageUrl }),
       }),
       field({
         label: "Caption (optional)",
         value: item.caption ?? "",
-        onInput: (v) =>
-          onChange({
-            ...block,
-            items: block.items.map((it, j) => (i === j ? withOptional(it, "caption", v) : it)),
-          }),
+        onInput: (v) => replaceItem(i, withOptional(item, "caption", v)),
       }),
-      button({
-        label: `Remove image ${i + 1}`,
-        glyph: "×",
-        variant: "danger",
-        onClick: () => onChange({ ...block, items: block.items.filter((_, j) => j !== i) }),
-      }),
+      ...(i < block.items.length
+        ? [
+            button({
+              label: `Remove image ${i + 1}`,
+              glyph: "×",
+              variant: "danger",
+              onClick: () => onChange({ ...block, items: block.items.filter((_, j) => j !== i) }),
+            }),
+          ]
+        : []),
     ]),
   );
 
