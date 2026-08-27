@@ -35,6 +35,17 @@ export interface State {
   readonly doc: Document;
   readonly surface: Surface;
   readonly selectedBlockId?: string;
+  /**
+   * The section whose removal is waiting on an answer.
+   *
+   * Removal is the one action here that destroys work and cannot be undone, and
+   * its control sits between "move up" and "move down" in three touch targets
+   * side by side on a phone. So it asks, and the question is state rather than
+   * a native `confirm()`: the interface rebuilds its DOM on every change and a
+   * modal would block that loop, quite apart from the answer belonging next to
+   * the row it concerns.
+   */
+  readonly pendingDeleteId?: string;
   readonly status: Status;
   readonly storageOk: boolean;
 }
@@ -177,11 +188,22 @@ function setQuietly(next: Patch): void {
 }
 
 export function setSurface(surface: Surface): void {
-  set({ surface });
+  // An unanswered question does not follow the artist to another screen and
+  // wait there. Leaving is an answer, and the safe one.
+  set({ surface, pendingDeleteId: undefined });
 }
 
 export function selectBlock(selectedBlockId: string | undefined): void {
   set(selectedBlockId === undefined ? { selectedBlockId: undefined } : { selectedBlockId });
+}
+
+/** Asks before removing a section. Nothing is removed until `removeBlock`. */
+export function askDelete(id: string): void {
+  set({ pendingDeleteId: id });
+}
+
+export function cancelDelete(): void {
+  set({ pendingDeleteId: undefined });
 }
 
 export function setTarget(target: string): void {
@@ -218,6 +240,7 @@ export function addBlock(block: Block): void {
 
 export function removeBlock(id: string): void {
   replaceBlocks(state.doc.blocks.filter((b) => b.id !== id));
+  if (state.pendingDeleteId === id) cancelDelete();
   if (state.selectedBlockId === id) selectBlock(undefined);
 }
 

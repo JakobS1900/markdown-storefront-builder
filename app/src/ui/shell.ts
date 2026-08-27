@@ -194,4 +194,13 @@ export function renderShell(root: HTMLElement): void {
   // Groups before the caret: a field inside a folded group cannot take focus.
   restoreOpenGroups(openGroups);
   restoreCaret(caret);
+
+  // A question that has just appeared takes focus, on the safe answer. The
+  // button that raised it no longer exists, so without this a keyboard or
+  // switch user is left at the top of the document hunting for what changed.
+  // Only when nothing else holds focus, so a later repaint cannot snatch it
+  // back from whichever answer the artist has tabbed to.
+  if (state.pendingDeleteId !== undefined && document.activeElement === document.body) {
+    document.querySelector<HTMLElement>(".block-row.confirm .btn.primary")?.focus({ preventScroll: true });
+  }
 }

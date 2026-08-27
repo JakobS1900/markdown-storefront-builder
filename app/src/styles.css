@@ -212,6 +212,32 @@ main {
   padding: 0.35rem;
 }
 
+/*
+ * The row while it is asking whether to remove the section.
+ *
+ * The question takes the full width and the two answers sit under it, rather
+ * than squeezing three words into the space three icons used to share. Keep is
+ * first and is the accented button, because the safe answer should be the one
+ * the thumb reaches and the eye lands on.
+ */
+.block-row.confirm {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.6rem;
+}
+
+.block-row.confirm .ask {
+  flex: 1 1 100%;
+  margin: 0;
+  font-weight: 600;
+}
+
+.block-row.confirm .block-tools {
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  padding: 0;
+}
+
 .block-editor {
   padding: 1rem;
   border-top: 1px solid var(--line);

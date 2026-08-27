@@ -10,6 +10,8 @@ import type { Block } from "@mdsb/engine";
 
 import {
   addBlock,
+  askDelete,
+  cancelDelete,
   getState,
   moveBlock,
   removeBlock,
@@ -52,45 +54,75 @@ export function buildSurface(container: HTMLElement): void {
     { class: "blocks", "aria-label": "Sections of your page" },
     blocks.map((block, i) => {
       const selected = state.selectedBlockId === block.id;
+      const kind = KIND_LABEL[block.kind];
+      const asking = state.pendingDeleteId === block.id;
+
+      // While a section is being asked about, its row holds the question and
+      // nothing else. The move controls sit either side of the delete control
+      // and are 44px apart, so leaving them there during the one interaction
+      // that cannot be undone is asking for the mis-tap all over again.
+      const row = asking
+        ? el("div", { class: "block-row confirm", role: "group", "aria-label": `Delete ${kind}?` }, [
+            el("p", { class: "ask" }, [`Delete ${kind}? This cannot be undone.`]),
+            el("div", { class: "block-tools" }, [
+              button({
+                label: `Keep ${kind}`,
+                variant: "primary",
+                onClick: () => {
+                  cancelDelete();
+                  announce(`Kept ${kind}`);
+                },
+              }),
+              button({
+                label: `Yes, delete ${kind}`,
+                variant: "danger",
+                onClick: () => {
+                  removeBlock(block.id);
+                  announce(`Deleted ${kind}`);
+                },
+              }),
+            ]),
+          ])
+        : el("div", { class: "block-row" }, [
+            button({
+              label: `Edit ${kind}: ${summarise(block)}`,
+              variant: "ghost",
+              pressed: selected,
+              onClick: () => selectBlock(selected ? undefined : block.id),
+            }),
+            el("div", { class: "block-tools" }, [
+              button({
+                label: `Move ${kind} up`,
+                glyph: "↑",
+                disabled: i === 0,
+                onClick: () => {
+                  moveBlock(block.id, -1);
+                  announce(`Moved ${kind} up`);
+                },
+              }),
+              button({
+                label: `Move ${kind} down`,
+                glyph: "↓",
+                disabled: i === blocks.length - 1,
+                onClick: () => {
+                  moveBlock(block.id, 1);
+                  announce(`Moved ${kind} down`);
+                },
+              }),
+              button({
+                label: `Delete ${kind}`,
+                glyph: "×",
+                variant: "danger",
+                onClick: () => {
+                  askDelete(block.id);
+                  announce(`Delete ${kind}? Nothing has been removed yet.`);
+                },
+              }),
+            ]),
+          ]);
 
       return el("li", { class: `block${selected ? " selected" : ""}` }, [
-        el("div", { class: "block-row" }, [
-          button({
-            label: `Edit ${KIND_LABEL[block.kind]}: ${summarise(block)}`,
-            variant: "ghost",
-            pressed: selected,
-            onClick: () => selectBlock(selected ? undefined : block.id),
-          }),
-          el("div", { class: "block-tools" }, [
-            button({
-              label: `Move ${KIND_LABEL[block.kind]} up`,
-              glyph: "↑",
-              disabled: i === 0,
-              onClick: () => {
-                moveBlock(block.id, -1);
-                announce(`Moved ${KIND_LABEL[block.kind]} up`);
-              },
-            }),
-            button({
-              label: `Move ${KIND_LABEL[block.kind]} down`,
-              glyph: "↓",
-              disabled: i === blocks.length - 1,
-              onClick: () => {
-                moveBlock(block.id, 1);
-                announce(`Moved ${KIND_LABEL[block.kind]} down`);
-              },
-            }),
-            button({
-              label: `Delete ${KIND_LABEL[block.kind]}`,
-              glyph: "×",
-              variant: "danger",
-              onClick: () => {
-                removeBlock(block.id);
-                announce(`Deleted ${KIND_LABEL[block.kind]}`);
-              },
-            }),
-          ]),
-        ]),
+        row,
         ...(selected
           ? [el("div", { class: "block-editor" }, [blockForm(block, (next) => updateBlock(block.id, next))])]
           : []),
