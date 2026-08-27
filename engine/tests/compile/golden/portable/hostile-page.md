@@ -11,7 +11,7 @@ Payment: a\|b, &lt;b&gt;c&lt;/b&gt;
 
 ### \# not a heading
 
-| Tier | Price | What you get |
+| Item | Price | What you get |
 | --- | --- | --- |
 | A\|B | 1\|2 | line break. \*\*\*, \`\`\` |
 

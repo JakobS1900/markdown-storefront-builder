@@ -119,7 +119,7 @@ describe("menu", () => {
 
   it("lays tiers out as a table where the host supports tables (FR-002)", () => {
     const out = md({ id: "m", kind: "menu", currency: "USD", tiers });
-    expect(out).toContain("| Tier | Price | What you get |");
+    expect(out).toContain("| Item | Price | What you get |");
     expect(out).toContain("| Bust | USD 45 | Head and shoulders. 1 revision, PNG |");
     expect(out).toContain("| Full body | DM me |");
   });
@@ -139,7 +139,7 @@ describe("menu", () => {
   it("degrades to a readable list without tables, and warns (FR-002)", () => {
     const out = compile(page({ id: "m", kind: "menu", tiers }), NO_TABLES);
     expect(out.markdown).toContain("**Bust**: 45");
-    expect(out.markdown).not.toContain("| Tier |");
+    expect(out.markdown).not.toContain("| Item |");
     const warning = out.diagnostics.find((d) => d.code === "table_unsupported");
     expect(warning?.blockId).toBe("m");
     expect(warning?.capability).toBe("tables");
@@ -366,13 +366,13 @@ describe("menu tier sample images (roadmap 3.1)", () => {
 
   it("adds an Example column only when a tier actually has an image", () => {
     const out = md({ id: "m", kind: "menu", tiers: withImage });
-    expect(out).toContain("| Tier | Price | What you get | Example |");
+    expect(out).toContain("| Item | Price | What you get | Example |");
     expect(out).toContain("![Bust](https://e.test/bust.png)");
   });
 
   it("omits the column entirely when no tier has one", () => {
     const out = md({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1" }] });
-    expect(out).toContain("| Tier | Price | What you get |");
+    expect(out).toContain("| Item | Price | What you get |");
     expect(out).not.toContain("Example");
   });
 

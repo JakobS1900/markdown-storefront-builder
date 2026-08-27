@@ -102,9 +102,12 @@ function tierTable(tiers: readonly Tier[], currency: string | undefined): string
     return `| ${cells.join(" | ")} |`;
   });
 
+  // "Item", the same word the form uses. The section called them tiers in the
+  // output, options in one part of the interface, and items in another, which
+  // is two words too many for a person who is only listing what they sell.
   const head = withImages
-    ? ["| Tier | Price | What you get | Example |", "| --- | --- | --- | --- |"]
-    : ["| Tier | Price | What you get |", "| --- | --- | --- |"];
+    ? ["| Item | Price | What you get | Example |", "| --- | --- | --- | --- |"]
+    : ["| Item | Price | What you get |", "| --- | --- | --- |"];
 
   return [...head, ...rows].join("\n");
 }
