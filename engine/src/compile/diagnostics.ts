@@ -15,7 +15,8 @@ export type DiagnosticCode =
   | "size_limit_exceeded"
   | "table_unsupported"
   | "link_scheme_refused"
-  | "item_omitted";
+  | "item_omitted"
+  | "section_empty";
 
 export type DiagnosticSeverity = "info" | "warning";
 

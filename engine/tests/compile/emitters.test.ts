@@ -214,6 +214,21 @@ describe("menu", () => {
     expect(out.diagnostics.some((d) => d.code === "item_omitted")).toBe(true);
   });
 
+  /**
+   * A section that produces nothing says so.
+   *
+   * An empty Prices section, an empty Text section and a Gallery with no
+   * images all vanished from the preview with no explanation, which reads as
+   * the tool having lost them. Found on the phone: a page with three sections
+   * previewed as one, and Preview offered not a word about the other two.
+   */
+  it("says when a section produced nothing at all", () => {
+    const out = compile(page({ id: "m", kind: "menu", tiers: [] }), "portable");
+    const note = out.diagnostics.find((d) => d.code === "section_empty");
+    expect(note?.blockId).toBe("m");
+    expect(note?.severity).toBe("info");
+  });
+
   it("warns once however many empty items there are", () => {
     const out = compile(
       page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }, { name: "", price: "" }] }),

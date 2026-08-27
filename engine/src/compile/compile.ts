@@ -99,7 +99,23 @@ function compileForTarget(
     const emitted = emitBlock(block, target, sink);
     // An empty section contributes nothing. Pushing it would produce a stray
     // blank line, since parts are joined by a blank line.
-    if (emitted !== "") parts.push(emitted);
+    if (emitted !== "") {
+      parts.push(emitted);
+      continue;
+    }
+
+    // Contributing nothing is not the same as being silent about it. A section
+    // the artist added and has not filled in simply disappeared from the
+    // preview, which reads as the tool having lost it rather than as the page
+    // being unfinished. Information rather than a warning: nothing was
+    // compromised, there is just nothing there yet.
+    sink.add({
+      code: "section_empty",
+      severity: "info",
+      blockId: block.id,
+      message:
+        "This section has nothing in it yet, so it does not appear on your page. Fill it in and it will show up.",
+    });
   }
 
   // Research D4. Blocks are joined by exactly one blank line, which is also
