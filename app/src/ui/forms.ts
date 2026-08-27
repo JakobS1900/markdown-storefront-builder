@@ -7,7 +7,7 @@
  */
 import type { Block } from "@mdsb/engine";
 
-import { button, el, field, select } from "./dom.js";
+import { button, disclosure, el, field, select } from "./dom.js";
 import { imageField } from "./image-field.js";
 import { newId } from "../store.js";
 
@@ -24,9 +24,11 @@ export function blankBlock(kind: Block["kind"]): Block {
     case "prose":
       return { id, kind, text: "" };
     case "menu":
-      return { id, kind, tiers: [] };
+      // One empty item already there. A price list whose first screen is two
+      // optional settings and a button does not read as a price list.
+      return { id, kind, tiers: [{ name: "", price: "" }] };
     case "gallery":
-      return { id, kind, layout: "grid", items: [] };
+      return { id, kind, layout: "grid", items: [{ imageUrl: "" }] };
     case "profile":
       return { id, kind, displayName: "" };
   }
@@ -109,78 +111,100 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
   ]);
 }
 
+/**
+ * The price list.
+ *
+ * Reordered after an artist tried it and said it did not feel like adding an
+ * item. It did not: the section opened on a heading field and a currency
+ * field, then asked you to press "Add an option" before anything you could
+ * sell existed, and each option then showed five fields of which three were
+ * optional. The two things the section is actually for, what it is and what it
+ * costs, were the fourth and fifth things it offered.
+ *
+ * Now the item comes first and the settings come last. A new price list
+ * arrives with one empty item already open, so there is nothing to press
+ * before typing, and the shape of the thing is legible at a glance: item,
+ * price, another item.
+ */
 function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): HTMLElement {
+  const withTiers = (tiers: typeof block.tiers): void => onChange({ ...block, tiers });
+  const replaceTier = (i: number, next: (typeof block.tiers)[number]): void =>
+    withTiers(block.tiers.map((t, j) => (i === j ? next : t)));
+
   const tiers = block.tiers.map((tier, i) =>
-    el("fieldset", { class: "sub" }, [
-      el("legend", {}, [`Option ${i + 1}`]),
+    el("fieldset", { class: "sub item" }, [
+      el("legend", {}, [`Item ${i + 1}`]),
       field({
-        label: "Name",
+        label: "Item",
         value: tier.name,
-        onInput: (name) => onChange({ ...block, tiers: block.tiers.map((t, j) => (i === j ? { ...t, name } : t)) }),
+        onInput: (name) => replaceTier(i, { ...tier, name }),
       }),
       field({
         label: "Price",
         value: tier.price,
         hint: 'Anything you like: "45", "from 45", or "DM me".',
-        onInput: (price) => onChange({ ...block, tiers: block.tiers.map((t, j) => (i === j ? { ...t, price } : t)) }),
+        onInput: (price) => replaceTier(i, { ...tier, price }),
       }),
-      field({
-        label: "Description (optional)",
-        value: tier.blurb ?? "",
-        onInput: (v) =>
-          onChange({
-            ...block,
-            tiers: block.tiers.map((t, j) => (i === j ? withOptional(t, "blurb", v) : t)),
+      disclosure({
+        summary: "More details",
+        children: [
+          field({
+            label: "Description (optional)",
+            value: tier.blurb ?? "",
+            onInput: (v) => replaceTier(i, withOptional(tier, "blurb", v)),
           }),
-      }),
-      field({
-        label: "What is included (optional)",
-        value: (tier.includes ?? []).join("\n"),
-        multiline: true,
-        hint: "One per line.",
-        onInput: (v) => {
-          const items = v.split("\n").map((s) => s.trim()).filter((s) => s !== "");
-          const next = { ...tier } as Record<string, unknown>;
-          if (items.length === 0) delete next["includes"];
-          else next["includes"] = items;
-          onChange({ ...block, tiers: block.tiers.map((t, j) => (i === j ? (next as typeof t) : t)) });
-        },
-      }),
-      imageField({
-        label: "Sample image (optional)",
-        value: tier.imageUrl ?? "",
-        hint: "An example of this option, if you have one online.",
-        onInput: (v) =>
-          onChange({
-            ...block,
-            tiers: block.tiers.map((t, j) => (i === j ? withOptional(t, "imageUrl", v) : t)),
+          field({
+            label: "What is included (optional)",
+            value: (tier.includes ?? []).join("\n"),
+            multiline: true,
+            hint: "One per line.",
+            onInput: (v) => {
+              const items = v.split("\n").map((s) => s.trim()).filter((s) => s !== "");
+              const next = { ...tier } as Record<string, unknown>;
+              if (items.length === 0) delete next["includes"];
+              else next["includes"] = items;
+              replaceTier(i, next as typeof tier);
+            },
           }),
+          imageField({
+            label: "Sample image (optional)",
+            value: tier.imageUrl ?? "",
+            hint: "An example of this option, if you have one online.",
+            onInput: (v) => replaceTier(i, withOptional(tier, "imageUrl", v)),
+          }),
+        ],
       }),
       button({
-        label: `Remove option ${i + 1}`,
+        label: `Remove item ${i + 1}`,
+        glyph: "×",
         variant: "danger",
-        onClick: () => onChange({ ...block, tiers: block.tiers.filter((_, j) => j !== i) }),
+        onClick: () => withTiers(block.tiers.filter((_, j) => j !== i)),
       }),
     ]),
   );
 
   return el("div", {}, [
-    field({
-      label: "Section heading (optional)",
-      value: block.heading ?? "",
-      onInput: (v) => onChange(withOptional(block, "heading", v)),
-    }),
-    field({
-      label: "Currency (optional)",
-      value: block.currency ?? "",
-      hint: 'For example USD or a symbol. Only added to prices that are just a number.',
-      onInput: (v) => onChange(withOptional(block, "currency", v)),
-    }),
     ...tiers,
     button({
-      label: "Add an option",
+      label: "Add another item",
       variant: "primary",
-      onClick: () => onChange({ ...block, tiers: [...block.tiers, { name: "", price: "" }] }),
+      onClick: () => withTiers([...block.tiers, { name: "", price: "" }]),
+    }),
+    disclosure({
+      summary: "Section settings",
+      children: [
+        field({
+          label: "Section heading (optional)",
+          value: block.heading ?? "",
+          onInput: (v) => onChange(withOptional(block, "heading", v)),
+        }),
+        field({
+          label: "Currency (optional)",
+          value: block.currency ?? "",
+          hint: "For example USD or a symbol. Only added to prices that are just a number.",
+          onInput: (v) => onChange(withOptional(block, "currency", v)),
+        }),
+      ],
     }),
   ]);
 }
@@ -206,6 +230,7 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
       }),
       button({
         label: `Remove image ${i + 1}`,
+        glyph: "×",
         variant: "danger",
         onClick: () => onChange({ ...block, items: block.items.filter((_, j) => j !== i) }),
       }),
@@ -213,26 +238,31 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
   );
 
   return el("div", {}, [
-    field({
-      label: "Section heading (optional)",
-      value: block.heading ?? "",
-      onInput: (v) => onChange(withOptional(block, "heading", v)),
-    }),
-    select({
-      label: "Layout",
-      value: block.layout,
-      options: [
-        { value: "grid", label: "Grid, two across" },
-        { value: "list", label: "One under another" },
-        { value: "single", label: "One at a time" },
-      ],
-      onChange: (v) => onChange({ ...block, layout: v as typeof block.layout }),
-    }),
     ...items,
     button({
-      label: "Add an image",
+      label: "Add another image",
       variant: "primary",
       onClick: () => onChange({ ...block, items: [...block.items, { imageUrl: "" }] }),
+    }),
+    disclosure({
+      summary: "Section settings",
+      children: [
+        field({
+          label: "Section heading (optional)",
+          value: block.heading ?? "",
+          onInput: (v) => onChange(withOptional(block, "heading", v)),
+        }),
+        select({
+          label: "Layout",
+          value: block.layout,
+          options: [
+            { value: "grid", label: "Grid, two across" },
+            { value: "list", label: "One under another" },
+            { value: "single", label: "One at a time" },
+          ],
+          onChange: (v) => onChange({ ...block, layout: v as typeof block.layout }),
+        }),
+      ],
     }),
   ]);
 }
@@ -260,6 +290,7 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
       }),
       button({
         label: `Remove link ${i + 1}`,
+        glyph: "×",
         variant: "danger",
         onClick: () => onChange({ ...block, links: (block.links ?? []).filter((_, j) => j !== i) }),
       }),

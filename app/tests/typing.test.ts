@@ -192,6 +192,11 @@ describe("every field in every section survives being typed into", () => {
       );
       (adder as HTMLButtonElement | undefined)?.click();
 
+      // Expand the folded groups, because a field inside a closed <details>
+      // cannot take focus in a real browser. jsdom will happily focus it, so
+      // without this the sweep would pass on fields no one can reach.
+      for (const group of document.querySelectorAll("details")) group.open = true;
+
       const count = document.querySelectorAll(
         "#surface input[type=text], #surface input[type=url], #surface textarea",
       ).length;

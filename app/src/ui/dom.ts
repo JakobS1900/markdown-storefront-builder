@@ -169,6 +169,25 @@ export function select(opts: {
   return el("div", { class: "field" }, [el("label", { for: id }, [opts.label]), control]);
 }
 
+/**
+ * A group of secondary fields, folded away until asked for.
+ *
+ * Native `details`, not a hand-rolled toggle. It is keyboard operable, it is
+ * announced as expanded or collapsed without any aria of ours, and it works
+ * with no state to keep. The open ones are remembered across a repaint by the
+ * shell, which is why this takes an id from the same sequence as the fields.
+ *
+ * The point is what an artist meets first. A section that opens with five
+ * fields, three of them optional, reads as a form to be completed. The same
+ * section opening with two reads as a thing to be filled in.
+ */
+export function disclosure(opts: { summary: string; children: Node[] }): HTMLElement {
+  return el("details", { class: "more", id: nextFieldId() }, [
+    el("summary", {}, [opts.summary]),
+    el("div", { class: "more-body" }, opts.children),
+  ]);
+}
+
 /** Replaces a container's children. */
 export function render(container: HTMLElement, ...children: Node[]): void {
   container.replaceChildren(...children);

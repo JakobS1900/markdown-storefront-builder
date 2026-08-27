@@ -237,6 +237,44 @@ fieldset.sub > * + * {
   margin-top: 0.75rem;
 }
 
+/*
+ * A folded group of secondary fields.
+ *
+ * The summary is a real control, so it gets the same 44px minimum as every
+ * other one. It is quieter than a button on purpose: opening it is not the
+ * thing the artist came here to do, and it should not compete with the two
+ * fields above it or with "Add another item" below.
+ */
+.more > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--ink-soft, inherit);
+}
+
+.more > summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.more-body > * + * {
+  margin-top: 0.75rem;
+}
+
+/* The remove control sits with the item rather than under it. */
+fieldset.item {
+  position: relative;
+}
+
+fieldset.item > .btn.icon.danger {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  margin-top: 0;
+}
+
 .adders {
   display: flex;
   flex-wrap: wrap;

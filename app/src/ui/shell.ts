@@ -126,11 +126,33 @@ function restoreCaret(caret: CaretPosition | null): void {
   }
 }
 
+/**
+ * Which folded groups the artist had opened.
+ *
+ * A repaint builds fresh `details` elements, and a fresh one is closed. Typing
+ * inside an opened group would therefore fold it away 200ms later, taking the
+ * field being typed into with it, which is the same defect as losing the caret
+ * wearing a different hat.
+ */
+function captureOpenGroups(): string[] {
+  return [...document.querySelectorAll("details[open]")]
+    .map((node) => node.id)
+    .filter((id) => id !== "");
+}
+
+function restoreOpenGroups(ids: readonly string[]): void {
+  for (const id of ids) {
+    const node = document.getElementById(id);
+    if (node instanceof HTMLDetailsElement) node.open = true;
+  }
+}
+
 export function renderShell(root: HTMLElement): void {
   const state = getState();
-  // Taken before anything is rebuilt, because the node holding the caret is
-  // about to be thrown away.
+  // Taken before anything is rebuilt, because the nodes holding the caret and
+  // the open groups are about to be thrown away.
   const caret = captureCaret();
+  const openGroups = captureOpenGroups();
   resetFieldIds();
 
   const tabs = el(
@@ -169,5 +191,7 @@ export function renderShell(root: HTMLElement): void {
     tabs,
   );
 
+  // Groups before the caret: a field inside a folded group cannot take focus.
+  restoreOpenGroups(openGroups);
   restoreCaret(caret);
 }

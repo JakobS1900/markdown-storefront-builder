@@ -32,7 +32,10 @@ function summarise(block: Block): string {
     case "prose":
       return block.heading ?? (block.text === "" ? "Empty" : block.text.slice(0, 60));
     case "menu":
-      return `${block.tiers.length} option${block.tiers.length === 1 ? "" : "s"}`;
+      // "item", matching the form. The section used to call these options in
+      // one place and items in another, which is one word too many for a
+      // person who is only trying to list what they sell.
+      return `${block.tiers.length} item${block.tiers.length === 1 ? "" : "s"}`;
     case "gallery":
       return `${block.items.length} image${block.items.length === 1 ? "" : "s"}`;
     case "profile":
