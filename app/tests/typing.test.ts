@@ -18,7 +18,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { addBlock, getState, init, selectBlock, subscribe } from "../src/store.js";
+import { addBlock, getState, init, selectBlock, subscribe, updateBlock } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -262,6 +262,99 @@ describe("the repaint that was deferred still happens", () => {
     // button press reads as ignored.
     expect(document.querySelectorAll(".block-row").length).toBe(1);
 
+    addBlock(blankBlock("prose"));
+    expect(document.querySelectorAll(".block-row").length).toBe(2);
+  });
+});
+
+describe("the field being typed into is never swapped out underneath the typist", () => {
+  /**
+   * Android hands text to a WebView through an InputConnection bound to the
+   * focused editable. Replace that element and the connection is torn down and
+   * rebuilt, and a character committed during the gap has nowhere to land.
+   *
+   * Measured on a Moto G7, typing "Full colour bust" into a Prices section:
+   *
+   *   empty section, first key adds a row   2 nodes, 1 swap   3 of 8 runs lost a character
+   *   section that already has a row        1 node,  0 swaps  0 of 8 runs lost anything
+   *
+   * Always the character straight after the swap: "Full" arrived as "Ful". A
+   * bare page that never replaces its input dropped nothing in six runs, so
+   * this is the app's doing, not the injection.
+   *
+   * Deferring a repaint while a field has focus is what keeps the element
+   * alive. The shape check alone was not enough: typing the first character
+   * into a placeholder row genuinely adds a row, which is a shape change, and
+   * that repainted at once while the artist was still typing.
+   */
+  function focusedNode(): Element | null {
+    return document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement
+      ? document.activeElement
+      : null;
+  }
+
+  it("keeps the same element when the first character adds a row", () => {
+    live();
+    addBlock(blankBlock("menu"));
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+    updateBlock(block.id, { ...block, tiers: [] });
+    selectBlock(block.id);
+
+    const before = fieldByLabel("Item");
+    before.focus();
+    expect(focusedNode()).toBe(before);
+
+    pressKey("F");
+
+    expect(focusedNode(), "the field being typed into was replaced mid-word").toBe(before);
+  });
+
+  it("still adds the row to the document, even though it did not repaint yet", () => {
+    live();
+    addBlock(blankBlock("menu"));
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+    updateBlock(block.id, { ...block, tiers: [] });
+    selectBlock(block.id);
+
+    fieldByLabel("Item").focus();
+    pressKey("F");
+
+    const after = getState().doc.blocks[0];
+    if (after === undefined || after.kind !== "menu") throw new Error("not a menu");
+    expect(after.tiers).toEqual([{ name: "F", price: "" }]);
+  });
+
+  it("catches the interface up once typing stops", async () => {
+    vi.useFakeTimers();
+    try {
+      live();
+      addBlock(blankBlock("menu"));
+      const block = getState().doc.blocks[0];
+      if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+      updateBlock(block.id, { ...block, tiers: [] });
+      selectBlock(block.id);
+
+      fieldByLabel("Item").focus();
+      pressKey("F");
+      expect(document.querySelector(".block-row")?.textContent ?? "").toContain("0 items");
+
+      await vi.advanceTimersByTimeAsync(400);
+
+      expect(document.querySelector(".block-row")?.textContent ?? "").toContain("1 item");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still repaints at once when nothing is being typed into", () => {
+    live();
+    addBlock(blankBlock("profile"));
+    // Focus is on no field here, so a section added by a button press must be
+    // on screen immediately or the press reads as ignored.
+    expect(document.querySelectorAll(".block-row").length).toBe(1);
     addBlock(blankBlock("prose"));
     expect(document.querySelectorAll(".block-row").length).toBe(2);
   });
