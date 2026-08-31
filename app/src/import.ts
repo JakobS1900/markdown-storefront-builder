@@ -52,5 +52,15 @@ export async function openBackup(text: string): Promise<Opened> {
   });
 
   adopt(id, result.document);
-  return { ok: true, message: "Opened the backup. The page you had open is still saved on this device." };
+  // Says what is true and stops there. The first wording was "the page you had
+  // open is still saved on this device", which is accurate and reads as an
+  // offer: it implies you can go back to it. There is no page list, so the app
+  // always opens whichever page was touched last and the previous one is out of
+  // reach. Reassurance that cannot be acted on is the same shape of promise as
+  // a backup button with nothing to reopen it.
+  return {
+    ok: true,
+    message:
+      "Opened the backup as a new page. The page you had open was not deleted, but there is no way to switch back to it yet.",
+  };
 }
