@@ -106,6 +106,10 @@ function pageList(state: State): HTMLElement[] {
 
   return [
     disclosure({
+      // Its own id, not one from the numbered sequence. There is exactly one of
+      // these on the surface, and a number would make its identity depend on
+      // how many fields the open section happens to have.
+      id: "pages-group",
       className: "pages-group",
       summary: `Your pages (${String(state.pages.length)})`,
       children: [

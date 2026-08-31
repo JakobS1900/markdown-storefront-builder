@@ -186,12 +186,24 @@ export function select(opts: {
  * with no state to keep. The open ones are remembered across a repaint by the
  * shell, which is why this takes an id from the same sequence as the fields.
  *
+ * A group that exists once on a surface should pass its own `id` instead. The
+ * numbered ones are a function of the shape of the page, which is right for a
+ * group belonging to a section and wrong for one that does not: the page list
+ * folded itself shut every time a section was opened, because opening a section
+ * renders its fields, that moves the counter, and a group the shell cannot find
+ * by id comes back closed.
+ *
  * The point is what an artist meets first. A section that opens with five
  * fields, three of them optional, reads as a form to be completed. The same
  * section opening with two reads as a thing to be filled in.
  */
-export function disclosure(opts: { summary: string; children: Node[]; className?: string }): HTMLElement {
-  return el("details", { class: `more${opts.className === undefined ? "" : ` ${opts.className}`}`, id: nextFieldId() }, [
+export function disclosure(opts: {
+  summary: string;
+  children: Node[];
+  className?: string;
+  id?: string;
+}): HTMLElement {
+  return el("details", { class: `more${opts.className === undefined ? "" : ` ${opts.className}`}`, id: opts.id ?? nextFieldId() }, [
     el("summary", {}, [opts.summary]),
     el("div", { class: "more-body" }, opts.children),
   ]);

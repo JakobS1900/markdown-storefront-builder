@@ -25,7 +25,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { emptyDocument } from "@mdsb/engine";
 
 import { writePage } from "../src/db.js";
-import { getState, init, refreshPages, subscribe } from "../src/store.js";
+import { addBlock, getState, init, refreshPages, selectBlock, subscribe } from "../src/store.js";
+import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
 let stop: (() => void) | undefined;
@@ -165,6 +166,39 @@ describe("the page list", () => {
     renderShell(document.getElementById("app") as HTMLElement);
 
     expect(document.querySelector('.pages [aria-current="page"]')?.textContent).toContain("Renamed");
+  });
+
+  it("stays open when a section is opened, having been left open", async () => {
+    // It used to fold itself shut whenever a section was opened. The shell
+    // remembers which groups were open by id, and this one took its id from the
+    // counter that every field draws from, so rendering an open section's
+    // fields moved the number out from under it and the shell had nothing to
+    // restore. Nothing the artist did closed it and it closed anyway.
+    await stored("mine", { title: "Commissions", updatedAt: 2000 });
+    await stored("other", { title: "Old prices", updatedAt: 1000 });
+    await live("mine", "Commissions");
+    const root = document.getElementById("app") as HTMLElement;
+
+    // A section with several fields, but shut, so opening it later is what
+    // moves the field counter. addBlock selects what it adds, so this starts by
+    // putting the editor away again: with it already open there is no change in
+    // the number of fields and the bug cannot happen.
+    addBlock(blankBlock("menu"));
+    const section = getState().doc.blocks[0]?.id;
+    selectBlock(undefined);
+    renderShell(root);
+
+    const group = document.querySelector<HTMLDetailsElement>(".pages-group");
+    if (group === null) throw new Error("no group");
+    group.open = true;
+    const idWhileShut = group.id;
+
+    selectBlock(section);
+    renderShell(root);
+
+    const after = document.querySelector<HTMLDetailsElement>(".pages-group");
+    expect(after?.id).toBe(idWhileShut);
+    expect(after?.open).toBe(true);
   });
 
   it("opens the page that was pressed", async () => {
