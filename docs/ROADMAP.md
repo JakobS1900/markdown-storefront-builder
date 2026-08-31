@@ -122,6 +122,47 @@ change it.
       tests are public and readable, which is the entire point of building it
       this way.
 
+## Phase 5: The phone
+
+Added on 2026-08-31, describing work already done. This phase was missing
+entirely: the decision to wrap the app natively came after the roadmap was
+written, so the document that says everything is finished was silent about the
+platform the owner actually uses. Every item below shipped before it was
+written down here, which is the wrong order and is recorded rather than tidied
+away.
+
+- [x] **5.1 The native shell.** A Capacitor wrapper around the same code, with
+      no platform branches in the app beyond detecting the shell. It buys a
+      launcher icon and a real file picker; the web build was already offline
+      and local, so there was nothing else for a native layer to add.
+- [x] **5.2 The service worker comes out.** It earns its place on the web and is
+      a liability inside the package, where it shadowed the app's own files with
+      the previous build. The native build tears down any registration and cache
+      a previous version left behind.
+- [x] **5.3 Room to type.** The keyboard was taking the screen away twice, once
+      by the window resizing and once by Capacitor padding for the same inset,
+      leaving 114 of 672 CSS pixels. The page no longer asks for the treatment
+      that triggers it.
+- [x] **5.4 Files that exist.** An anchor with a download attribute does nothing
+      in a WebView, so both export buttons produced no file while announcing
+      that they had. The shell writes into its own directory and offers the file
+      through the manifest's file provider, and the page reports what actually
+      happened.
+- [x] **5.5 Back goes back.** Back closed the app from every screen. It now
+      returns to Build from anywhere else and leaves from Build, with at most
+      one history entry so wandering between tabs never deepens the stack.
+- [x] **5.6 On-device verification.** Driven over adb against the WebView's own
+      debugger: persistence across a kill, the clipboard, typing at speed, the
+      export files, and the whole editing loop. Recorded in `63ccbec` and in
+      `specs/010-field-work/spec.md`.
+- [ ] **5.7 A signed release.** There is no release build, no signing key, and
+      no distribution. The APK is a debug build installed over a cable. Nothing
+      here is ready for anyone but its owner, and saying so is cheaper than
+      discovering it at the point of publishing.
+- [ ] **5.8 A second device.** Everything above was verified on one Moto G7 on
+      Android 10. The keyboard inset bug was specific to that era of Android, so
+      the fix for it is the least portable thing in the project.
+
 ## Explicitly deferred
 
 Accounts, cloud sync, direct publish via host APIs, custom output CSS,
