@@ -20,9 +20,34 @@
  *
  * That is strictly stronger than sanitizing. A sanitizer is a filter that has
  * to be right about every input; this is a design in which the dangerous
- * operation is simply never performed. The XSS corpus test asserts exactly
- * that, rather than asserting that a filter caught the payloads it was given.
+ * operation is simply never performed.
+ *
+ * ON THE ADDRESSES, which is a separate question.
+ *
+ * Not parsing HTML says nothing about what goes into an `href` or a `src`, and
+ * those are the only values here a browser will act on. This used to lean
+ * entirely on the compiler having refused anything but http and https, which is
+ * true, and on the escaper putting a backslash between `]` and `(` so a refused
+ * link cannot match the pattern below, which is also true and is a load-bearing
+ * fact living in a different module. Nothing asserted either of them: this file
+ * had no test at all, and the comment here claimed a corpus test that did not
+ * exist. Verified by breaking the coupling on purpose, at which point seven
+ * payloads produced live `javascript:` addresses.
+ *
+ * So the scheme is now checked here as well, where it is used. Two independent
+ * reasons the bad case cannot happen is the right number for the only value on
+ * this page a browser will execute.
  */
+
+/** Only an address a browser may safely be handed. Anything else is text. */
+function safeAddress(url: string): string | undefined {
+  // Browsers strip whitespace and control characters before reading a scheme,
+  // so this has to see what they will see rather than what was written. The
+  // same cleaning the engine's own address check does, for the same reason.
+  // eslint-disable-next-line no-control-regex
+  const cleaned = url.replace(/[\s\u0000-\u001f\u007f]/g, "");
+  return /^https?:\/\//i.test(cleaned) ? url : undefined;
+}
 
 /** Entities the escaper produces, turned back into the characters they stand for. */
 function decodeEntities(text: string): string {
@@ -49,21 +74,30 @@ function inline(text: string): DocumentFragment {
     const at = match.index;
     if (at > last) frag.append(unescape(text.slice(last, at)));
 
+    const address = safeAddress(match[3] ?? "");
+
     if (match[1] === "!") {
-      const img = document.createElement("img");
-      // Only http and https reach here, because the compiler already refused
-      // anything else. Set as an attribute on an element that cannot execute.
-      img.src = match[3] ?? "";
-      img.alt = unescape(match[2] ?? "");
-      img.loading = "lazy";
-      frag.append(img);
+      if (address === undefined) {
+        // Not an address, so it stays what it always was: the artist's words.
+        frag.append(unescape(match[0]));
+      } else {
+        const img = document.createElement("img");
+        img.src = address;
+        img.alt = unescape(match[2] ?? "");
+        img.loading = "lazy";
+        frag.append(img);
+      }
     } else if (match[2] !== undefined) {
-      const a = document.createElement("a");
-      a.href = match[3] ?? "";
-      a.rel = "noopener noreferrer nofollow";
-      a.target = "_blank";
-      a.append(unescape(match[2]));
-      frag.append(a);
+      if (address === undefined) {
+        frag.append(unescape(match[0]));
+      } else {
+        const a = document.createElement("a");
+        a.href = address;
+        a.rel = "noopener noreferrer nofollow";
+        a.target = "_blank";
+        a.append(unescape(match[2]));
+        frag.append(a);
+      }
     } else if (match[4] !== undefined) {
       const strong = document.createElement("strong");
       strong.append(unescape(match[5] ?? ""));
