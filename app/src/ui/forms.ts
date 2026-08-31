@@ -9,9 +9,34 @@ import type { Block } from "@mdsb/engine";
 
 import { button, disclosure, el, field, select } from "./dom.js";
 import { imageField } from "./image-field.js";
-import { newId } from "../store.js";
+import { getState, newId } from "../store.js";
 
 type OnChange = (next: Block) => void;
+
+/**
+ * The section as it is right now, rather than as it was when this form was
+ * drawn.
+ *
+ * Repaints wait for a pause in typing, so between keystrokes the controls on
+ * screen are older than the document. Every handler here was created during the
+ * last render, and one that closed over the block from then would rebuild it
+ * from a stale copy: filling in a second field put the first field's old value
+ * back. Measured on the deployed app, an item name typed and then a price typed
+ * within the repaint delay lost the name entirely, and the same held for a name
+ * and a tagline, a heading and its text, an image and its caption.
+ *
+ * Drawing still uses the snapshot it was given, which is correct: that is the
+ * state being shown. Only the handlers look at what is live, because by the
+ * time one runs, the snapshot is history.
+ */
+function nowBlock<K extends Block["kind"]>(
+  fallback: Extract<Block, { kind: K }>,
+): Extract<Block, { kind: K }> {
+  const found = getState().doc.blocks.find((b) => b.id === fallback.id);
+  return found !== undefined && found.kind === fallback.kind
+    ? (found as Extract<Block, { kind: K }>)
+    : fallback;
+}
 
 /** A default, valid instance of each kind, for the add-section menu. */
 export function blankBlock(kind: Block["kind"]): Block {
@@ -80,7 +105,7 @@ function headingForm(block: Extract<Block, { kind: "heading" }>, onChange: OnCha
     field({
       label: "Heading text",
       value: block.text,
-      onInput: (text) => onChange({ ...block, text }),
+      onInput: (text) => onChange({ ...nowBlock(block), text }),
     }),
     select({
       label: "Size",
@@ -89,7 +114,7 @@ function headingForm(block: Extract<Block, { kind: "heading" }>, onChange: OnCha
         value: String(n),
         label: n === 1 ? "1 (largest)" : n === 6 ? "6 (smallest)" : String(n),
       })),
-      onChange: (v) => onChange({ ...block, level: Number(v) }),
+      onChange: (v) => onChange({ ...nowBlock(block), level: Number(v) }),
     }),
   ]);
 }
@@ -99,14 +124,14 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
     field({
       label: "Section heading (optional)",
       value: block.heading ?? "",
-      onInput: (v) => onChange(withOptional(block, "heading", v)),
+      onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
     }),
     field({
       label: "Text",
       value: block.text,
       multiline: true,
       hint: "Blank line between paragraphs. **bold**, *italic*, [text](https://address) for a link, and lines starting with a dash for a list.",
-      onInput: (text) => onChange({ ...block, text }),
+      onInput: (text) => onChange({ ...nowBlock(block), text }),
     }),
   ]);
 }
@@ -135,11 +160,20 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
  * which keeps "no items" a state the document can still honestly hold.
  */
 function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): HTMLElement {
-  const withTiers = (tiers: typeof block.tiers): void => onChange({ ...block, tiers });
+  type Tier = (typeof block.tiers)[number];
+  const withTiers = (make: (tiers: readonly Tier[]) => readonly Tier[]): void => {
+    const now = nowBlock(block);
+    onChange({ ...now, tiers: make(now.tiers) });
+  };
   // A row past the end is the placeholder, so typing into it appends rather
-  // than editing nothing. See BLANK_ROW above.
-  const replaceTier = (i: number, next: (typeof block.tiers)[number]): void =>
-    withTiers(i < block.tiers.length ? block.tiers.map((t, j) => (i === j ? next : t)) : [...block.tiers, next]);
+  // than editing nothing. See BLANK_ROW above. The row being edited is read
+  // from the live section too, or a second field would revert the first.
+  const editTier = (i: number, change: (tier: Tier) => Tier): void =>
+    withTiers((tiers) =>
+      i < tiers.length
+        ? tiers.map((t, j) => (i === j ? change(t) : t))
+        : [...tiers, change({ name: "", price: "" })],
+    );
 
   const shown = block.tiers.length > 0 ? block.tiers : [{ name: "", price: "" }];
 
@@ -149,13 +183,13 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
       field({
         label: "Item",
         value: tier.name,
-        onInput: (name) => replaceTier(i, { ...tier, name }),
+        onInput: (name) => editTier(i, (t) => ({ ...t, name })),
       }),
       field({
         label: "Price",
         value: tier.price,
         hint: 'Anything you like: "45", "from 45", or "DM me".',
-        onInput: (price) => replaceTier(i, { ...tier, price }),
+        onInput: (price) => editTier(i, (t) => ({ ...t, price })),
       }),
       disclosure({
         summary: "More details",
@@ -163,7 +197,7 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
           field({
             label: "Description (optional)",
             value: tier.blurb ?? "",
-            onInput: (v) => replaceTier(i, withOptional(tier, "blurb", v)),
+            onInput: (v) => editTier(i, (t) => withOptional(t, "blurb", v)),
           }),
           field({
             label: "What is included (optional)",
@@ -172,17 +206,19 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
             hint: "One per line.",
             onInput: (v) => {
               const items = v.split("\n").map((s) => s.trim()).filter((s) => s !== "");
-              const next = { ...tier } as Record<string, unknown>;
-              if (items.length === 0) delete next["includes"];
-              else next["includes"] = items;
-              replaceTier(i, next as typeof tier);
+              editTier(i, (t) => {
+                const next = { ...t } as Record<string, unknown>;
+                if (items.length === 0) delete next["includes"];
+                else next["includes"] = items;
+                return next as Tier;
+              });
             },
           }),
           imageField({
             label: "Sample image (optional)",
             value: tier.imageUrl ?? "",
             hint: "An example of this option, if you have one online.",
-            onInput: (v) => replaceTier(i, withOptional(tier, "imageUrl", v)),
+            onInput: (v) => editTier(i, (t) => withOptional(t, "imageUrl", v)),
           }),
         ],
       }),
@@ -193,7 +229,7 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
               label: `Remove item ${i + 1}`,
               glyph: "×",
               variant: "danger",
-              onClick: () => withTiers(block.tiers.filter((_, j) => j !== i)),
+              onClick: () => withTiers((tiers) => tiers.filter((_, j) => j !== i)),
             }),
           ]
         : []),
@@ -205,7 +241,7 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
     button({
       label: "Add another item",
       variant: "primary",
-      onClick: () => withTiers([...block.tiers, { name: "", price: "" }]),
+      onClick: () => withTiers((tiers) => [...tiers, { name: "", price: "" }]),
     }),
     disclosure({
       summary: "Section settings",
@@ -213,13 +249,13 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         field({
           label: "Section heading (optional)",
           value: block.heading ?? "",
-          onInput: (v) => onChange(withOptional(block, "heading", v)),
+          onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
         }),
         field({
           label: "Currency (optional)",
           value: block.currency ?? "",
           hint: "For example USD or a symbol. Only added to prices that are just a number.",
-          onInput: (v) => onChange(withOptional(block, "currency", v)),
+          onInput: (v) => onChange(withOptional(nowBlock(block), "currency", v)),
         }),
       ],
     }),
@@ -227,12 +263,19 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
 }
 
 function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnChange): HTMLElement {
-  // Same placeholder row as the price list. See BLANK_ROW on menuForm.
-  const replaceItem = (i: number, next: (typeof block.items)[number]): void =>
-    onChange({
-      ...block,
-      items: i < block.items.length ? block.items.map((it, j) => (i === j ? next : it)) : [...block.items, next],
-    });
+  // Same placeholder row as the price list, and the same live read. See
+  // BLANK_ROW and nowBlock on menuForm.
+  type Item = (typeof block.items)[number];
+  const withItems = (make: (items: readonly Item[]) => readonly Item[]): void => {
+    const now = nowBlock(block);
+    onChange({ ...now, items: make(now.items) });
+  };
+  const editItem = (i: number, change: (item: Item) => Item): void =>
+    withItems((items) =>
+      i < items.length
+        ? items.map((it, j) => (i === j ? change(it) : it))
+        : [...items, change({ imageUrl: "" })],
+    );
 
   const shown = block.items.length > 0 ? block.items : [{ imageUrl: "" }];
 
@@ -242,12 +285,12 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
       imageField({
         label: "Image address",
         value: item.imageUrl,
-        onInput: (imageUrl) => replaceItem(i, { ...item, imageUrl }),
+        onInput: (imageUrl) => editItem(i, (it) => ({ ...it, imageUrl })),
       }),
       field({
         label: "Caption (optional)",
         value: item.caption ?? "",
-        onInput: (v) => replaceItem(i, withOptional(item, "caption", v)),
+        onInput: (v) => editItem(i, (it) => withOptional(it, "caption", v)),
       }),
       ...(i < block.items.length
         ? [
@@ -255,7 +298,7 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
               label: `Remove image ${i + 1}`,
               glyph: "×",
               variant: "danger",
-              onClick: () => onChange({ ...block, items: block.items.filter((_, j) => j !== i) }),
+              onClick: () => withItems((all) => all.filter((_, j) => j !== i)),
             }),
           ]
         : []),
@@ -267,7 +310,7 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
     button({
       label: "Add another image",
       variant: "primary",
-      onClick: () => onChange({ ...block, items: [...block.items, { imageUrl: "" }] }),
+      onClick: () => withItems((all) => [...all, { imageUrl: "" }]),
     }),
     disclosure({
       summary: "Section settings",
@@ -275,7 +318,7 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
         field({
           label: "Section heading (optional)",
           value: block.heading ?? "",
-          onInput: (v) => onChange(withOptional(block, "heading", v)),
+          onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
         }),
         select({
           label: "Layout",
@@ -285,7 +328,7 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
             { value: "list", label: "One under another" },
             { value: "single", label: "One at a time" },
           ],
-          onChange: (v) => onChange({ ...block, layout: v as typeof block.layout }),
+          onChange: (v) => onChange({ ...nowBlock(block), layout: v as typeof block.layout }),
         }),
       ],
     }),
@@ -293,31 +336,33 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
 }
 
 function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnChange): HTMLElement {
+  // Every handler reads the profile as it is now. See nowBlock on menuForm.
+  type Link = NonNullable<(typeof block)["links"]>[number];
+  const withLinks = (make: (links: readonly Link[]) => readonly Link[]): void => {
+    const now = nowBlock(block);
+    onChange({ ...now, links: make(now.links ?? []) });
+  };
+
   const links = (block.links ?? []).map((link, i) =>
     el("fieldset", { class: "sub" }, [
       el("legend", {}, [`Link ${i + 1}`]),
       field({
         label: "What to call it",
         value: link.label,
-        onInput: (label) =>
-          onChange({
-            ...block,
-            links: (block.links ?? []).map((l, j) => (i === j ? { ...l, label } : l)),
-          }),
+        onInput: (label) => withLinks((all) => all.map((l, j) => (i === j ? { ...l, label } : l))),
       }),
       field({
         label: "Address",
         value: link.url,
         inputMode: "url",
         hint: "Must start with https://",
-        onInput: (url) =>
-          onChange({ ...block, links: (block.links ?? []).map((l, j) => (i === j ? { ...l, url } : l)) }),
+        onInput: (url) => withLinks((all) => all.map((l, j) => (i === j ? { ...l, url } : l))),
       }),
       button({
         label: `Remove link ${i + 1}`,
         glyph: "×",
         variant: "danger",
-        onClick: () => onChange({ ...block, links: (block.links ?? []).filter((_, j) => j !== i) }),
+        onClick: () => withLinks((all) => all.filter((_, j) => j !== i)),
       }),
     ]),
   );
@@ -326,18 +371,18 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
     field({
       label: "Your name",
       value: block.displayName,
-      onInput: (displayName) => onChange({ ...block, displayName }),
+      onInput: (displayName) => onChange({ ...nowBlock(block), displayName }),
     }),
     field({
       label: "One line about you (optional)",
       value: block.tagline ?? "",
-      onInput: (v) => onChange(withOptional(block, "tagline", v)),
+      onInput: (v) => onChange(withOptional(nowBlock(block), "tagline", v)),
     }),
     imageField({
       label: "Profile picture address (optional)",
       value: block.avatarUrl ?? "",
       hint: "Paste the address of a picture already online. Leave it blank if you would rather not have one.",
-      onInput: (v) => onChange(withOptional(block, "avatarUrl", v)),
+      onInput: (v) => onChange(withOptional(nowBlock(block), "avatarUrl", v)),
     }),
     select({
       label: "Are you taking work",
@@ -348,7 +393,7 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
         { value: "closed", label: "Closed" },
         { value: "waitlist", label: "Waitlist" },
       ],
-      onChange: (v) => onChange(withOptional(block, "status", v)),
+      onChange: (v) => onChange(withOptional(nowBlock(block), "status", v)),
     }),
     field({
       label: "How you take payment (optional)",
@@ -357,7 +402,7 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
       hint: "One per line.",
       onInput: (v) => {
         const items = v.split("\n").map((s) => s.trim()).filter((s) => s !== "");
-        const next = { ...block } as Record<string, unknown>;
+        const next = { ...nowBlock(block) } as Record<string, unknown>;
         if (items.length === 0) delete next["paymentMethods"];
         else next["paymentMethods"] = items;
         onChange(next as typeof block);
@@ -367,7 +412,7 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
     button({
       label: "Add a link",
       variant: "primary",
-      onClick: () => onChange({ ...block, links: [...(block.links ?? []), { label: "", url: "" }] }),
+      onClick: () => withLinks((all) => [...all, { label: "", url: "" }]),
     }),
   ]);
 }
