@@ -13,6 +13,7 @@ import { compile, findTarget, serializeDocument } from "@mdsb/engine";
 
 import { getState } from "../store.js";
 import { handOff } from "../files.js";
+import { openBackup } from "../import.js";
 import { announce, button, el, render } from "./dom.js";
 
 /** Where to paste, per host. Kept beside the target ids it describes. */
@@ -38,16 +39,66 @@ function save(name: string, text: string, type: string): void {
   announce(handOff(name, text, type).message);
 }
 
+/**
+ * The other half of the backup button, which was missing.
+ *
+ * "A backup you can reopen here" was true about the saving and false about the
+ * reopening: there was no file input anywhere in the app. The picker is hidden
+ * from assistive technology and from the tab order, with a real button in front
+ * of it, which is the same pairing the image field uses and the accessibility
+ * gate enforces.
+ */
+function openBackupControl(): Node[] {
+  const picker = el("input", {
+    id: "backup-file",
+    type: "file",
+    accept: "application/json,.json",
+    class: "sr-only",
+    "aria-hidden": "true",
+    tabindex: "-1",
+  }) as HTMLInputElement;
+
+  const open = button({
+    label: "Open a backup from this device",
+    onClick: () => picker.click(),
+  });
+
+  picker.addEventListener("change", () => {
+    const file = picker.files?.[0];
+    if (file === undefined) return;
+    open.disabled = true;
+    announce("Reading the backup.");
+
+    void file
+      .text()
+      .then((text) => openBackup(text))
+      .catch(() => ({ ok: false, message: "That file could not be read. Nothing has been changed." }))
+      .then((result) => {
+        open.disabled = false;
+        picker.value = "";
+        announce(result.message);
+      });
+  });
+
+  return [open, picker];
+}
+
 export function exportSurface(container: HTMLElement): void {
   const state = getState();
   const result = compile(state.doc, state.doc.target);
   const target = findTarget(result.targetId);
 
   if (result.markdown === "") {
+    // The empty page still offers to open a backup. Somebody who has just lost
+    // everything is exactly who needs it, and hiding it behind having content
+    // would put it out of reach at the only moment it matters.
     render(
       container,
-      el("p", { class: "empty" }, [
-        "There is nothing to copy yet. Add a section on the Build tab first.",
+      el("div", { class: "stack" }, [
+        el("p", { class: "empty" }, [
+          "There is nothing to copy yet. Add a section on the Build tab first, or open a backup you saved earlier.",
+        ]),
+        el("div", { class: "adders" }, openBackupControl()),
       ]),
     );
     return;
@@ -101,6 +152,7 @@ export function exportSurface(container: HTMLElement): void {
           label: "Save a backup you can reopen here",
           onClick: () => save("page-backup.json", serializeDocument(state.doc), "application/json"),
         }),
+        ...openBackupControl(),
       ]),
 
       el("section", { "aria-labelledby": "steps-heading" }, [

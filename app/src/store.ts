@@ -340,6 +340,17 @@ export async function openPage(id: string): Promise<void> {
   set({ pageId: stored.id, doc: result.document, status: { kind: "idle" }, selectedBlockId: undefined });
 }
 
+/**
+ * Makes an already stored page the one on screen.
+ *
+ * Used when a backup has been read and written under its own id. It does not
+ * save, because the caller has already done that, and saving again here would
+ * mean a page could be written before anyone had checked it parses.
+ */
+export function adopt(pageId: string, doc: Document): void {
+  set({ pageId, doc, status: { kind: "idle" }, selectedBlockId: undefined, pendingDeleteId: undefined });
+}
+
 export async function newPage(target: string): Promise<void> {
   set({
     pageId: newId(),
