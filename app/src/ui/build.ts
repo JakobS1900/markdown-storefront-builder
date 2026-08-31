@@ -99,6 +99,13 @@ function lastEdited(at: number): string {
 function pageList(state: State): HTMLElement[] {
   if (!state.storageOk) return [];
 
+  // Nothing saved yet, so there is nothing to list. A new install used to open
+  // on "Your pages (0)": a list of nothing, above an empty page, offering to
+  // start a second empty page. It appears the moment the first page is written,
+  // which the store now notices, so hiding it here does not hide the way to a
+  // second page for longer than it takes to type one character.
+  if (state.pages.length === 0) return [];
+
   const live =
     state.doc.title === undefined || state.doc.title === ""
       ? "Untitled page"

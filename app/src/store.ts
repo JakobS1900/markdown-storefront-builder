@@ -382,6 +382,15 @@ async function save(): Promise<void> {
     // status line. Repainting the whole interface to announce it was half of
     // the cost of typing a character.
     setQuietly({ status: { kind: "saved" } });
+
+    // A page that has just come into existence has to appear in the list, and
+    // this is the only moment that can be noticed: nothing else runs between a
+    // new page's first save and the artist looking for it. The condition is
+    // what keeps it cheap. It is false from the second keystroke onwards, so
+    // this reads every stored page once per page rather than once per
+    // character, which is the cost the deferred repaint exists to avoid.
+    if (!state.pages.some((page) => page.id === state.pageId)) await refreshPages();
+
   } catch (error) {
     set({
       status: {

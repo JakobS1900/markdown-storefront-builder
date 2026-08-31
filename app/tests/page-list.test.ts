@@ -24,8 +24,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { emptyDocument } from "@mdsb/engine";
 
-import { writePage } from "../src/db.js";
-import { addBlock, getState, init, refreshPages, selectBlock, subscribe } from "../src/store.js";
+import { listPages, writePage } from "../src/db.js";
+import { addBlock, getState, init, refreshPages, selectBlock, subscribe, update } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -98,6 +98,55 @@ beforeEach(() => {
 });
 
 describe("the page list", () => {
+  it("is not there at all before anything has been saved", async () => {
+    // A brand new install showed "Your pages (0)": a list of nothing, above an
+    // empty page, offering to start another empty page. There is nothing to
+    // switch to and nothing to gain from a second blank page when the one on
+    // screen is already blank.
+    await live("nothing-saved-yet");
+
+    expect(getState().pages).toHaveLength(0);
+    expect(document.querySelector(".pages-group")).toBeNull();
+    expect(document.querySelector(".pages")).toBeNull();
+  });
+
+  it("appears as soon as the first page has actually been saved", async () => {
+    // The half that matters. Hiding the group at zero is only right if the
+    // group comes back by itself, and nothing refreshed the list after a save,
+    // so a new artist would have typed their first page and still had no way to
+    // start a second one until they next launched the app.
+    await live("first-page");
+
+    update({ ...getState().doc, title: "Commissions" });
+    await settle();
+    renderShell(document.getElementById("app") as HTMLElement);
+
+    expect(await listPages()).toHaveLength(1);
+    expect(document.querySelector(".pages-group")).not.toBeNull();
+    expect(document.querySelector(".pages-group > summary")?.textContent).toBe("Your pages (1)");
+    expect(document.querySelector('.pages [aria-current="page"]')?.textContent).toContain("Commissions");
+  });
+
+  it("does not re-read storage on every keystroke once the page is listed", async () => {
+    // The refresh above fires when the page just written is not in the list
+    // yet, which is once per page, not once per save. Re-reading every stored
+    // page's contents on every character is exactly the cost the deferred
+    // repaint exists to avoid.
+    await live("first-page");
+    update({ ...getState().doc, title: "C" });
+    await settle();
+
+    const reads: number[] = [];
+    for (const ch of ["Co", "Com", "Comm"]) {
+      update({ ...getState().doc, title: ch });
+      await settle();
+      reads.push(getState().pages.length);
+    }
+
+    expect(reads).toEqual([1, 1, 1]);
+    expect(await listPages()).toHaveLength(1);
+  });
+
   it("offers nothing to switch to when there is only one page", async () => {
     // This asserted that the whole group was absent, which was FR-020c. Feature
     // 012 replaced that rule: the group carries the only way to start a second
