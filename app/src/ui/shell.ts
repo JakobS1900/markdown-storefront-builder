@@ -5,10 +5,17 @@
  * screen the same three sit under the header instead, and the editor keeps a
  * readable column rather than stretching to the window.
  *
- * This used to claim a split view with Build beside Preview. There is not one
- * and there never was, in this file or in the stylesheet that made the same
- * claim. Seeing both at once would be a good desktop design and remains
- * unbuilt; describing it as though it shipped meant nobody went looking.
+ * With room for it, the preview sits beside the editor: the one thing a desktop
+ * offers that a phone cannot, which is watching the page take shape without
+ * switching away from what you are typing. Only beside Build, because Preview
+ * and Copy already have the whole width and a preview beside a preview is
+ * nonsense.
+ *
+ * The decision is made here rather than in CSS, and that is deliberate. Hiding
+ * the pane with a media query would still compile the document and build its
+ * DOM on every repaint, on the phone, for something the phone cannot show, and
+ * that is precisely the work that made typing expensive on a Moto G7. So a
+ * narrow screen does not build it at all, and a change of width repaints.
  */
 import { TARGETS } from "@mdsb/engine";
 
@@ -34,6 +41,28 @@ const renderers: Record<Surface, SurfaceRenderer> = {
   preview: previewSurface,
   export: exportSurface,
 };
+
+/**
+ * The width at which the preview earns a column of its own.
+ *
+ * Matches the stylesheet's own breakpoint. Read through matchMedia rather than
+ * innerWidth so it agrees with the CSS on the same rounding, and so a test can
+ * say which side of it we are on.
+ */
+const ROOM_FOR_BOTH = "(min-width: 900px)";
+
+function roomForBoth(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(ROOM_FOR_BOTH).matches;
+}
+
+/** Repaints when the window crosses the breakpoint, since the shape changes. */
+export function watchWidth(onChange: () => void): () => void {
+  if (typeof window.matchMedia !== "function") return () => undefined;
+  const query = window.matchMedia(ROOM_FOR_BOTH);
+  const handle = (): void => onChange();
+  query.addEventListener("change", handle);
+  return () => query.removeEventListener("change", handle);
+}
 
 function statusLine(): HTMLElement {
   const { status } = getState();
@@ -179,6 +208,20 @@ export function renderShell(root: HTMLElement): void {
   const panel = el("div", { id: "surface", class: "surface", role: "tabpanel", "aria-label": "Editor" });
   renderers[state.surface](panel);
 
+  // The preview beside the editor, on a screen wide enough to hold both.
+  const alongside = state.surface === "build" && roomForBoth();
+  const panes: Node[] = [panel];
+  if (alongside) {
+    const side = el("div", {
+      id: "beside",
+      class: "surface beside",
+      role: "region",
+      "aria-label": "Preview of your page",
+    });
+    previewSurface(side);
+    panes.push(side);
+  }
+
   render(
     root,
     el("header", { class: "bar" }, [
@@ -194,7 +237,7 @@ export function renderShell(root: HTMLElement): void {
       }),
     ]),
     statusLine(),
-    el("main", {}, [panel]),
+    el("main", { class: alongside ? "split" : undefined }, panes),
     tabs,
   );
 

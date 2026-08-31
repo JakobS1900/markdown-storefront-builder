@@ -9,7 +9,7 @@ import { listPages, init, openPage, subscribe } from "./store.js";
 import { storageAvailable } from "./db.js";
 import { setUpServiceWorker } from "./register-sw.js";
 import { startSurfaceHistory } from "./surface-history.js";
-import { renderShell } from "./ui/shell.js";
+import { renderShell, watchWidth } from "./ui/shell.js";
 
 async function start(): Promise<void> {
   const root = document.getElementById("app");
@@ -22,6 +22,8 @@ async function start(): Promise<void> {
   init(storageOk);
 
   subscribe(() => renderShell(root));
+  // Crossing the breakpoint changes which panes exist, not just how they look.
+  watchWidth(() => renderShell(root));
   renderShell(root);
 
   if (!storageOk) return;

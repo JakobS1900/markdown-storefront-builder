@@ -558,6 +558,39 @@ fieldset.item > .btn.icon.danger {
   #surface .stack {
     max-width: 44rem;
   }
+
+  /*
+   * Build beside Preview. Two columns that each refuse to be pushed wider than
+   * their share, which is what minmax(0, 1fr) buys over a bare 1fr: a long
+   * unbroken address in the editor would otherwise stretch its column and
+   * squeeze the preview out.
+   */
+  main.split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    max-width: 96rem;
+  }
+
+  /* Inside the split each column is already narrow enough to read. */
+  main.split #surface .stack {
+    max-width: none;
+  }
+
+  /*
+   * The preview stays put while the editor scrolls, because the whole point is
+   * watching it change as you type. It scrolls within itself when the page is
+   * taller than the screen.
+   */
+  main.split .beside {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+    border-left: 1px solid var(--line);
+    padding-left: 2rem;
+  }
 }
 
 /* Respect a stated preference for less motion. Nothing here animates yet, and
