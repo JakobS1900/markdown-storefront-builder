@@ -36,6 +36,11 @@
             "***",
             "```"
           ]
+        },
+        {
+          "name": "Range ~ and caret ^",
+          "price": "$45 to $60",
+          "blurb": "~~not struck~~ and a^b"
         }
       ]
     },
@@ -56,7 +61,7 @@
     {
       "id": "t",
       "kind": "prose",
-      "text": "](evil) [\n\n***\n\n<img src=x onerror=alert(1)>"
+      "text": "](evil) [\n\n***\n\n<img src=x onerror=alert(1)>\n\nDollar $45, tilde 50~60, caret a^b."
     }
   ]
 }

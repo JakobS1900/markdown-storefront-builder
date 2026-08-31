@@ -65,7 +65,7 @@ export const RENTRY: Target = {
     hardBreak: "Observed in rentry's live preview on 2026-08-18: the backslash form produced no break and was swallowed, joining the two lines. Two trailing spaces is the form Python-Markdown implements",
     tables: "rentry.co/how documents pipe tables, with --: and :--: alignment",
     thematicBreak: "Standard Markdown, no documented divergence. *** per review R-1",
-    escapeStyle: "rentry.co/how documents no divergence from standard escaping",
+    escapeStyle: "Observed in rentry's live preview on 2026-08-31, one line per character: the backslash was consumed for ` * _ { } [ ] ( ) # + - . ! | and a literal backslash, and left visible for ~ ^ and $. Those three are emitted as numeric character references instead. This value previously read 'documents no divergence from standard escaping', which is an absence of documentation recorded as a presence of behaviour, exactly what FR-014 above forbids",
     maxBytes: "rentry.co/how documents no limit. Recorded as unknown, not as unlimited",
   },
 };

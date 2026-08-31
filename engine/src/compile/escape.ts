@@ -20,10 +20,41 @@
  * two that can begin HTML.
  *
  * The list is deliberately broad. A narrower one would produce prettier source,
- * and the artist never reads the source, so prettiness buys nothing and every
- * omission is a way out of the construct.
+ * and every omission is a way out of the construct.
+ *
+ * It used to say the artist never reads the source, which was the justification
+ * for not caring how the escapes look. That was wrong twice over. The Copy
+ * screen shows them the source, it being the whole output of the tool. And
+ * three of these characters cannot be backslash escaped on a host that renders
+ * with Python-Markdown, whose escapable set is narrower than CommonMark's "all
+ * ASCII punctuation". See ENTITY_ONLY.
  */
-const ESCAPABLE = /[\\`*_{}[\]()#+\-.!|~^$]/g;
+const ESCAPABLE = /[\\`*_{}[\]()#+\-.!|]/g;
+
+/**
+ * The characters a backslash cannot protect, so an entity does instead.
+ *
+ * Pasted into rentry's live preview on 2026-08-31, one line per character, the
+ * backslash was consumed for fifteen of them and left plainly visible for these
+ * three. An artist writing a price of "$45", which is the likeliest input this
+ * whole application will ever receive, published "\$45".
+ *
+ * A numeric character reference is the same answer this file already gives for
+ * `<`, `&` and `>`, and for the same reason: it removes the character from the
+ * source entirely, so no renderer can build a construct out of what is not
+ * there, while every renderer displays it as the character the artist typed.
+ * Confirmed in the same preview, including that a doubled tilde written as
+ * entities stays literal text while a real one is still struck through.
+ *
+ * Recorded in `docs/research/2026-08-31-rentry-escape-verification.md`.
+ */
+const ENTITY_ONLY: Record<string, string> = {
+  "~": "&#126;",
+  "^": "&#94;",
+  $: "&#36;",
+};
+
+const ENTITY_ONLY_PATTERN = /[~^$]/g;
 
 /**
  * Escapes text that will occupy whole lines of the output.
@@ -46,7 +77,12 @@ export function escapeText(text: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(ESCAPABLE, (ch) => `\\${ch}`);
+    .replace(ESCAPABLE, (ch) => `\\${ch}`)
+    // Last, because an entity contains `&` and `#`, and those are ours rather
+    // than the artist's. Running it earlier produced `a&\#36;b`: the escaper
+    // escaping its own output, which is the same trap the `&` ordering above
+    // exists to avoid.
+    .replace(ENTITY_ONLY_PATTERN, (ch) => ENTITY_ONLY[ch] ?? ch);
 }
 
 /**
