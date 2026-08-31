@@ -101,6 +101,50 @@ describe("what an artist writes never becomes a live address", () => {
   });
 });
 
+describe("the entities the escaper produces are shown as their characters", () => {
+  /**
+   * The preview renders the compiled output, so it has to undo what the
+   * compiler did for the host's benefit, or it shows the artist plumbing.
+   *
+   * This was a live regression rather than a hypothetical. When three
+   * characters moved from backslash escapes to numeric references, so that
+   * rentry would stop publishing "\$45", the preview began showing "&#36;45"
+   * because it only knew how to decode the three named entities.
+   */
+  it("shows a price of $45 as $45, not as its entity", () => {
+    const host = renderCompiled({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "$45" }] });
+    expect(host.textContent).toContain("$45");
+    expect(host.textContent, "the artist is being shown the plumbing").not.toContain("&#36;");
+  });
+
+  it("shows a tilde and a caret as themselves", () => {
+    const host = renderCompiled({ id: "p", kind: "prose", text: "range 50~60 caret a^b" });
+    expect(host.textContent).toContain("50~60");
+    expect(host.textContent).toContain("a^b");
+    expect(host.textContent).not.toContain("&#");
+  });
+
+  it("shows a doubled tilde as text, matching what the host will do", () => {
+    const host = renderCompiled({ id: "p", kind: "prose", text: "~~not struck~~" });
+    expect(host.textContent).toContain("~~not struck~~");
+    expect(host.querySelector("del, s, strike")).toBeNull();
+  });
+
+  it("shows an entity the artist typed themselves, rather than decoding it twice", () => {
+    const host = renderCompiled({ id: "p", kind: "prose", text: "literally &#36;45" });
+    expect(host.textContent).toContain("&#36;45");
+  });
+
+  it("decoding a reference still cannot produce markup", () => {
+    // The dangerous direction: if a numeric reference for "<" were decoded into
+    // something the renderer then parsed, the whole no-markup design would be
+    // undone. Every node here is built from text, so it stays text.
+    const host = render("a &#60;script&#62;alert(1)&#60;/script&#62; b");
+    expect(host.querySelector("script")).toBeNull();
+    expect(host.textContent).toContain("<script>");
+  });
+});
+
 describe("it draws what the compiler emits", () => {
   it("renders headings at their level", () => {
     expect(render("## Prices").querySelector("h2")?.textContent).toBe("Prices");

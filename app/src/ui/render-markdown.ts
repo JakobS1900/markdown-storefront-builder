@@ -49,9 +49,36 @@ function safeAddress(url: string): string | undefined {
   return /^https?:\/\//i.test(cleaned) ? url : undefined;
 }
 
-/** Entities the escaper produces, turned back into the characters they stand for. */
+/**
+ * Entities the escaper produces, turned back into the characters they stand for.
+ *
+ * The numeric references matter as much as the named ones. When three
+ * characters moved from backslash escapes to numeric references, so that rentry
+ * would stop publishing "\$45", this function still knew only the three named
+ * entities and the preview began showing the artist "&#36;45". The preview
+ * renders the compiled output, so anything the compiler did for the host's
+ * benefit has to be undone here or the artist is looking at plumbing.
+ *
+ * Decoding a reference cannot produce markup. Every result goes into a text
+ * node, so a decoded `<` is a less-than sign and never the start of a tag,
+ * which is the same property the whole file rests on.
+ *
+ * `&amp;` is decoded last, mirroring the escaper encoding it first. An artist
+ * who literally types `&#36;` has it stored as `&amp;#36;`, which contains no
+ * numeric reference until the final step, so it survives as the text they
+ * typed rather than turning into a dollar sign.
+ */
 function decodeEntities(text: string): string {
-  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, code: string) => {
+      const point = Number(code);
+      return Number.isInteger(point) && point > 0 && point <= 0x10ffff
+        ? String.fromCodePoint(point)
+        : _;
+    })
+    .replace(/&amp;/g, "&");
 }
 
 /** Backslash escapes the escaper added, removed for display. */
