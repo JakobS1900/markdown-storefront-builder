@@ -35,12 +35,18 @@ answerable without reading fifty commit messages.
 | [009 Imgur and Android](009-imgur/) | 2026-08-25 | after the fact | no | no | no | no |
 | [010 field work](010-field-work/) | ongoing since 2026-08-25 | after the fact | no | no | no | no |
 | [011 page list](011-page-list/) | 2026-08-31 | **before** | no | no | no | no |
+| [012 page lifecycle](012-page-lifecycle/) | 2026-08-31 | **before** | no | no | no | no |
 
-Feature 011 is the first since 003 whose spec was written before the code. It
-has no plan or task list either, because it is one screen's worth of work and a
-plan for it would have been a paraphrase of the spec, but the reasoning and the
-scope were settled on paper before anything was built, and the two things
-deliberately left out are named there rather than discovered later.
+Features 011 and 012 are the first since 003 whose specs were written before the
+code. Neither has a plan or a task list, because each is one screen's worth of
+work and a plan for it would have been a paraphrase of the spec, but the
+reasoning and the scope were settled on paper before anything was built.
+
+They are worth reading in that order. 011 names two things it deliberately left
+out; 012 is those two things, and it opens by amending a requirement 011 had got
+right for a switcher and wrong for what the group became. The amendment is
+recorded in 012 rather than edited into 011, because a specification that
+quietly changes to match the code is worth nothing.
 
 Plan, tasks and review columns are left honestly empty. Writing a retrospective
 "plan" for work already finished would be fiction, and a retrospective task list

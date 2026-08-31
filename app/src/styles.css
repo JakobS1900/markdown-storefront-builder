@@ -320,6 +320,12 @@ fieldset.item > .btn.icon.danger {
   padding: 0;
 }
 
+.pages > li {
+  display: flex;
+  gap: 0.25rem;
+  align-items: stretch;
+}
+
 .pages > li + li {
   margin-top: 0.25rem;
 }
@@ -330,15 +336,46 @@ fieldset.item > .btn.icon.danger {
    not reach on its own. */
 .pages button {
   display: block;
-  width: 100%;
   min-height: var(--tap);
   text-align: left;
+}
+
+/* The button that opens takes the row; the one that removes takes its own
+   square at the end of it. */
+.pages > li > button:first-child {
+  flex: 1 1 auto;
 }
 
 .pages .current {
   margin: 0;
   padding: 0.6rem 0.75rem;
   color: var(--muted);
+}
+
+/*
+ * A row while it is asking whether to remove the page.
+ *
+ * Same shape as the question a section asks, for the same reason: the row holds
+ * the question and the two answers and nothing else, Keep is first and is the
+ * accented one, and the control that raised it is not sitting under the thumb
+ * that just pressed it.
+ */
+.pages > li.confirm {
+  display: block;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.pages > li.confirm .ask {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.pages > li.confirm .answers {
+  display: flex;
+  gap: 0.5rem;
 }
 
 /* Status */

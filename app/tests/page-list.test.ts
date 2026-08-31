@@ -71,15 +71,22 @@ async function live(pageId: string, title?: string): Promise<void> {
   renderShell(root);
 }
 
-/** The list's entries, by accessible name, buttons and current entry alike. */
+/**
+ * What each row is called, by accessible name.
+ *
+ * First child only: that is the control that opens the page, or the text
+ * marking the one already open. A row also carries a remove control, which is
+ * feature 012's and is not what these tests are about.
+ */
 function entries(): string[] {
-  return [...document.querySelectorAll(".pages li > *")].map((node) =>
+  return [...document.querySelectorAll(".pages li > :first-child")].map((node) =>
     (node.getAttribute("aria-label") ?? node.textContent ?? "").trim(),
   );
 }
 
+/** The rows that can be opened, which excludes the page already open. */
 function openable(): HTMLButtonElement[] {
-  return [...document.querySelectorAll<HTMLButtonElement>(".pages li > button")];
+  return [...document.querySelectorAll<HTMLButtonElement>(".pages li > button:first-child")];
 }
 
 beforeEach(() => {
@@ -90,11 +97,17 @@ beforeEach(() => {
 });
 
 describe("the page list", () => {
-  it("stays out of the way when there is nothing to switch to", async () => {
+  it("offers nothing to switch to when there is only one page", async () => {
+    // This asserted that the whole group was absent, which was FR-020c. Feature
+    // 012 replaced that rule: the group carries the only way to start a second
+    // page, so somebody with one page has to be able to reach it. What survives
+    // of the original intent is the part that was actually about switching.
     await stored("only");
     await live("only");
 
-    expect(document.querySelector(".pages")).toBeNull();
+    expect(openable()).toHaveLength(0);
+    expect(document.querySelectorAll(".pages li")).toHaveLength(1);
+    expect(document.querySelector('.pages [aria-current="page"]')).not.toBeNull();
   });
 
   it("appears once a second page exists", async () => {

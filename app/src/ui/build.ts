@@ -11,11 +11,15 @@ import type { Block } from "@mdsb/engine";
 import {
   addBlock,
   askDelete,
+  askPageDelete,
   cancelDelete,
+  cancelPageDelete,
   getState,
   moveBlock,
+  newPage,
   openPage,
   removeBlock,
+  removePage,
   selectBlock,
   updateBlock,
   update,
@@ -24,7 +28,14 @@ import {
 import { announce, button, disclosure, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
 
-const ADDABLE: Block["kind"][] = ["profile", "menu", "gallery", "prose", "heading", "divider"];
+const ADDABLE: Block["kind"][] = [
+  "profile",
+  "menu",
+  "gallery",
+  "prose",
+  "heading",
+  "divider",
+];
 
 /** A short description of a section, so the list is scannable. */
 function summarise(block: Block): string {
@@ -34,7 +45,9 @@ function summarise(block: Block): string {
     case "divider":
       return "A line across the page";
     case "prose":
-      return block.heading ?? (block.text === "" ? "Empty" : block.text.slice(0, 60));
+      return (
+        block.heading ?? (block.text === "" ? "Empty" : block.text.slice(0, 60))
+      );
     case "menu":
       // "item", matching the form. The section used to call these options in
       // one place and items in another, which is one word too many for a
@@ -72,15 +85,24 @@ function lastEdited(at: number): string {
  * for, and a tab would spend a permanent quarter of the tab bar on something
  * used once a month.
  *
- * Nothing here deletes a page. That is Principle V, and a delete control
- * belongs to its own decision with its own question, not to a list.
+ * It is present whenever storage works, including for somebody who has exactly
+ * one page. It first appeared only when there was something to switch to, which
+ * was right while it was only a switcher and became wrong the moment it carried
+ * the only way to start a second page. That is FR-021c replacing FR-020c, and
+ * the reasoning is written down in specs/012-page-lifecycle rather than being
+ * quietly edited into the spec it contradicts.
+ *
+ * The page on screen has no remove control, and the store refuses its id as
+ * well. Removing what somebody is looking at raises a question with no good
+ * answer, and every answer to it is worse than not asking.
  */
 function pageList(state: State): HTMLElement[] {
-  // Nothing to switch to means no switcher. One page is not a list, and the
-  // page on screen is not somewhere to go.
-  if (!state.pages.some((page) => page.id !== state.pageId)) return [];
+  if (!state.storageOk) return [];
 
-  const live = state.doc.title === undefined || state.doc.title === "" ? "Untitled page" : state.doc.title;
+  const live =
+    state.doc.title === undefined || state.doc.title === ""
+      ? "Untitled page"
+      : state.doc.title;
 
   return [
     disclosure({
@@ -101,29 +123,93 @@ function pageList(state: State): HTMLElement[] {
             // beside it. Two entries reading "Untitled page" are not a choice.
             const label = `${title}, last edited ${lastEdited(page.updatedAt)}`;
 
+            if (current) {
+              return el("li", {}, [
+                el("p", { class: "current", "aria-current": "page" }, [
+                  `${label}. Open now.`,
+                ]),
+              ]);
+            }
+
+            // Being asked about, the row holds the question and its two answers
+            // and nothing else, exactly as a section does. The control that
+            // raised it is gone while it stands, so the same thumb cannot hit
+            // it twice, and "open this page" is not sitting a few pixels from
+            // "destroy this page" during the one interaction that is final.
+            if (state.pendingPageDeleteId === page.id) {
+              // The group role goes on a wrapper, not on the `li`. Overriding a
+              // list item's role breaks the list it is in, which axe says as
+              // `aria-allowed-role` and `list`, and it caught this the day the
+              // markup was written.
+              return el("li", { class: "confirm" }, [
+                el("div", { role: "group", "aria-label": `Remove ${title}?` }, [
+                  el("p", { class: "ask" }, [
+                    `Remove ${title}? This cannot be undone.`,
+                  ]),
+                  el("div", { class: "answers" }, [
+                    button({
+                      label: `Keep ${title}`,
+                      variant: "primary",
+                      onClick: () => {
+                        cancelPageDelete();
+                        announce(`Kept ${title}`);
+                      },
+                    }),
+                    button({
+                      label: `Yes, remove ${title}`,
+                      variant: "danger",
+                      onClick: () => {
+                        void removePage(page.id).then(() => {
+                          announce(`Removed ${title}`);
+                        });
+                      },
+                    }),
+                  ]),
+                ]),
+              ]);
+            }
+
             return el("li", {}, [
-              current
-                ? el("p", { class: "current", "aria-current": "page" }, [`${label}. Open now.`])
-                : button({
-                    label,
-                    onClick: () => {
-                      void openPage(page.id).then(() => {
-                        if (getState().pageId === page.id) announce(`Opened ${title}`);
-                        // The button just pressed no longer exists: it is the
-                        // current entry now, or the page was refused and the
-                        // status line has the news. Either way focus has fallen
-                        // to the body, which leaves a keyboard user at the top
-                        // of the document hunting for what changed. The summary
-                        // is where they were.
-                        document
-                          .querySelector<HTMLElement>(".pages-group > summary")
-                          ?.focus({ preventScroll: true });
-                      });
-                    },
-                  }),
+              button({
+                label,
+                onClick: () => {
+                  void openPage(page.id).then(() => {
+                    if (getState().pageId === page.id)
+                      announce(`Opened ${title}`);
+                    // The button just pressed no longer exists: it is the
+                    // current entry now, or the page was refused and the
+                    // status line has the news. Either way focus has fallen
+                    // to the body, which leaves a keyboard user at the top
+                    // of the document hunting for what changed. The summary
+                    // is where they were.
+                    document
+                      .querySelector<HTMLElement>(".pages-group > summary")
+                      ?.focus({ preventScroll: true });
+                  });
+                },
+              }),
+              button({
+                label: `Remove ${title}`,
+                glyph: "×",
+                variant: "danger",
+                onClick: () => {
+                  askPageDelete(page.id);
+                },
+              }),
             ]);
           }),
         ),
+        el("div", { class: "adders" }, [
+          button({
+            label: "Start a new page",
+            variant: "primary",
+            onClick: () => {
+              void newPage(getState().doc.target).then(() => {
+                announce("Started a new page");
+              });
+            },
+          }),
+        ]),
       ],
     }),
   ];
@@ -148,27 +234,37 @@ export function buildSurface(container: HTMLElement): void {
       // and are 44px apart, so leaving them there during the one interaction
       // that cannot be undone is asking for the mis-tap all over again.
       const row = asking
-        ? el("div", { class: "block-row confirm", role: "group", "aria-label": `Delete ${kind}?` }, [
-            el("p", { class: "ask" }, [`Delete ${kind}? This cannot be undone.`]),
-            el("div", { class: "block-tools" }, [
-              button({
-                label: `Keep ${kind}`,
-                variant: "primary",
-                onClick: () => {
-                  cancelDelete();
-                  announce(`Kept ${kind}`);
-                },
-              }),
-              button({
-                label: `Yes, delete ${kind}`,
-                variant: "danger",
-                onClick: () => {
-                  removeBlock(block.id);
-                  announce(`Deleted ${kind}`);
-                },
-              }),
-            ]),
-          ])
+        ? el(
+            "div",
+            {
+              class: "block-row confirm",
+              role: "group",
+              "aria-label": `Delete ${kind}?`,
+            },
+            [
+              el("p", { class: "ask" }, [
+                `Delete ${kind}? This cannot be undone.`,
+              ]),
+              el("div", { class: "block-tools" }, [
+                button({
+                  label: `Keep ${kind}`,
+                  variant: "primary",
+                  onClick: () => {
+                    cancelDelete();
+                    announce(`Kept ${kind}`);
+                  },
+                }),
+                button({
+                  label: `Yes, delete ${kind}`,
+                  variant: "danger",
+                  onClick: () => {
+                    removeBlock(block.id);
+                    announce(`Deleted ${kind}`);
+                  },
+                }),
+              ]),
+            ],
+          )
         : el("div", { class: "block-row" }, [
             // It says which way it will go. It used to read "Edit" whether the
             // section was open or shut, so the button offering to edit was the

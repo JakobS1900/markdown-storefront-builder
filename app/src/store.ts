@@ -46,6 +46,14 @@ export interface State {
    * the row it concerns.
    */
   readonly pendingDeleteId?: string;
+  /**
+   * The saved page whose removal is waiting on an answer.
+   *
+   * Separate from `pendingDeleteId`, which is about a section. They are two
+   * questions of very different weight and nothing good comes of one variable
+   * meaning "something, somewhere, is about to be destroyed".
+   */
+  readonly pendingPageDeleteId?: string;
   readonly status: Status;
   readonly storageOk: boolean;
   /**
@@ -218,8 +226,10 @@ function setQuietly(next: Patch): void {
 
 export function setSurface(surface: Surface): void {
   // An unanswered question does not follow the artist to another screen and
-  // wait there. Leaving is an answer, and the safe one.
-  set({ surface, pendingDeleteId: undefined });
+  // wait there. Leaving is an answer, and the safe one. Both questions, because
+  // either one left standing is a destructive control armed on a screen nobody
+  // is looking at.
+  set({ surface, pendingDeleteId: undefined, pendingPageDeleteId: undefined });
 }
 
 export function selectBlock(selectedBlockId: string | undefined): void {
@@ -233,6 +243,51 @@ export function askDelete(id: string): void {
 
 export function cancelDelete(): void {
   set({ pendingDeleteId: undefined });
+}
+
+/** Asks before removing a saved page. Nothing is removed until `removePage`. */
+export function askPageDelete(id: string): void {
+  set({ pendingPageDeleteId: id });
+}
+
+export function cancelPageDelete(): void {
+  set({ pendingPageDeleteId: undefined });
+}
+
+/**
+ * Removes a saved page, never the one on screen.
+ *
+ * The refusal is here rather than only in the markup. Not drawing a control is
+ * a decision about a screen; this is the guarantee, and it holds for anything
+ * that reaches this function by any route.
+ *
+ * Deleting whatever is open would raise a question with no good answer. Opening
+ * the next page swaps the artist's work for a different document without being
+ * asked. Opening nothing leaves an empty editor that looks exactly like the
+ * thing this project exists to never do. So the way to remove a page is to open
+ * a different one first, and the last remaining page cannot be removed at all,
+ * which is correct: nothing here should end with the artist having nothing.
+ */
+export async function removePage(id: string): Promise<void> {
+  if (id === state.pageId) {
+    cancelPageDelete();
+    return;
+  }
+
+  try {
+    await deletePage(id);
+  } catch (error) {
+    set({
+      status: {
+        kind: "error",
+        message: `That page could not be removed: ${error instanceof Error ? error.message : String(error)}. Nothing has been changed.`,
+      },
+    });
+    return;
+  }
+
+  cancelPageDelete();
+  await refreshPages();
 }
 
 export function setTarget(target: string): void {
@@ -385,14 +440,24 @@ export function adopt(pageId: string, doc: Document): void {
   set({ pageId, doc, status: { kind: "idle" }, selectedBlockId: undefined, pendingDeleteId: undefined });
 }
 
+/**
+ * Starts an empty page and opens it.
+ *
+ * Saved at once rather than when it is first typed into, so a page somebody has
+ * made exists and is listed. A page that appeared only after a keystroke would
+ * look like the button had not worked.
+ */
 export async function newPage(target: string): Promise<void> {
   set({
     pageId: newId(),
     doc: emptyDocument(target),
     status: { kind: "idle" },
     selectedBlockId: undefined,
+    pendingDeleteId: undefined,
+    pendingPageDeleteId: undefined,
   });
   await save();
+  await refreshPages();
 }
 
 export { deletePage, listPages, type StoredPage };

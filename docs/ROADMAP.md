@@ -160,14 +160,22 @@ was found on the device, which is where everything is found now.
       debugger: persistence across a kill, the clipboard, typing at speed, the
       export files, and the whole editing loop. Recorded in `63ccbec` and in
       `specs/010-field-work/spec.md`.
-- [x] **5.7 A way back to a page.** Storage held many pages from the start and
-      nothing ever let anyone choose one, so the app opened the newest and every
-      other page was unreachable. Importing a backup makes a page, and a page
-      refused under FR-018 keeps the newest timestamp, so both of them stranded
-      the artist's real work in storage where they could not get at it. "Your
-      pages" on the Build screen opens any of them, including after a refusal,
-      which is the case it exists for. Specified before it was built, in
-      `specs/011-page-list/spec.md`, and walked on the device with real taps.
+- [x] **5.7 Pages you can reach, make, and put away.** Storage held many pages
+      from the start and nothing ever let anyone choose one, so the app opened
+      the newest and every other page was unreachable. Importing a backup makes
+      a page, and a page refused under FR-018 keeps the newest timestamp, so
+      both of them stranded the artist's real work in storage where they could
+      not get at it. "Your pages" on the Build screen opens any of them,
+      including after a refusal, which is the case it exists for
+      (`specs/011-page-list/spec.md`).
+
+      Shipping that made the rest of the hole obvious: the only way to create a
+      page was to import a file, `newPage` had sat in `store.ts` with no caller
+      since the app shell, and nothing could ever be removed. Starting and
+      removing a page landed next (`specs/012-page-lifecycle/spec.md`), with the
+      rule that the page on screen cannot be removed, enforced in the store and
+      not only by declining to draw the control. Both were specified before they
+      were built and walked on the device with real taps.
 - [ ] **5.8 A signed release.** There is no release build, no signing key, and
       no distribution. The APK is a debug build installed over a cable. Nothing
       here is ready for anyone but its owner, and saying so is cheaper than

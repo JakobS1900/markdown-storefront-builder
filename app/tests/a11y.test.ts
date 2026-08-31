@@ -156,7 +156,7 @@ describe("the page switcher is accessible", () => {
   it("names every entry, and names them differently from each other", () => {
     open(mount());
 
-    const names = [...document.querySelectorAll(".pages li > *")].map((node) =>
+    const names = [...document.querySelectorAll(".pages li > :first-child")].map((node) =>
       (node.getAttribute("aria-label") ?? node.textContent ?? "").trim(),
     );
     expect(names).toHaveLength(2);
@@ -168,7 +168,37 @@ describe("the page switcher is accessible", () => {
     open(mount());
 
     expect(document.querySelectorAll('.pages [aria-current="page"]')).toHaveLength(1);
-    expect(document.querySelectorAll(".pages li > button")).toHaveLength(1);
+    expect(document.querySelectorAll(".pages li > button:first-child")).toHaveLength(1);
+  });
+
+  it("names the remove control after the page it removes", () => {
+    // "Remove" repeated down a list is not an answerable question read aloud,
+    // and the glyph alone is nothing at all.
+    open(mount());
+
+    const remove = [...document.querySelectorAll(".pages li > button.danger")];
+    expect(remove).toHaveLength(1);
+    for (const control of remove) {
+      const name = control.getAttribute("aria-label") ?? "";
+      expect(name).toContain("Remove ");
+      expect(name).not.toBe(control.textContent);
+    }
+  });
+
+  it("has no axe violations while it is asking whether to remove a page", async () => {
+    // The question is a state the gate would otherwise never render, which is
+    // the exact failure this file exists to stop repeating.
+    const root = mount();
+    open(root);
+    const remove = document.querySelector<HTMLButtonElement>(".pages li > button.danger");
+    if (remove === null) throw new Error("no remove control to press");
+    remove.click();
+    // This harness renders on demand rather than subscribing, so the state
+    // change has to be drawn deliberately.
+    open(root);
+
+    expect(document.querySelector(".pages li.confirm")).not.toBeNull();
+    expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 });
 
