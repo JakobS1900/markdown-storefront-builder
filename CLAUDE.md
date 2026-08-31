@@ -1,14 +1,14 @@
 <!-- SPECKIT START -->
-For technologies, project structure, and shell commands, read
+Start at `specs/README.md`. It indexes every feature, says which documents
+each one actually has, and is honest about which were written after the code
+shipped. For technologies, project structure, and shell commands, read
 `docs/ROADMAP.md` and `docs/WORKFLOW.md`.
 
-This block used to point at `specs/002-compile-skeleton/plan.md` as "the
-current plan". It stopped being current around 35 commits ago, so every
-session was starting by reading a description of finished work. The spec
-pipeline covers features 001 to 003 and stops: everything after it, which is
-the whole app, the PWA, images, CI, deploy, and the Android build, was written
-without spec artifacts. Treat that as a known gap, not as a set of documents
-waiting to be found.
+This block used to name `specs/002-compile-skeleton/plan.md` as "the current
+plan". It had been finished for a month, so every session began by reading a
+description of work already done. Specs 004 to 010 were backfilled on
+2026-08-31 and say so in their own headers; there are no plan or task
+documents after 001, and no architecture or holistic review after 003.
 <!-- SPECKIT END -->
 
 # Project Rules
