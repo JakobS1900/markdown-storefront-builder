@@ -47,6 +47,38 @@ describe("moving between surfaces", () => {
     rememberSurface("preview");
     expect(history.length).toBe(after);
   });
+
+  /**
+   * Build is the first screen, so back from anywhere else returns to it and
+   * back from it leaves. Plain browser history does not do that: it retraces,
+   * so Preview then Copy then back landed on Preview, and toggling tabs ten
+   * times needed ten presses to get out. Measured on the phone, where the
+   * earlier check missed it by relaunching the app between every case.
+   */
+  it("keeps at most one entry beyond the first screen, however far you wander", () => {
+    const root = history.length;
+    rememberSurface("preview");
+    rememberSurface("export");
+    rememberSurface("preview");
+    rememberSurface("export");
+
+    expect(history.length, "the history stack grew with every tab press").toBe(root + 1);
+    expect((history.state as { surface?: string } | null)?.surface).toBe("export");
+  });
+
+  it("gives back the entry when returning to Build, rather than stacking another", async () => {
+    rememberSurface("preview");
+    expect((history.state as { surface?: string } | null)?.surface).toBe("preview");
+
+    rememberSurface("build");
+
+    // Going back is asynchronous, so wait for it rather than guessing a delay.
+    for (let i = 0; i < 50 && history.state !== null; i += 1) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+
+    expect(history.state, "returning to Build left an entry behind").toBeNull();
+  });
 });
 
 describe("when the system goes back", () => {

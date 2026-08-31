@@ -20,14 +20,33 @@ function asSurface(value: unknown): Surface | undefined {
   return typeof value === "string" && SURFACES.includes(value) ? (value as Surface) : undefined;
 }
 
-/** Records a move between surfaces so that back has somewhere to return to. */
+/**
+ * Records a move between surfaces so that back has somewhere to return to.
+ *
+ * At most one entry ever exists beyond the first screen, which is the part that
+ * took a second look on the phone. Pushing for every move gives plain browser
+ * history: back retraces, so Build then Preview then Copy then back landed on
+ * Preview rather than Build, and toggling tabs ten times needed ten presses to
+ * leave the app. The earlier check missed it by relaunching between every case,
+ * so the stack never had a chance to grow.
+ *
+ * Build is the first screen. Back from anywhere else returns to it, back from
+ * it leaves, and wandering between the other two never deepens anything.
+ */
 export function rememberSurface(surface: Surface): void {
   const current = asSurface((history.state as { surface?: unknown } | null)?.surface);
   if (current === surface) return;
-  // Build is the bottom of the stack. Pushing for it would mean back has to be
-  // pressed twice to leave the app from the first screen.
-  if (surface === "build") return;
-  history.pushState({ surface }, "");
+
+  if (surface === "build") {
+    // Give the entry back rather than stacking another on top of it. The
+    // popstate that follows sets the surface, which is the same thing the
+    // caller is about to do, so doing it twice costs nothing.
+    if (current !== undefined) history.back();
+    return;
+  }
+
+  if (current === undefined) history.pushState({ surface }, "");
+  else history.replaceState({ surface }, "");
 }
 
 /** Sends a system back gesture to the surface its history entry names. */
