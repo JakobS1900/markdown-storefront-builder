@@ -176,10 +176,21 @@ was found on the device, which is where everything is found now.
       rule that the page on screen cannot be removed, enforced in the store and
       not only by declining to draw the control. Both were specified before they
       were built and walked on the device with real taps.
-- [ ] **5.8 A signed release.** There is no release build, no signing key, and
-      no distribution. The APK is a debug build installed over a cable. Nothing
-      here is ready for anyone but its owner, and saying so is cheaper than
-      discovering it at the point of publishing.
+- [x] **5.8 A signed release.** A release build, signed with an RSA 4096 key
+      held outside the repository and valid to 2054, verified against both the
+      v2 and v3 signature schemes. v3 is on deliberately: it carries a rotation
+      lineage, which is the only thing that would let a leaked key be replaced
+      instead of ending the app. Without the key present the build still
+      succeeds and produces an unsigned file, so a fresh clone and CI both
+      compile the release variant; confirmed by pointing the build at a key file
+      that does not exist. Procedure and the recovery position are in
+      `docs/RELEASE.md`.
+
+      **Distribution is still missing and this box does not claim it.** There is
+      no listing and no download page: a signed APK is a file, and nobody can
+      get it yet. The Play Store route additionally needs an account, a privacy
+      policy, a content rating and artwork, and is worth taking mainly because
+      Play App Signing would make the key above replaceable rather than fatal.
 - [ ] **5.9 A second device.** Everything above was verified on one Moto G7 on
       Android 10. The keyboard inset bug was specific to that era of Android, so
       the fix for it is the least portable thing in the project.

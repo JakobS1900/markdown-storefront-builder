@@ -1,5 +1,25 @@
 apply plugin: 'com.android.application'
 
+/**
+ * Release signing details, or nothing.
+ *
+ * The file lives in the user profile, never in this repository. A signing key
+ * inside a working tree is one careless `git add -A` away from being public,
+ * and unlike every other secret in a project this one cannot be rotated: an
+ * update signed with a different key will not install over an app signed with
+ * this one, so everybody who installed it has to uninstall first, which throws
+ * away the pages they saved.
+ *
+ * When the file is absent the release build still runs and simply comes out
+ * unsigned, so a fresh clone and CI both work without the key.
+ */
+def keystorePropertiesFile = file(System.getenv("MDSB_KEYSTORE_PROPERTIES")
+    ?: "${System.properties['user.home']}/.android-keys/storefront-builder.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "com.rade.storefrontbuilder"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -8,7 +28,10 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        // Not 1.0. The roadmap has two open items and this has been verified on
+        // one handset by the person who wrote it, so calling it 1.0 would be the
+        // same kind of claim as a ticked box that was never true.
+        versionName "0.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +39,36 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystoreProperties['storeFile']) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+            // v1 is the old JAR signature, needed only below API 24, and this
+            // app requires 24. v3 is worth turning on for one reason: it is the
+            // scheme that carries a rotation lineage, so a key that leaks can
+            // later be replaced without every installed copy becoming a dead
+            // end. Signing v3 now is what makes that possible at all.
+            enableV1Signing false
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Signed when the key is on this machine, unsigned when it is not,
+            // rather than failing the build. An unsigned release APK is useless
+            // but honest; a build that cannot run without a secret is a build
+            // nobody else can check out and compile.
+            if (keystoreProperties['storeFile']) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

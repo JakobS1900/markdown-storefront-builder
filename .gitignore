@@ -29,3 +29,10 @@ android/.gradle/
 android/local.properties
 android/app/src/main/assets/public/
 android/app/src/main/assets/capacitor.config.json
+
+# Signing material. The real key lives in the user profile, never here, but a
+# pattern costs nothing and the one mistake this guards against is permanent.
+*.jks
+*.keystore
+keystore.properties
+android/keystore.properties
