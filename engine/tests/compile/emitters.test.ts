@@ -47,7 +47,7 @@ describe("FR-001: every block kind emits", () => {
 
 describe("prose", () => {
   it("separates paragraphs with a blank line", () => {
-    expect(md({ id: "p", kind: "prose", text: "One.\n\nTwo." })).toBe("One\\.\n\nTwo\\.\n");
+    expect(md({ id: "p", kind: "prose", text: "One.\n\nTwo." })).toBe("One.\n\nTwo.\n");
   });
 
   it("turns a single newline into a hard line break with no trailing space", () => {
@@ -58,7 +58,7 @@ describe("prose", () => {
 
   it("emits its heading at the shared section level", () => {
     expect(md({ id: "p", kind: "prose", heading: "Terms", text: "Body." })).toBe(
-      "### Terms\n\nBody\\.\n",
+      "### Terms\n\nBody.\n",
     );
   });
 
@@ -106,7 +106,10 @@ describe("prose", () => {
 
   it("still refuses an unsafe link inside prose", () => {
     const out = md({ id: "p", kind: "prose", text: "[click](javascript:alert(1))" });
-    expect(out).not.toMatch(/\]\(javascript/i);
+    // The property, not a proxy for it: a link needs an unescaped closing
+    // bracket, and this one is escaped. Round brackets stopped being escaped in
+    // feature 013, so the old assertion matched a substring that is harmless.
+    expect(out).not.toMatch(/(^|[^\\])\]\(/);
     expect(out).toContain("click");
   });
 });
@@ -122,6 +125,32 @@ describe("menu", () => {
     expect(out).toContain("| Item | Price | What you get |");
     expect(out).toContain("| Bust | USD 45 | Head and shoulders. 1 revision, PNG |");
     expect(out).toContain("| Full body | DM me |");
+  });
+
+  it("does not add a full stop to a blurb that already has one", () => {
+    // The blurb and the includes list share one column, because a table cell
+    // cannot hold a bullet list, and they were joined with ". " whatever the
+    // blurb ended in. Most people end a sentence with a full stop, so a real
+    // storefront came out with "tumbled finish.. CPM-S35VN blade" eight times
+    // over. Every fixture happened to use a blurb without one.
+    const out = md({
+      id: "m",
+      kind: "menu",
+      tiers: [{ name: "Mk III", price: "185", blurb: "Titanium frame lock.", includes: ["S35VN blade"] }],
+    });
+    // Matched with the escape optional, so this keeps asserting the thing it is
+    // about if the escaper's breadth ever changes.
+    expect(out).toMatch(/Titanium frame lock\\?\. S35VN blade/);
+    expect(out).not.toContain("..");
+  });
+
+  it("still joins with a full stop when the blurb does not end in one", () => {
+    const out = md({
+      id: "m",
+      kind: "menu",
+      tiers: [{ name: "Mk III", price: "185", blurb: "Titanium frame lock", includes: ["S35VN blade"] }],
+    });
+    expect(out).toMatch(/Titanium frame lock\\?\. S35VN blade/);
   });
 
   it("adds the currency only to a price that is purely a number", () => {
@@ -426,7 +455,7 @@ describe("profile", () => {
         "",
         "- [Bluesky](https://e.test/ari)",
         "",
-        "Payment: PayPal, Ko\\-fi",
+        "Payment: PayPal, Ko-fi",
         "",
       ].join("\n"),
     );

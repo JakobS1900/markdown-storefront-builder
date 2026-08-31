@@ -16,20 +16,68 @@
  */
 
 /**
- * Every character that can begin, end, or alter a Markdown construct, plus the
- * two that can begin HTML.
+ * The characters that can begin a construct anywhere on a line.
  *
- * The list is deliberately broad. A narrower one would produce prettier source,
- * and every omission is a way out of the construct.
+ * This list used to be much longer, and its own comment defended the breadth:
+ * "a narrower one would produce prettier source, and every omission is a way
+ * out of the construct." The first half was true. The second was not, because
+ * most of what it held can only begin a construct in a particular position, and
+ * escaping those everywhere bought nothing at all.
  *
- * It used to say the artist never reads the source, which was the justification
- * for not caring how the escapes look. That was wrong twice over. The Copy
- * screen shows them the source, it being the whole output of the tool. And
- * three of these characters cannot be backslash escaped on a host that renders
- * with Python-Markdown, whose escapable set is narrower than CommonMark's "all
- * ASCII punctuation". See ENTITY_ONLY.
+ * A storefront published to rentry on 2026-08-31 carried 74 backslashes: 59
+ * full stops and 15 hyphens, every one of them in the middle of a sentence
+ * where neither can start anything. The tagline read
+ * `Small\-batch everyday carry\. Machined in Sheffield\.` The host consumes all
+ * of them, so no reader ever saw one. The artist sees all of them, because the
+ * Copy screen shows the source and the source is the entire output of this
+ * tool.
+ *
+ * What is left is the set that works wherever it lands: emphasis, code, link
+ * brackets, rentry's image-sizing braces, and the pipe that ends a table cell.
+ * Position-sensitive characters are handled per line below. See FR-023.
  */
-const ESCAPABLE = /[\\`*_{}[\]()#+\-.!|]/g;
+const ESCAPABLE = /[\\`*_{}[\]|]/g;
+
+/**
+ * A bullet or heading marker, which only marks anything at the start of a line.
+ *
+ * Leading spaces are kept and the marker after them is escaped, because an
+ * indented `- ` is still a list item.
+ */
+const LINE_MARKER = /^([ \t]*)([#+-])/;
+
+/**
+ * An ordered list marker: digits, then a full stop or a closing bracket.
+ *
+ * Both forms make a list. `)` is not escaped anywhere else any more, so this is
+ * the only thing keeping `1) First` from becoming a numbered list, which is why
+ * it is here and not left to the general set.
+ */
+const ORDERED_MARKER = /^([ \t]*)(\d+)([.)])/;
+
+/**
+ * Escapes the characters that only mean something at the beginning of a line.
+ *
+ * The start of the string counts as the start of a line, always. A fragment
+ * such as a table cell or an item in a bullet list is placed inside a line that
+ * is already begun, so its first character is not really in marker position,
+ * and treating it as though it were escapes a little more than necessary.
+ *
+ * That direction is the safe one. The reverse would mean auditing every call
+ * site and trusting every future one, to save a backslash on text that begins
+ * with a hyphen. An item reading `- also this` is written `\- also this`,
+ * because `- - also this` is a nested list.
+ */
+function escapeLineStarts(text: string): string {
+  return text
+    .split("\n")
+    .map((line) =>
+      line
+        .replace(LINE_MARKER, (_, indent: string, marker: string) => `${indent}\\${marker}`)
+        .replace(ORDERED_MARKER, (_, indent: string, digits: string, mark: string) => `${indent}${digits}\\${mark}`),
+    )
+    .join("\n");
+}
 
 /**
  * The characters a backslash cannot protect, so an entity does instead.
@@ -73,16 +121,24 @@ const ENTITY_ONLY_PATTERN = /[~^$]/g;
  * other two produce.
  */
 export function escapeText(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(ESCAPABLE, (ch) => `\\${ch}`)
-    // Last, because an entity contains `&` and `#`, and those are ours rather
-    // than the artist's. Running it earlier produced `a&\#36;b`: the escaper
-    // escaping its own output, which is the same trap the `&` ordering above
-    // exists to avoid.
-    .replace(ENTITY_ONLY_PATTERN, (ch) => ENTITY_ONLY[ch] ?? ch);
+  const entities = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  // Anywhere first, then line starts. In that order a line beginning with a
+  // character from the always set arrives at the marker pass already carrying a
+  // backslash, so it no longer begins with a marker and is left alone, which is
+  // correct: `\*foo` does not start a list.
+  const anywhere = entities.replace(ESCAPABLE, (ch) => `\\${ch}`);
+
+  return (
+    escapeLineStarts(anywhere)
+      // Last, because an entity contains `&` and `#`, and those are ours rather
+      // than the artist's. Running it earlier produced `a&\#36;b`: the escaper
+      // escaping its own output, which is the same trap the `&` ordering above
+      // exists to avoid. It also has to come after the marker pass, or a line
+      // beginning with `$` would arrive there as `&#36;...` and be inspected
+      // for a heading that is ours.
+      .replace(ENTITY_ONLY_PATTERN, (ch) => ENTITY_ONLY[ch] ?? ch)
+  );
 }
 
 /**

@@ -107,24 +107,43 @@ export function parseInline(text: string, depth = 0): Node[] {
  * through `escapeText`. There is no branch that copies input to output.
  */
 export function emitInline(nodes: readonly Node[]): string {
-  return nodes
-    .map((node) => {
-      switch (node.kind) {
-        case "text":
-          return escapeText(node.value);
-        case "strong":
-          return `**${emitInline(node.children)}**`;
-        case "em":
-          return `*${emitInline(node.children)}*`;
-        case "link": {
-          const label = emitInline(node.children);
-          // A link with no visible label would be invisible on the page, so the
-          // address stands in for it.
-          return `[${label === "" ? escapeText(node.url) : label}](${encodeAddress(node.url)})`;
-        }
+  let out = "";
+
+  for (const node of nodes) {
+    // A bracket written by this function turns a preceding exclamation mark
+    // into an image marker, and that mark came from the artist.
+    //
+    // The escaper stopped escaping `!` in feature 013, on the reasoning that an
+    // image needs `![` and `[` is escaped on every path. That reasoning missed
+    // this one: the bracket here is ours, not theirs, so `![alt](url)` in a
+    // paragraph became a real embedded image rather than the literal text they
+    // typed. Escaping it at the seam keeps `!` free everywhere else, which is
+    // the whole point of the change.
+    if (node.kind === "link" && /(^|[^\\])!$/.test(out)) {
+      out = `${out.slice(0, -1)}\\!`;
+    }
+
+    switch (node.kind) {
+      case "text":
+        out += escapeText(node.value);
+        break;
+      case "strong":
+        out += `**${emitInline(node.children)}**`;
+        break;
+      case "em":
+        out += `*${emitInline(node.children)}*`;
+        break;
+      case "link": {
+        const label = emitInline(node.children);
+        // A link with no visible label would be invisible on the page, so the
+        // address stands in for it.
+        out += `[${label === "" ? escapeText(node.url) : label}](${encodeAddress(node.url)})`;
+        break;
       }
-    })
-    .join("");
+    }
+  }
+
+  return out;
 }
 
 /** Parses and emits in one step, which is all any caller wants. */

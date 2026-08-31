@@ -7,9 +7,9 @@
 **Commissions are OPEN**
 
 - [Bluesky](https://example.test/ari)
-- [Ko\-fi](https://example.test/kofi)
+- [Ko-fi](https://example.test/kofi)
 
-Payment: PayPal, Ko\-fi
+Payment: PayPal, Ko-fi
 
 ***
 
@@ -37,7 +37,7 @@ Payment: PayPal, Ko\-fi
 
 ### Terms
 
-**Half up front**, half on completion\.
+**Half up front**, half on completion.
 
 I will not draw:
 
@@ -45,5 +45,5 @@ I will not draw:
 - real people without consent
 - anything involving minors
 
-Revisions are included as listed above\. Extra revisions are USD 10 each\.  
-Refunds are available until lineart begins\. Full terms at [my page](https://example.test/terms)\.
+Revisions are included as listed above. Extra revisions are USD 10 each.  
+Refunds are available until lineart begins. Full terms at [my page](https://example.test/terms).

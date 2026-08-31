@@ -110,6 +110,18 @@ function tierImage(t: Tier): string {
   return `![${cell(t.name)}](${encodeAddress(t.imageUrl)})`;
 }
 
+/**
+ * Whether a run of text already closes its own sentence.
+ *
+ * The text has been through the escaper by this point, so a full stop arrives
+ * as `\.` on a host whose escape style backslashes one. Both forms end in the
+ * punctuation itself, which is why this looks at the last character rather than
+ * trying to unescape anything.
+ */
+function endsSentence(text: string): boolean {
+  return /[.!?:]$/.test(text);
+}
+
 function tierTable(tiers: readonly Tier[], currency: string | undefined): string {
   // The Example column appears only when at least one tier has a usable image.
   // An empty column on every row would be a worse table for everyone who does
@@ -118,9 +130,13 @@ function tierTable(tiers: readonly Tier[], currency: string | undefined): string
 
   const rows = tiers.map((t) => {
     const includes = t.includes === undefined ? "" : t.includes.map(cell).join(", ");
-    const detail = [t.blurb === undefined ? "" : cell(t.blurb), includes]
-      .filter((s) => s !== "")
-      .join(". ");
+    // A table cell cannot hold a bullet list, so the blurb and the list of what
+    // is included run together in one column, joined by a full stop. Adding one
+    // to a blurb that already ends in punctuation produced "tumbled finish.."
+    // eight times in a real page, because most people end a sentence with a
+    // full stop and the emitter added a second.
+    const parts = [t.blurb === undefined ? "" : cell(t.blurb), includes].filter((s) => s !== "");
+    const detail = parts.reduce((acc, part) => (acc === "" ? part : `${acc}${endsSentence(acc) ? " " : ". "}${part}`), "");
     const cells = [cell(t.name), cell(withCurrency(t.price, currency)), detail];
     if (withImages) cells.push(tierImage(t));
     return `| ${cells.join(" | ")} |`;

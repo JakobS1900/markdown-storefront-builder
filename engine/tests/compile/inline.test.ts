@@ -40,7 +40,7 @@ describe("the formatting artists actually type", () => {
   });
 
   it("uses the address as the label when there is none", () => {
-    expect(formatInline("[](https://e.test/x)")).toBe("[https://e\\.test/x](https://e.test/x)");
+    expect(formatInline("[](https://e.test/x)")).toBe("[https://e.test/x](https://e.test/x)");
   });
 });
 
@@ -87,8 +87,17 @@ describe("the whitelist holds, whatever is written", () => {
   it("refuses a javascript address, keeping the text so the artist can see it", () => {
     const out = formatInline("[click](javascript:alert(1))");
     // Not a link, and not silently deleted either.
-    expect(out).not.toMatch(/\]\(javascript/i);
+    //
+    // This asserted that the output contains no "](javascript" at all. Once
+    // round brackets stopped being escaped the output became
+    // "\[click\](javascript:alert(1))", which contains that substring and is
+    // still not a link, because a link needs an unescaped closing bracket and
+    // this one is escaped. The proxy had become cruder than the property, so
+    // the property is asserted directly: no unescaped "](" anywhere.
+    expect(out).not.toMatch(/(^|[^\\])\]\(/);
     expect(out).toContain("click");
+    expect(out).toContain("\\[");
+    expect(out).toContain("\\]");
   });
 
   it("refuses data and other schemes the same way", () => {

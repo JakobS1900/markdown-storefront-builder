@@ -64,19 +64,81 @@ describe("characters the host does not unescape", () => {
   });
 });
 
-describe("characters the host does unescape are left alone", () => {
-  const HONOURED = ["`", "*", "_", "{", "}", "[", "]", "(", ")", "#", "+", "-", ".", "!", "|"];
+/**
+ * This block used to assert that every character rentry unescapes keeps its
+ * backslash, on the reasoning that the host handles it so the escape is free.
+ *
+ * Feature 013 replaced that reasoning. Whether the host unescapes a character
+ * says nothing about whether it needed escaping: most of these can only begin a
+ * construct at the start of a line, and escaping them in the middle of a
+ * sentence bought nothing while filling the Copy screen with backslashes. The
+ * three groups below are what rentry's behaviour actually implies now.
+ */
+describe("what is escaped, and where", () => {
+  /** These begin a construct wherever they land, so they are escaped wherever they land. */
+  const ANYWHERE = ["`", "*", "_", "{", "}", "[", "]", "|"];
 
-  for (const char of HONOURED) {
-    it(`keeps the backslash escape for ${JSON.stringify(char)}`, () => {
+  for (const char of ANYWHERE) {
+    it(`escapes ${JSON.stringify(char)} in the middle of a sentence`, () => {
       const out = md({ id: "p", kind: "prose", text: `a${char}b` });
       expect(out).toContain(`\\${char}`);
     });
   }
 
-  it("keeps the backslash escape for a literal backslash", () => {
+  it("escapes a literal backslash", () => {
     const out = md({ id: "p", kind: "prose", text: "a\\b" });
     expect(out).toContain("\\\\");
+  });
+
+  /** These mark something only at the start of a line. */
+  const MARKERS = ["#", "+", "-"];
+
+  for (const char of MARKERS) {
+    it(`leaves ${JSON.stringify(char)} alone in the middle of a sentence`, () => {
+      const out = md({ id: "p", kind: "prose", text: `a${char}b` });
+      expect(out).toContain(`a${char}b`);
+      expect(out).not.toContain(`\\${char}`);
+    });
+  }
+
+  it("escapes a hash that begins a line, because nothing else would stop it", () => {
+    expect(md({ id: "p", kind: "prose", text: "# not a heading" })).toContain("\\# not a heading");
+  });
+
+  it("turns a line the artist began with a bullet into a bullet, on purpose", () => {
+    // Not an escaping case at all, which is why the first version of this test
+    // was wrong. A text section reads leading "-" and "+" as the artist asking
+    // for a list and emits one, so the escaper never sees a marker in marker
+    // position. The escaper's own behaviour is covered in narrow-escaping.
+    for (const marker of ["-", "+"]) {
+      const out = md({ id: "p", kind: "prose", text: `${marker} first\n${marker} second` });
+      expect(out).toContain("- first\n- second");
+      expect(out).not.toContain("\\-");
+    }
+  });
+
+  it("leaves a full stop alone unless it is finishing a list number", () => {
+    expect(md({ id: "p", kind: "prose", text: "a.b" })).toContain("a.b");
+    expect(md({ id: "p", kind: "prose", text: "1. not a list" })).toContain("1\\. not a list");
+    expect(md({ id: "p", kind: "prose", text: "1) not a list" })).toContain("1\\) not a list");
+  });
+
+  /** These never begin anything here, so they are never escaped. */
+  it("never escapes round brackets, which only matter inside an address", () => {
+    const out = md({ id: "p", kind: "prose", text: "Engraving (up to 20 characters)" });
+    expect(out).toContain("Engraving (up to 20 characters)");
+  });
+
+  it("leaves an exclamation mark alone in ordinary writing", () => {
+    expect(md({ id: "p", kind: "prose", text: "Back in stock!" })).toContain("Back in stock!");
+  });
+
+  it("escapes an exclamation mark that would turn a link into an image", () => {
+    // The one place `!` still matters. The bracket here is written by the
+    // emitter, not typed by the artist, so nothing else stops the pair.
+    const out = md({ id: "p", kind: "prose", text: "![alt](https://evil.test/x.png)" });
+    expect(out).toMatch(/\\!\[/);
+    expect(out).not.toMatch(/(^|[^\\])!\[/);
   });
 });
 

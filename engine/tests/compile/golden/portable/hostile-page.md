@@ -1,4 +1,4 @@
-### &lt;script&gt;alert\(1\)&lt;/script&gt;
+### &lt;script&gt;alert(1)&lt;/script&gt;
 
 *\| pipe \| table \|*
 
@@ -20,10 +20,10 @@ Payment: a\|b, &lt;b&gt;c&lt;/b&gt;
 | --- | --- |
 | ![\] escape \[](https://example.test/ok.png) |  |
 
-\]\(evil\) \[
+\](evil) \[
 
 \*\*\*
 
-&lt;img src=x onerror=alert\(1\)&gt;
+&lt;img src=x onerror=alert(1)&gt;
 
-Dollar &#36;45, tilde 50&#126;60, caret a&#94;b\.
+Dollar &#36;45, tilde 50&#126;60, caret a&#94;b.
