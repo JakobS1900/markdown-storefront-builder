@@ -12,6 +12,7 @@
 import { compile, findTarget, serializeDocument } from "@mdsb/engine";
 
 import { getState } from "../store.js";
+import { handOff } from "../files.js";
 import { announce, button, el, render } from "./dom.js";
 
 /** Where to paste, per host. Kept beside the target ids it describes. */
@@ -32,11 +33,9 @@ const WALKTHROUGH: Record<string, string[]> = {
   ],
 };
 
-function download(name: string, text: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const link = el("a", { href: url, download: name });
-  link.click();
-  URL.revokeObjectURL(url);
+/** Announces what actually happened, which is not always what was asked for. */
+function save(name: string, text: string, type: string): void {
+  announce(handOff(name, text, type).message);
 }
 
 export function exportSurface(container: HTMLElement): void {
@@ -95,18 +94,12 @@ export function exportSurface(container: HTMLElement): void {
       el("div", { class: "adders" }, [
         copy,
         button({
-          label: "Download as a file",
-          onClick: () => {
-            download("page.md", result.markdown, "text/markdown");
-            announce("Downloaded your page as a file");
-          },
+          label: "Save as a file",
+          onClick: () => save("page.md", result.markdown, "text/markdown"),
         }),
         button({
           label: "Save a backup you can reopen here",
-          onClick: () => {
-            download("page-backup.json", serializeDocument(state.doc), "application/json");
-            announce("Downloaded a backup");
-          },
+          onClick: () => save("page-backup.json", serializeDocument(state.doc), "application/json"),
         }),
       ]),
 

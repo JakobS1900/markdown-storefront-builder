@@ -9,6 +9,8 @@
 import { TARGETS } from "@mdsb/engine";
 
 import { getState, setSurface, setTarget, type Surface } from "../store.js";
+import { handOff } from "../files.js";
+import { rememberSurface } from "../surface-history.js";
 import { announce, button, el, render, resetFieldIds, select } from "./dom.js";
 import { buildSurface } from "./build.js";
 import { exportSurface } from "./export.js";
@@ -42,16 +44,12 @@ function statusLine(): HTMLElement {
       const { json } = status.rawRecovery;
       children.push(
         button({
-          label: "Download exactly what was saved",
+          label: "Save exactly what was saved",
           variant: "primary",
-          onClick: () => {
-            const blob = new Blob([json], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const link = el("a", { href: url, download: "recovered-page.json" });
-            link.click();
-            URL.revokeObjectURL(url);
-            announce("Downloaded the saved file");
-          },
+          // Through the same hand-off as the export buttons. This one mattered
+          // most and was just as inert in the Android shell: the recovery path
+          // is the promise that a page we refuse to open is still not lost.
+          onClick: () => announce(handOff("recovered-page.json", json, "application/json").message),
         }),
       );
     }
@@ -164,7 +162,12 @@ export function renderShell(root: HTMLElement): void {
         variant: state.surface === s.id ? "primary" : "ghost",
         pressed: state.surface === s.id,
         controls: "surface",
-        onClick: () => setSurface(s.id),
+        onClick: () => {
+          // The history entry is what gives the system back gesture somewhere
+          // to return to. Without it, back closed the app from every screen.
+          rememberSurface(s.id);
+          setSurface(s.id);
+        },
       }),
     ),
   );

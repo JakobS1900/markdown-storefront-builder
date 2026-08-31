@@ -2,4 +2,8 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-path name="my_images" path="." />
     <cache-path name="my_cache_images" path="." />
+    <!-- Where exported pages and backups are written before the share sheet
+         hands them on. Inside the app's own external directory, so it needs no
+         storage permission on any supported version. -->
+    <external-files-path name="exports" path="exports/" />
 </paths>

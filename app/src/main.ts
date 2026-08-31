@@ -8,6 +8,7 @@
 import { listPages, init, openPage, subscribe } from "./store.js";
 import { storageAvailable } from "./db.js";
 import { setUpServiceWorker } from "./register-sw.js";
+import { startSurfaceHistory } from "./surface-history.js";
 import { renderShell } from "./ui/shell.js";
 
 async function start(): Promise<void> {
@@ -15,6 +16,7 @@ async function start(): Promise<void> {
   if (root === null) throw new Error("missing #app");
 
   setUpServiceWorker();
+  startSurfaceHistory();
 
   const storageOk = await storageAvailable();
   init(storageOk);
