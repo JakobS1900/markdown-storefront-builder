@@ -71,6 +71,14 @@ change it.
       its raw stored content, and the failure message MUST offer that action.
       Raised by review R-4, because refusing to open a page is only recoverable
       if the artist can still get their work out.
+
+      **Import was ticked here and did not exist.** Export shipped, and with it
+      a button offering "a backup you can reopen here", but there was no file
+      input anywhere in the app and nothing that read one. The item stayed
+      ticked from 2026-08-15 until 2026-08-31, when opening a backup was
+      actually built, in commit `911d758`. Found by checking the three surfaces
+      on a phone rather than by reading this line, which is the point: a ticked
+      box is a claim, and this one was wrong for sixteen days.
 - [x] **2.2 The block editor.** Add, edit, reorder, and delete blocks. Mobile
       sheet and desktop card forms. Accessibility gates enforced from the first
       control, not retrofitted.
@@ -91,8 +99,18 @@ change it.
       Ships before upload so the gallery is usable with no server at all.
 - [x] **3.2 The upload proxy.** The serverless function, magic-byte sniffing,
       byte ceiling, per-IP rate limiting, and the server-held key.
+
+      **Shipped, then deliberately removed** in `7b391bc`, and the published
+      build now carries no upload key at all (`c79e5a9`). A serverless function
+      is a deployment, a runtime, and a thing that can be down, in a project
+      whose pitch is that it needs no server. The reasoning is in
+      `specs/006-images/spec.md`. This item is left ticked because it was built
+      and the decision to drop it was made with it working, but nothing in the
+      repository implements a proxy today, so do not go looking for one.
 - [x] **3.3 Client upload path.** Canvas downscale and re-encode, the upload UI,
-      and graceful degradation to URL mode when the proxy is unavailable.
+      and graceful degradation to URL mode when the proxy is unavailable. The
+      downscale and the UI are real and still tested; uploads now go directly to
+      the host, and are absent from the published build for want of a key.
 
 ## Phase 4: Ship
 
