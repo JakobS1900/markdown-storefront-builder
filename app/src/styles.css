@@ -493,28 +493,70 @@ fieldset.item > .btn.icon.danger {
   text-align: center;
 }
 
-/* Wider screens: Build beside Preview, since there is room to see both. */
+/*
+ * Wider screens.
+ *
+ * This block used to be introduced as "Build beside Preview, since there is
+ * room to see both", and so did the comment at the top of shell.ts. There is no
+ * split view and there never was: the rule below only unpins the tab bar. Both
+ * comments described an intention as though it had shipped.
+ *
+ * Unpinning it had a consequence nobody looked at, because nobody opened this
+ * on a desktop until someone asked where the desktop version was. The tab bar
+ * is the last child of the app, after the content, which is right when it is
+ * pinned to the bottom of a phone and wrong the moment it becomes static: it
+ * landed in the middle of the page, below the editor, reading as a stray strip
+ * rather than as navigation. Ordering puts it back under the header where its
+ * bottom border already assumed it was.
+ */
 
 @media (min-width: 900px) {
   body {
     padding-bottom: 0;
   }
 
+  #app {
+    display: flex;
+    flex-direction: column;
+  }
+
+  header.bar {
+    order: 1;
+  }
+
   .tabs {
+    order: 2;
     position: static;
     border-top: 0;
     border-bottom: 1px solid var(--line);
     padding: 0.5rem 1rem;
   }
 
+  /* Sized to their words. Stretched across a desktop window they read as three
+     page-wide bars rather than as a row of tabs. */
   .tabs .btn {
     flex: 0 0 auto;
     min-width: 8rem;
   }
 
+  .status {
+    order: 3;
+  }
+
   main {
+    order: 4;
+    width: 100%;
     max-width: 70rem;
     margin: 0 auto;
+  }
+
+  /*
+   * A text field the full width of a desktop window is not a text field, it is
+   * a horizon. The editor keeps a readable column; the preview and the copied
+   * output still get the whole width, because those are meant to be read wide.
+   */
+  #surface .stack {
+    max-width: 44rem;
   }
 }
 

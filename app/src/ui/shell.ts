@@ -2,9 +2,13 @@
  * The shell: the three surfaces, the target switcher, and the status line.
  *
  * On a phone the surfaces are a bottom tab bar, within thumb reach. On a wider
- * screen the same three become a split view with Build beside Preview, since
- * seeing both at once is the whole point when there is room for it. One set of
- * components, one layout decision, made in CSS.
+ * screen the same three sit under the header instead, and the editor keeps a
+ * readable column rather than stretching to the window.
+ *
+ * This used to claim a split view with Build beside Preview. There is not one
+ * and there never was, in this file or in the stylesheet that made the same
+ * claim. Seeing both at once would be a good desktop design and remains
+ * unbuilt; describing it as though it shipped meant nobody went looking.
  */
 import { TARGETS } from "@mdsb/engine";
 
