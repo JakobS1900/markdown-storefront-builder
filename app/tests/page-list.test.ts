@@ -1,0 +1,219 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * Choosing which saved page to open.
+ *
+ * Storage has been multi-page since feature 004 and nothing in the interface
+ * ever let anyone pick one, so the app opened whichever page had the newest
+ * timestamp and that was the only page anybody could reach. Import writes a new
+ * page every time, on purpose, and FR-018 refuses to open a damaged one while
+ * leaving it in place with the newest timestamp of all. Both of those strand
+ * the page the artist actually cares about, in storage, intact, with no route
+ * back to it.
+ *
+ * The refusal case is the one that matters and it is the last test here: a page
+ * that cannot be opened must not take the list down with it, or the fix is only
+ * a fix for the easy half.
+ *
+ * jsdom has no IndexedDB, so these run against fake-indexeddb, as db.test.ts
+ * does, with a fresh factory per test.
+ */
+import "fake-indexeddb/auto";
+import { IDBFactory } from "fake-indexeddb";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { emptyDocument } from "@mdsb/engine";
+
+import { writePage } from "../src/db.js";
+import { getState, init, refreshPages, subscribe } from "../src/store.js";
+import { renderShell } from "../src/ui/shell.js";
+
+let stop: (() => void) | undefined;
+
+/** A page in storage. The default title is what an untitled page is stored as. */
+async function stored(id: string, over: { title?: string; updatedAt?: number; json?: string } = {}) {
+  await writePage({
+    id,
+    json: over.json ?? '{"schemaVersion":1,"target":"rentry","blocks":[]}',
+    title: over.title ?? "Untitled page",
+    updatedAt: over.updatedAt ?? 1000,
+  });
+}
+
+/**
+ * Waits for storage.
+ *
+ * fake-indexeddb settles a request over several turns of the event loop, as the
+ * real thing does. One flush is not enough and a test that asserts too early
+ * fails for a reason that has nothing to do with what it is testing.
+ */
+async function settle(): Promise<void> {
+  for (let i = 0; i < 10; i += 1) await new Promise((r) => setTimeout(r, 0));
+}
+
+/**
+ * Boots the app on a given page id, with storage working.
+ *
+ * The title is passed separately because the open page's entry reads its name
+ * from the live document rather than from the record, which is the point of one
+ * of these tests. At launch the two agree, because the document came from the
+ * record; here they only agree if the test says so.
+ */
+async function live(pageId: string, title?: string): Promise<void> {
+  document.body.innerHTML =
+    '<a class="skip" href="#surface">Skip</a><div id="app"></div>' +
+    '<div id="live-region" class="sr-only" role="status" aria-live="polite"></div>';
+  const root = document.getElementById("app");
+  if (root === null) throw new Error("missing #app");
+  init(true, title === undefined ? undefined : { ...emptyDocument("rentry"), title }, pageId);
+  stop = subscribe(() => renderShell(root));
+  await refreshPages();
+  renderShell(root);
+}
+
+/** The list's entries, by accessible name, buttons and current entry alike. */
+function entries(): string[] {
+  return [...document.querySelectorAll(".pages li > *")].map((node) =>
+    (node.getAttribute("aria-label") ?? node.textContent ?? "").trim(),
+  );
+}
+
+function openable(): HTMLButtonElement[] {
+  return [...document.querySelectorAll<HTMLButtonElement>(".pages li > button")];
+}
+
+beforeEach(() => {
+  stop?.();
+  stop = undefined;
+  // A fresh database per test, so nothing passes because of a leftover page.
+  globalThis.indexedDB = new IDBFactory();
+});
+
+describe("the page list", () => {
+  it("stays out of the way when there is nothing to switch to", async () => {
+    await stored("only");
+    await live("only");
+
+    expect(document.querySelector(".pages")).toBeNull();
+  });
+
+  it("appears once a second page exists", async () => {
+    await stored("mine", { title: "Commissions", updatedAt: 2000 });
+    await stored("backup", { title: "Commissions (backup)", updatedAt: 1000 });
+    await live("mine");
+
+    expect(document.querySelector(".pages")).not.toBeNull();
+    expect(entries()).toHaveLength(2);
+    expect(document.querySelector(".pages-group > summary")?.textContent).toBe("Your pages (2)");
+  });
+
+  it("lists the newest first", async () => {
+    await stored("old", { title: "Older", updatedAt: 1000 });
+    await stored("new", { title: "Newer", updatedAt: 5000 });
+    await live("old", "Older");
+
+    expect(entries().map((e) => e.split(",")[0])).toEqual(["Newer", "Older"]);
+  });
+
+  it("tells two untitled pages apart", async () => {
+    // Titles are optional and default to the same words, so a title alone
+    // cannot name an entry. FR-020a.
+    await stored("a", { updatedAt: Date.UTC(2026, 0, 2) });
+    await stored("b", { updatedAt: Date.UTC(2026, 5, 9) });
+    await live("a");
+
+    const names = entries();
+    expect(names[0]).not.toBe(names[1]);
+    expect(names.every((n) => n.startsWith("Untitled page, last edited "))).toBe(true);
+  });
+
+  it("marks the page already open, and does not offer to open it again", async () => {
+    await stored("mine", { title: "Commissions", updatedAt: 2000 });
+    await stored("other", { title: "Old prices", updatedAt: 1000 });
+    await live("mine", "Commissions");
+
+    const current = document.querySelector('.pages [aria-current="page"]');
+    expect(current?.textContent).toContain("Commissions");
+    expect(openable().map((b) => b.textContent?.split(",")[0])).toEqual(["Old prices"]);
+  });
+
+  it("takes the open page's title from the document, not the stale record", async () => {
+    // The record is only rewritten when a save lands. Reading the live document
+    // means renaming a page renames its entry at once.
+    await stored("mine", { title: "Commissions", updatedAt: 2000 });
+    await stored("other", { title: "Old prices", updatedAt: 1000 });
+    await live("mine", "Commissions");
+
+    // The switcher holds no inputs, so the first text input is the page title.
+    const title = document.querySelector<HTMLInputElement>("#app input[type=text]");
+    if (title === null) throw new Error("no title field");
+    title.value = "Renamed";
+    title.dispatchEvent(new Event("input"));
+    renderShell(document.getElementById("app") as HTMLElement);
+
+    expect(document.querySelector('.pages [aria-current="page"]')?.textContent).toContain("Renamed");
+  });
+
+  it("opens the page that was pressed", async () => {
+    await stored("mine", { title: "Commissions", updatedAt: 2000 });
+    await stored("other", {
+      title: "Old prices",
+      updatedAt: 1000,
+      json: '{"schemaVersion":1,"target":"rentry","title":"Old prices","blocks":[{"id":"h","kind":"heading","text":"Prices","level":2}]}',
+    });
+    await live("mine", "Commissions");
+
+    const button = openable()[0];
+    if (button === undefined) throw new Error("nothing to open");
+    button.click();
+    await settle();
+
+    expect(getState().pageId).toBe("other");
+    expect(getState().doc.blocks).toHaveLength(1);
+  });
+
+  it("leaves the list up when a page will not open, so another can be chosen", async () => {
+    // The whole reason this exists. A refused page keeps the newest timestamp,
+    // so it is what the app tries to open at every launch. If refusing it also
+    // removed the way out, the artist is exactly as stuck as before. FR-020b.
+    await stored("damaged", {
+      title: "A damaged page",
+      updatedAt: 9000,
+      json: '{"schemaVersion":1,"target":"rentry","blocks":[{"id":"x","kind":"heading","text":"my work","level":"TWO"}]}',
+    });
+    await stored("mine", { title: "Commissions", updatedAt: 2000 });
+    // No page is open: the launch attempt was refused, so pageId is a fresh id
+    // that is not in storage.
+    await live("nothing-open-yet");
+
+    const damaged = openable().find((b) => b.textContent?.startsWith("A damaged page"));
+    if (damaged === undefined) throw new Error("the damaged page is not listed");
+    damaged.click();
+    await settle();
+
+    expect(getState().status.kind).toBe("error");
+    expect(getState().status.rawRecovery?.id).toBe("damaged");
+    expect(document.querySelector(".pages")).not.toBeNull();
+
+    const mine = openable().find((b) => b.textContent?.startsWith("Commissions"));
+    if (mine === undefined) throw new Error("no way out of the refusal");
+    mine.click();
+    await settle();
+
+    expect(getState().pageId).toBe("mine");
+    expect(getState().status.kind).toBe("idle");
+  });
+
+  it("puts focus somewhere after switching, since the button pressed is gone", async () => {
+    await stored("mine", { title: "Commissions", updatedAt: 2000 });
+    await stored("other", { title: "Old prices", updatedAt: 1000 });
+    await live("mine", "Commissions");
+
+    const button = openable()[0];
+    if (button === undefined) throw new Error("nothing to open");
+    button.click();
+    await settle();
+
+    expect(document.activeElement).toBe(document.querySelector(".pages-group > summary"));
+  });
+});

@@ -14,12 +14,14 @@ import {
   cancelDelete,
   getState,
   moveBlock,
+  openPage,
   removeBlock,
   selectBlock,
   updateBlock,
   update,
+  type State,
 } from "../store.js";
-import { announce, button, el, field, render } from "./dom.js";
+import { announce, button, disclosure, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
 
 const ADDABLE: Block["kind"][] = ["profile", "menu", "gallery", "prose", "heading", "divider"];
@@ -43,6 +45,88 @@ function summarise(block: Block): string {
     case "profile":
       return block.displayName === "" ? "No name yet" : block.displayName;
   }
+}
+
+/** When a page was last written, short enough to sit beside its title. */
+function lastEdited(at: number): string {
+  const when = new Date(at);
+  return when.toDateString() === new Date().toDateString()
+    ? `today at ${when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+    : when.toLocaleDateString();
+}
+
+/**
+ * The other pages saved in this browser.
+ *
+ * Storage has been multi-page since the app shell was built and there was never
+ * a way to choose one, so whichever page had the newest timestamp was the only
+ * page anybody could reach. That went unnoticed while there was one page per
+ * device, and then two things started making more: importing a backup writes it
+ * under a new id so that opening the wrong file cannot destroy the page already
+ * open, and FR-018 refuses a page it cannot read while leaving it in place with
+ * the newest timestamp of all. Each of those strands the artist's real page,
+ * intact and unreachable, which is close enough to losing it.
+ *
+ * It lives on Build, folded, rather than in a fourth tab: Build is the surface
+ * still standing when a page has been refused, which is the case this exists
+ * for, and a tab would spend a permanent quarter of the tab bar on something
+ * used once a month.
+ *
+ * Nothing here deletes a page. That is Principle V, and a delete control
+ * belongs to its own decision with its own question, not to a list.
+ */
+function pageList(state: State): HTMLElement[] {
+  // Nothing to switch to means no switcher. One page is not a list, and the
+  // page on screen is not somewhere to go.
+  if (!state.pages.some((page) => page.id !== state.pageId)) return [];
+
+  const live = state.doc.title === undefined || state.doc.title === "" ? "Untitled page" : state.doc.title;
+
+  return [
+    disclosure({
+      className: "pages-group",
+      summary: `Your pages (${String(state.pages.length)})`,
+      children: [
+        el(
+          "ul",
+          { class: "pages", "aria-label": "Saved pages" },
+          state.pages.map((page) => {
+            const current = page.id === state.pageId;
+            // The record only catches up to the title when a save lands, so the
+            // page on screen reads its name from the document instead. Renaming
+            // renames the entry as it is typed.
+            const title = current ? live : page.title;
+            // A title is optional and untitled pages are all called the same
+            // thing, so the date is part of the name rather than decoration
+            // beside it. Two entries reading "Untitled page" are not a choice.
+            const label = `${title}, last edited ${lastEdited(page.updatedAt)}`;
+
+            return el("li", {}, [
+              current
+                ? el("p", { class: "current", "aria-current": "page" }, [`${label}. Open now.`])
+                : button({
+                    label,
+                    onClick: () => {
+                      void openPage(page.id).then(() => {
+                        if (getState().pageId === page.id) announce(`Opened ${title}`);
+                        // The button just pressed no longer exists: it is the
+                        // current entry now, or the page was refused and the
+                        // status line has the news. Either way focus has fallen
+                        // to the body, which leaves a keyboard user at the top
+                        // of the document hunting for what changed. The summary
+                        // is where they were.
+                        document
+                          .querySelector<HTMLElement>(".pages-group > summary")
+                          ?.focus({ preventScroll: true });
+                      });
+                    },
+                  }),
+            ]);
+          }),
+        ),
+      ],
+    }),
+  ];
 }
 
 export function buildSurface(container: HTMLElement): void {
@@ -163,6 +247,7 @@ export function buildSurface(container: HTMLElement): void {
   render(
     container,
     el("div", { class: "stack" }, [
+      ...pageList(state),
       field({
         label: "Page title (optional)",
         value: state.doc.title ?? "",

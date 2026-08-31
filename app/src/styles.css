@@ -312,6 +312,35 @@ fieldset.item > .btn.icon.danger {
   padding: 1.5rem 0;
 }
 
+/* The page switcher */
+
+.pages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pages > li + li {
+  margin-top: 0.25rem;
+}
+
+/* Full width, left aligned: these are rows of a list, not a row of buttons,
+   and a title long enough to wrap has to wrap somewhere sensible. The height
+   floor is the shared touch target minimum, which a single line of text does
+   not reach on its own. */
+.pages button {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  text-align: left;
+}
+
+.pages .current {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  color: var(--muted);
+}
+
 /* Status */
 
 .status {

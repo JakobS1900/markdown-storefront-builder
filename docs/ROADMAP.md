@@ -129,7 +129,12 @@ entirely: the decision to wrap the app natively came after the roadmap was
 written, so the document that says everything is finished was silent about the
 platform the owner actually uses. Every item below shipped before it was
 written down here, which is the wrong order and is recorded rather than tidied
-away.
+away. 5.7 is the exception and the first thing in this project since the engine
+to be specified before it was built.
+
+It is also where work found by using the app on the phone is recorded, whether
+or not the fix is specific to the phone. 5.7 is not a native concern at all: it
+was found on the device, which is where everything is found now.
 
 - [x] **5.1 The native shell.** A Capacitor wrapper around the same code, with
       no platform branches in the app beyond detecting the shell. It buys a
@@ -155,11 +160,19 @@ away.
       debugger: persistence across a kill, the clipboard, typing at speed, the
       export files, and the whole editing loop. Recorded in `63ccbec` and in
       `specs/010-field-work/spec.md`.
-- [ ] **5.7 A signed release.** There is no release build, no signing key, and
+- [x] **5.7 A way back to a page.** Storage held many pages from the start and
+      nothing ever let anyone choose one, so the app opened the newest and every
+      other page was unreachable. Importing a backup makes a page, and a page
+      refused under FR-018 keeps the newest timestamp, so both of them stranded
+      the artist's real work in storage where they could not get at it. "Your
+      pages" on the Build screen opens any of them, including after a refusal,
+      which is the case it exists for. Specified before it was built, in
+      `specs/011-page-list/spec.md`, and walked on the device with real taps.
+- [ ] **5.8 A signed release.** There is no release build, no signing key, and
       no distribution. The APK is a debug build installed over a cable. Nothing
       here is ready for anyone but its owner, and saying so is cheaper than
       discovering it at the point of publishing.
-- [ ] **5.8 A second device.** Everything above was verified on one Moto G7 on
+- [ ] **5.9 A second device.** Everything above was verified on one Moto G7 on
       Android 10. The keyboard inset bug was specific to that era of Android, so
       the fix for it is the least portable thing in the project.
 

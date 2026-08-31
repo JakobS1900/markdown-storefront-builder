@@ -11,7 +11,9 @@
  * name rather than a plausible-looking one, that the touch target minimum is
  * actually met, and that nothing depends on a pointing device.
  */
+import "fake-indexeddb/auto";
 import axe from "axe-core";
+import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -33,7 +35,8 @@ vi.mock("../src/upload.js", () => ({
   uploadImage: vi.fn(),
 }));
 
-import { addBlock, getState, init, selectBlock, setSurface } from "../src/store.js";
+import { writePage } from "../src/db.js";
+import { addBlock, getState, init, refreshPages, selectBlock, setSurface } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -112,6 +115,60 @@ describe("the shell is accessible", () => {
     } finally {
       mocks.uploads = true;
     }
+  });
+});
+
+describe("the page switcher is accessible", () => {
+  /**
+   * Rendered through the real path, not assembled by hand.
+   *
+   * The switcher only exists when storage holds a page other than the one on
+   * screen, so a gate that boots the app and looks would never see it. That is
+   * exactly how an unlabelled file input shipped for weeks: the gate was green
+   * on a control it had never rendered. So this seeds two pages into
+   * fake-indexeddb and lets the app decide what to draw.
+   */
+  beforeEach(async () => {
+    globalThis.indexedDB = new IDBFactory();
+    init(true, undefined, "mine");
+    for (const [id, title, updatedAt] of [
+      ["mine", "Commissions", 2000],
+      ["backup", "Untitled page", 1000],
+    ] as const) {
+      await writePage({ id, json: '{"schemaVersion":1,"target":"rentry","blocks":[]}', title, updatedAt });
+    }
+    await refreshPages();
+  });
+
+  /** Unfolded, because a closed group is content axe is entitled to skip. */
+  function open(root: HTMLElement): void {
+    renderShell(root);
+    const group = document.querySelector<HTMLDetailsElement>(".pages-group");
+    if (group === null) throw new Error("the switcher did not render");
+    group.open = true;
+  }
+
+  it("has no axe violations with the switcher open", async () => {
+    open(mount());
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("names every entry, and names them differently from each other", () => {
+    open(mount());
+
+    const names = [...document.querySelectorAll(".pages li > *")].map((node) =>
+      (node.getAttribute("aria-label") ?? node.textContent ?? "").trim(),
+    );
+    expect(names).toHaveLength(2);
+    for (const name of names) expect(name).not.toBe("");
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("marks the open page rather than offering to open it again", () => {
+    open(mount());
+
+    expect(document.querySelectorAll('.pages [aria-current="page"]')).toHaveLength(1);
+    expect(document.querySelectorAll(".pages li > button")).toHaveLength(1);
   });
 });
 

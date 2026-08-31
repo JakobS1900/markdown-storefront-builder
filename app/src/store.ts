@@ -48,6 +48,17 @@ export interface State {
   readonly pendingDeleteId?: string;
   readonly status: Status;
   readonly storageOk: boolean;
+  /**
+   * Every page in this browser's storage, newest first.
+   *
+   * Held in state rather than read when the list renders, because rendering is
+   * synchronous and storage is not. It is refreshed at the moments the set can
+   * actually change, not on every save: a save alters one record's timestamp,
+   * and re-reading every page's JSON on every keystroke to notice that would
+   * cost far more than the ordering is worth. The entry for the page on screen
+   * therefore reads its title from the live document instead of from here.
+   */
+  readonly pages: readonly StoredPage[];
 }
 
 type Listener = (state: State) => void;
@@ -89,8 +100,26 @@ export function init(storageOk: boolean, doc?: Document, pageId?: string): State
             "This browser will not let the page save anything, so your work will be lost when you close the tab. Private browsing usually causes this. Use Export to keep a copy.",
         },
     storageOk,
+    pages: [],
   };
   return state;
+}
+
+/**
+ * Re-reads which pages exist.
+ *
+ * Called when the set of pages can have changed: at launch, after opening one,
+ * and after a backup has been written under a new id. Failure is swallowed on
+ * purpose. Not knowing the list is a missing convenience; it must never be able
+ * to take down the surface that is showing somebody their work.
+ */
+export async function refreshPages(): Promise<void> {
+  if (!state.storageOk) return;
+  try {
+    set({ pages: await listPages() });
+  } catch {
+    // Left as it was. An empty or stale list hides the switcher at worst.
+  }
 }
 
 export function getState(): State {
@@ -317,6 +346,11 @@ async function save(): Promise<void> {
  * losing it.
  */
 export async function openPage(id: string): Promise<void> {
+  // Before anything else, and on every path out of here including the two
+  // failures. Switching away from a page is the moment its stored title stops
+  // being the one on screen, so it is the moment the list has to catch up.
+  await refreshPages();
+
   const stored = await readPage(id);
   if (stored === undefined) {
     set({ status: { kind: "error", message: "That page is no longer in this browser's storage." } });

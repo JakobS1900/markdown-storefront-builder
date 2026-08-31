@@ -5,7 +5,7 @@
  * one. Storage failure is reported rather than hidden: a tool that appears to
  * save and does not is worse than one that admits it cannot.
  */
-import { listPages, init, openPage, subscribe } from "./store.js";
+import { listPages, init, openPage, refreshPages, subscribe } from "./store.js";
 import { storageAvailable } from "./db.js";
 import { setUpServiceWorker } from "./register-sw.js";
 import { startSurfaceHistory } from "./surface-history.js";
@@ -30,9 +30,12 @@ async function start(): Promise<void> {
 
   // Reopen the page they were last working on. openPage reports its own
   // failure, including handing back the raw file, so nothing is swallowed here.
+  // It refreshes the page list on every path out, so a page refused at launch
+  // still leaves the switcher populated and every other page reachable.
   const pages = await listPages();
   const mostRecent = pages[0];
   if (mostRecent !== undefined) await openPage(mostRecent.id);
+  else await refreshPages();
 }
 
 void start();

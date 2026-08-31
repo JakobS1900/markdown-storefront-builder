@@ -16,7 +16,7 @@
 import { parseDocument, serializeDocument } from "@mdsb/engine";
 
 import { writePage } from "./db.js";
-import { adopt, newId } from "./store.js";
+import { adopt, newId, refreshPages } from "./store.js";
 
 export interface Opened {
   readonly ok: boolean;
@@ -52,15 +52,17 @@ export async function openBackup(text: string): Promise<Opened> {
   });
 
   adopt(id, result.document);
-  // Says what is true and stops there. The first wording was "the page you had
-  // open is still saved on this device", which is accurate and reads as an
-  // offer: it implies you can go back to it. There is no page list, so the app
-  // always opens whichever page was touched last and the previous one is out of
-  // reach. Reassurance that cannot be acted on is the same shape of promise as
-  // a backup button with nothing to reopen it.
+  // A page has just come into existence, so the switcher has to know about it,
+  // and about the page it now sits beside.
+  await refreshPages();
+  // This sentence has been wrong twice. It first read "the page you had open is
+  // still saved on this device", which was accurate and read as an offer: it
+  // implied you could go back, and there was no way to. It then said so plainly,
+  // which was honest and no use. Both are now obsolete, because "Your pages" on
+  // the Build screen is the route it is pointing at.
   return {
     ok: true,
     message:
-      "Opened the backup as a new page. The page you had open was not deleted, but there is no way to switch back to it yet.",
+      "Opened the backup as a new page. The page you had open is still saved, under Your pages on the Build screen.",
   };
 }

@@ -190,8 +190,8 @@ export function select(opts: {
  * fields, three of them optional, reads as a form to be completed. The same
  * section opening with two reads as a thing to be filled in.
  */
-export function disclosure(opts: { summary: string; children: Node[] }): HTMLElement {
-  return el("details", { class: "more", id: nextFieldId() }, [
+export function disclosure(opts: { summary: string; children: Node[]; className?: string }): HTMLElement {
+  return el("details", { class: `more${opts.className === undefined ? "" : ` ${opts.className}`}`, id: nextFieldId() }, [
     el("summary", {}, [opts.summary]),
     el("div", { class: "more-body" }, opts.children),
   ]);
