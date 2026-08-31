@@ -229,6 +229,48 @@ describe("menu", () => {
     expect(note?.severity).toBe("info");
   });
 
+  /**
+   * Two notes about one section must not contradict each other.
+   *
+   * Seen on the phone: pasting a javascript: address into a gallery produced
+   * "one of your images does not have an http address, so it has been left
+   * out", correctly, and then "this section has nothing in it yet, fill it in
+   * and it will show up", which is false. The artist had just filled it in. The
+   * preview also offered two identical buttons to go to the same section.
+   *
+   * Saying nothing is here, immediately after saying what was removed, is worse
+   * than saying nothing at all: it sends the artist to look for a problem they
+   * have already been told about, described as a different problem.
+   */
+  it("does not also call a section empty when something else explains why", () => {
+    const out = compile(
+      page({ id: "g", kind: "gallery", layout: "grid", items: [{ imageUrl: "javascript:alert(1)" }] }),
+      "portable",
+    );
+    expect(out.markdown).toBe("");
+    expect(out.diagnostics.map((d) => d.code)).toEqual(["link_scheme_refused"]);
+  });
+
+  it("does not call a price list empty when its only item was left out", () => {
+    const out = compile(page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }] }), "portable");
+    expect(out.markdown).toBe("");
+    expect(out.diagnostics.map((d) => d.code)).toEqual(["item_omitted"]);
+  });
+
+  it("still calls a section empty when nothing else has anything to say", () => {
+    const out = compile(page({ id: "p", kind: "prose", text: "" }), "portable");
+    expect(out.diagnostics.map((d) => d.code)).toEqual(["section_empty"]);
+  });
+
+  it("offers one way back to a section, not one per note", () => {
+    const out = compile(
+      page({ id: "g", kind: "gallery", layout: "grid", items: [{ imageUrl: "javascript:alert(1)" }] }),
+      "portable",
+    );
+    const forThisBlock = out.diagnostics.filter((d) => d.blockId === "g");
+    expect(forThisBlock).toHaveLength(1);
+  });
+
   it("warns once however many empty items there are", () => {
     const out = compile(
       page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }, { name: "", price: "" }] }),

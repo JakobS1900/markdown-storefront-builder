@@ -96,6 +96,7 @@ function compileForTarget(
 
   const parts: string[] = [];
   for (const block of doc.blocks) {
+    const before = sink.all.length;
     const emitted = emitBlock(block, target, sink);
     // An empty section contributes nothing. Pushing it would produce a stray
     // blank line, since parts are joined by a blank line.
@@ -103,6 +104,17 @@ function compileForTarget(
       parts.push(emitted);
       continue;
     }
+
+    // Something the emitter said already explains why this produced nothing.
+    //
+    // Pasting a javascript: address into a gallery used to report both "one of
+    // your images does not have an http address, so it has been left out",
+    // which is true, and "this section has nothing in it yet, fill it in",
+    // which is false: the artist had just filled it in. The preview then
+    // offered two identical buttons to the same section. Saying nothing is here
+    // straight after saying what was removed sends them looking for a second
+    // problem that does not exist.
+    if (sink.all.slice(before).some((d) => d.blockId === block.id)) continue;
 
     // Contributing nothing is not the same as being silent about it. A section
     // the artist added and has not filled in simply disappeared from the
