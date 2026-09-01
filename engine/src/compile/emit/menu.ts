@@ -96,7 +96,13 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
 function withCurrency(price: string, currency: string | undefined): string {
   if (currency === undefined || currency === "") return price;
   const isBareNumber = /^[\d\s.,+\-/]+$/.test(price.trim());
-  return isBareNumber ? `${currency} ${price}` : price;
+  if (!isBareNumber) return price;
+  // "USD 20" wants the space and "$ 20" does not. A currency written as a word
+  // or a code is read as one, and a symbol belongs against the digits. Became
+  // visible once units arrived, because "$ 20 per lb" has the space in the one
+  // place a price should not.
+  const symbol = !/[a-z]/i.test(currency);
+  return symbol ? `${currency}${price}` : `${currency} ${price}`;
 }
 
 /**
@@ -122,13 +128,46 @@ function endsSentence(text: string): boolean {
   return /[.!?:]$/.test(text);
 }
 
+/**
+ * The price, with what it buys.
+ *
+ * Twenty dollars of bananas is not a price until you know it buys a pound. The
+ * unit follows the price in the same breath because it qualifies the price and
+ * not the item: "Bananas, per lb" answers a different question.
+ */
+function pricedAs(tier: Tier, currency: string | undefined): string {
+  const price = withCurrency(tier.price, currency);
+  const unit = tier.unit === undefined ? "" : tier.unit.trim();
+  return unit === "" ? price : `${price} ${unit}`;
+}
+
+/**
+ * The labelled facts an item actually has.
+ *
+ * A detail missing either half is one somebody started and abandoned, and it is
+ * dropped for the same reason an item with no name and no price is: an empty
+ * row is not a thing anyone meant to publish. FR-026a.
+ */
+function realDetails(tier: Tier): readonly { label: string; value: string }[] {
+  if (tier.details === undefined) return [];
+  return tier.details
+    .map((d) => ({ label: d.label.trim(), value: d.value.trim() }))
+    .filter((d) => d.label !== "" && d.value !== "");
+}
+
 function tierTable(tiers: readonly Tier[], currency: string | undefined): string {
   // The Example column appears only when at least one tier has a usable image.
   // An empty column on every row would be a worse table for everyone who does
   // not use the feature.
   const withImages = tiers.some((t) => tierImage(t) !== "");
+  // The same rule for details: a column of empty cells is a worse table for
+  // everybody who does not sell anything with options.
+  const withDetails = tiers.some((t) => realDetails(t).length > 0);
 
-  const rows = tiers.map((t) => {
+  // "What you get" earns its place the same way. It was unconditional, so a
+  // greengrocer listing weights and prices got a column of nothing, which is
+  // precisely the cost the other two columns are conditional to avoid.
+  const describe = (t: Tier): string => {
     const includes = t.includes === undefined ? "" : t.includes.map(cell).join(", ");
     // A table cell cannot hold a bullet list, so the blurb and the list of what
     // is included run together in one column, joined by a full stop. Adding one
@@ -136,8 +175,17 @@ function tierTable(tiers: readonly Tier[], currency: string | undefined): string
     // eight times in a real page, because most people end a sentence with a
     // full stop and the emitter added a second.
     const parts = [t.blurb === undefined ? "" : cell(t.blurb), includes].filter((s) => s !== "");
-    const detail = parts.reduce((acc, part) => (acc === "" ? part : `${acc}${endsSentence(acc) ? " " : ". "}${part}`), "");
-    const cells = [cell(t.name), cell(withCurrency(t.price, currency)), detail];
+    return parts.reduce((acc, part) => (acc === "" ? part : `${acc}${endsSentence(acc) ? " " : ". "}${part}`), "");
+  };
+
+  const withDescriptions = tiers.some((t) => describe(t) !== "");
+
+  const rows = tiers.map((t) => {
+    const cells = [cell(t.name), cell(pricedAs(t, currency))];
+    if (withDescriptions) cells.push(describe(t));
+    if (withDetails) {
+      cells.push(realDetails(t).map((d) => `${cell(d.label)}: ${cell(d.value)}`).join(", "));
+    }
     if (withImages) cells.push(tierImage(t));
     return `| ${cells.join(" | ")} |`;
   });
@@ -145,9 +193,14 @@ function tierTable(tiers: readonly Tier[], currency: string | undefined): string
   // "Item", the same word the form uses. The section called them tiers in the
   // output, options in one part of the interface, and items in another, which
   // is two words too many for a person who is only listing what they sell.
-  const head = withImages
-    ? ["| Item | Price | What you get | Example |", "| --- | --- | --- | --- |"]
-    : ["| Item | Price | What you get |", "| --- | --- | --- |"];
+  // Built from the columns actually present, rather than one string per
+  // combination, which is four strings for two optional columns and eight for
+  // the next one somebody adds.
+  const columns = ["Item", "Price"];
+  if (withDescriptions) columns.push("What you get");
+  if (withDetails) columns.push("Details");
+  if (withImages) columns.push("Example");
+  const head = [`| ${columns.join(" | ")} |`, `| ${columns.map(() => "---").join(" | ")} |`];
 
   return [...head, ...rows].join("\n");
 }
@@ -170,13 +223,19 @@ function tierList(
   return tiers
     .map((t) => {
       const lines = [
-        `**${escapeText(t.name)}**: ${escapeText(withCurrency(t.price, currency))}`,
+        `**${escapeText(t.name)}**: ${escapeText(pricedAs(t, currency))}`,
       ];
       if (t.blurb !== undefined && t.blurb !== "") lines.push(escapeText(t.blurb));
       const image = tierImage(t);
       if (image !== "") lines.push(image);
       const includes = t.includes === undefined ? undefined : bulletList(t.includes.map(escapeText));
       if (includes !== undefined) lines.push(includes);
+      // Details follow the item as a list, which is what the fallback already
+      // does for what is included.
+      const details = bulletList(
+        realDetails(t).map((d) => `${escapeText(d.label)}: ${escapeText(d.value)}`),
+      );
+      if (details !== undefined) lines.push(details);
       return lines.join("\n\n");
     })
     .join("\n\n");

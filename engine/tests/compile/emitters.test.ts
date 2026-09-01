@@ -153,6 +153,96 @@ describe("menu", () => {
     expect(out).toMatch(/Titanium frame lock\\?\. S35VN blade/);
   });
 
+  it("puts a currency symbol against the digits and a currency word apart from them", () => {
+    const symbol = md({ id: "m", kind: "menu", currency: "$", tiers: [{ name: "Bananas", price: "20", unit: "per lb" }] });
+    expect(symbol).toContain("| Bananas | &#36;20 per lb |");
+
+    const word = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "Bananas", price: "20" }] });
+    expect(word).toContain("| Bananas | USD 20 |");
+  });
+
+  it("says what the price buys, beside the price", () => {
+    // Twenty dollars of bananas is not a price until you know it buys a pound.
+    const out = md({
+      id: "m",
+      kind: "menu",
+      currency: "USD",
+      tiers: [{ name: "Bananas", price: "20", unit: "per lb" }],
+    });
+    expect(out).toContain("| Bananas | USD 20 per lb |");
+  });
+
+  it("leaves a unit alone on a price that is not a number", () => {
+    const out = md({
+      id: "m",
+      kind: "menu",
+      tiers: [{ name: "Consulting", price: "ask", unit: "per hour" }],
+    });
+    expect(out).toContain("| Consulting | ask per hour |");
+  });
+
+  it("gives details their own column, only when something has any", () => {
+    const withNone = md({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }] });
+    expect(withNone).not.toContain("Details");
+
+    const out = md({
+      id: "m",
+      kind: "menu",
+      tiers: [
+        { name: "Pixel 6a", price: "180", unit: "each", details: [
+          { label: "Colour", value: "black" },
+          { label: "Storage", value: "128GB" },
+        ] },
+        { name: "Case", price: "12" },
+      ],
+    });
+    expect(out).toContain("| Item | Price | Details |");
+    expect(out).toContain("| Pixel 6a | 180 each | Colour: black, Storage: 128GB |");
+    // The item with no details still has a cell, or the row is short and the
+    // table stops being rectangular.
+    expect(out).toContain("| Case | 12 |  |");
+    const lines = out.split("\n").filter((l) => l.startsWith("|"));
+    expect(new Set(lines.map((l) => (l.match(/(?<!\\)\|/g) ?? []).length)).size).toBe(1);
+  });
+
+  it("leaves out a detail that was started and abandoned", () => {
+    // FR-026a, the same rule an item itself already follows.
+    const out = md({
+      id: "m",
+      kind: "menu",
+      tiers: [{ name: "Bananas", price: "20", details: [
+        { label: "Origin", value: "Ecuador" },
+        { label: "", value: "" },
+        { label: "Colour", value: "" },
+        { label: "", value: "yellow" },
+      ] }],
+    });
+    expect(out).toContain("| Bananas | 20 | Origin: Ecuador |");
+    expect(out).not.toContain("Colour");
+    expect(out).not.toContain("yellow");
+  });
+
+  it("lists the unit and details without tables, in the fallback", () => {
+    const out = compile(
+      page({
+        id: "m",
+        kind: "menu",
+        tiers: [{ name: "Bananas", price: "20", unit: "per lb", details: [{ label: "Origin", value: "Ecuador" }] }],
+      }),
+      NO_TABLES,
+    ).markdown;
+    expect(out).toContain("**Bananas**: 20 per lb");
+    expect(out).toContain("- Origin: Ecuador");
+  });
+
+  it("nothing changes for a price list that uses neither", () => {
+    // FR-027. The guarantee that made this safe to land.
+    const out = md({ id: "m", kind: "menu", currency: "USD", tiers });
+    expect(out).toContain("| Item | Price | What you get |");
+    expect(out).not.toContain("Details");
+    expect(out).toContain("| Bust | USD 45 | Head and shoulders. 1 revision, PNG |");
+  });
+
   it("adds the currency only to a price that is purely a number", () => {
     const bare = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price: "45" }] });
     expect(bare).toContain("| A | USD 45 |");
@@ -181,10 +271,14 @@ describe("menu", () => {
 
   it("cannot have its table broken by a pipe in a price (FR-003)", () => {
     const out = md({ id: "m", kind: "menu", tiers: [{ name: "A|B", price: "1|2" }] });
-    const row = out.split("\n").find((l) => l.includes("A"));
-    // Every pipe the artist wrote is escaped, so the only unescaped pipes left
-    // are the four cell separators. A broken table would have more.
-    expect(row?.match(/(?<!\\)\|/g)).toHaveLength(4);
+    // Every pipe the artist wrote is escaped, so the only unescaped ones left
+    // are cell separators, and a broken table would have more in one row than
+    // in the header. Asserted as rectangularity rather than as a fixed count of
+    // four: the columns are conditional now, so a count is a statement about
+    // which columns this fixture happens to use, and the property being
+    // defended is that the artist's text cannot add one.
+    const lines = out.split("\n").filter((l) => l.startsWith("|"));
+    expect(new Set(lines.map((l) => (l.match(/(?<!\\)\|/g) ?? []).length)).size).toBe(1);
     expect(out).toContain("\\|");
   });
 
@@ -506,14 +600,29 @@ describe("menu tier sample images (roadmap 3.1)", () => {
 
   it("adds an Example column only when a tier actually has an image", () => {
     const out = md({ id: "m", kind: "menu", tiers: withImage });
-    expect(out).toContain("| Item | Price | What you get | Example |");
+    // Neither item has a blurb, so "What you get" is correctly absent too:
+    // every optional column earns its place now, not just this one.
+    expect(out).toContain("| Item | Price | Example |");
+    expect(out).toContain("| --- | --- | --- |");
     expect(out).toContain("![Bust](https://e.test/bust.png)");
   });
 
   it("omits the column entirely when no tier has one", () => {
     const out = md({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1" }] });
-    expect(out).toContain("| Item | Price | What you get |");
     expect(out).not.toContain("Example");
+  });
+
+  it("keeps only the columns something is actually written in", () => {
+    // Every optional column earns its place. A name, a price and a unit is a
+    // whole price list for a greengrocer, and it used to come out with an empty
+    // "What you get" column on every row.
+    const bare = md({ id: "m", kind: "menu", tiers: [{ name: "Bananas", price: "20", unit: "per lb" }] });
+    expect(bare).toContain("| Item | Price |");
+    expect(bare).toContain("| --- | --- |");
+    expect(bare).not.toContain("What you get");
+    expect(bare).not.toContain("Details");
+    expect(bare).not.toContain("Example");
+    expect(bare).toContain("| Bananas | 20 per lb |");
   });
 
   it("leaves the cell empty for a tier without an image, keeping the table square", () => {

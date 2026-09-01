@@ -191,9 +191,46 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         hint: 'Anything you like: "45", "from 45", or "DM me".',
         onInput: (price) => editTier(i, (t) => ({ ...t, price })),
       }),
+      // Beside the price, because it qualifies the price. Twenty dollars of
+      // bananas is not a price until you know it buys a pound, and this is
+      // where somebody is already looking when they type the twenty.
+      field({
+        label: "What the price buys (optional)",
+        value: tier.unit ?? "",
+        hint: 'Leave empty for one of something. Or: "per lb", "each", "per hour".',
+        onInput: (v) => editTier(i, (t) => withOptional(t, "unit", v)),
+      }),
       disclosure({
         summary: "More details",
         children: [
+          field({
+            label: "Details (optional)",
+            value: (tier.details ?? []).map((d) => `${d.label}: ${d.value}`).join("\n"),
+            multiline: true,
+            hint: 'One per line, as "Colour: black". Anything you want listed against this item.',
+            onInput: (v) => {
+              // Typed as lines rather than as pairs of fields. Two boxes per
+              // detail is six controls for a phone with three facts on it, and
+              // the format people already write is a label, a colon, a value.
+              // A line with no colon is kept as a value with no label, which
+              // the compiler then leaves out rather than guessing at a label.
+              const parsed = v
+                .split("\n")
+                .map((line) => {
+                  const at = line.indexOf(":");
+                  return at === -1
+                    ? { label: "", value: line.trim() }
+                    : { label: line.slice(0, at).trim(), value: line.slice(at + 1).trim() };
+                })
+                .filter((d) => d.label !== "" || d.value !== "");
+              editTier(i, (t) => {
+                const next = { ...t } as Record<string, unknown>;
+                if (parsed.length === 0) delete next["details"];
+                else next["details"] = parsed;
+                return next as Tier;
+              });
+            },
+          }),
           field({
             label: "Description (optional)",
             value: tier.blurb ?? "",
