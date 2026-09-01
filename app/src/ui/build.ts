@@ -391,7 +391,10 @@ export function buildSurface(container: HTMLElement): void {
   // most of why it is here rather than floating over the tab bar. It is not on
   // a timer: FR-024b, because an undo that expires while somebody is scrolled
   // elsewhere is a safety net that is not there when it is reached for.
-  if (state.undo !== undefined) {
+  // Only a removed SECTION belongs in this list. A removed row is offered back
+  // inside the section it came from, where the gap is, which is the same
+  // reasoning applied one level down.
+  if (state.undo !== undefined && state.undo.kind === "block") {
     const { block, index } = state.undo;
     const kind = KIND_LABEL[block.kind];
     list.insertBefore(
@@ -444,7 +447,7 @@ export function buildSurface(container: HTMLElement): void {
           update(next as typeof state.doc);
         },
       }),
-      ...(blocks.length === 0 && state.undo === undefined ? emptyState() : [list]),
+      ...(blocks.length === 0 && state.undo?.kind !== "block" ? emptyState() : [list]),
       el("h2", { class: "sr-only" }, ["Add a section"]),
       adders,
     ]),

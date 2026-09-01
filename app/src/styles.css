@@ -231,6 +231,21 @@ main {
 }
 
 /*
+ * The same three tools, one level down, on a row inside a section.
+ *
+ * Separated from the fields above it, because the row it acts on ends here and
+ * the next one begins immediately after. Without the rule the remove button for
+ * item two sits directly against the name field for item three, which is the
+ * adjacency that caused the original mis-tap.
+ */
+.row-tools {
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line);
+}
+
+/*
  * The offer to put back what was just removed.
  *
  * It sits in the list at the index the section came from, so the gap it leaves

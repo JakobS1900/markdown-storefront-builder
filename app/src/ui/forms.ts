@@ -9,9 +9,97 @@ import type { Block } from "@mdsb/engine";
 
 import { button, disclosure, el, field, select } from "./dom.js";
 import { imageField } from "./image-field.js";
-import { getState, newId } from "../store.js";
+import { getState, newId, removeRow, undoRemove } from "../store.js";
 
 type OnChange = (next: Block) => void;
+
+/**
+ * Move up, move down, and remove, for one row inside a section.
+ *
+ * Sections have had these since the beginning and rows had only remove, which
+ * was the wrong way round for anybody with a real list. A shop has three
+ * sections and thirty products: reordering matters more down here, and so does
+ * getting a deletion back, because a product holds a name, a price, a unit, a
+ * bulk table, several details and an image address.
+ *
+ * Removing goes through the store rather than through `onChange` so the
+ * section as it was is remembered. Everything else is an ordinary edit.
+ *
+ * `count` is the number of REAL rows. The placeholder row past the end is not
+ * one, so it gets no tools: there is nothing yet to move or remove.
+ */
+function rowTools(args: {
+  readonly blockId: string;
+  readonly noun: string;
+  readonly index: number;
+  readonly count: number;
+  readonly reorder: (from: number, to: number) => Block;
+  readonly without: (index: number) => Block;
+  readonly onChange: OnChange;
+}): Node[] {
+  const { blockId, noun, index, count, reorder, without, onChange } = args;
+  if (index >= count) return [];
+
+  const tools: Node[] = [];
+  if (count > 1) {
+    tools.push(
+      button({
+        label: `Move ${noun} ${index + 1} up`,
+        glyph: "\u2191",
+        disabled: index === 0,
+        onClick: () => onChange(reorder(index, index - 1)),
+      }),
+      button({
+        label: `Move ${noun} ${index + 1} down`,
+        glyph: "\u2193",
+        disabled: index === count - 1,
+        onClick: () => onChange(reorder(index, index + 1)),
+      }),
+    );
+  }
+
+  tools.push(
+    button({
+      label: `Remove ${noun} ${index + 1}`,
+      glyph: "\u00d7",
+      variant: "danger",
+      onClick: () => removeRow(blockId, without(index), `${noun} ${index + 1}`),
+    }),
+  );
+
+  return [el("div", { class: "block-tools row-tools" }, tools)];
+}
+
+/**
+ * The offer to put a removed row back, shown where the row was.
+ *
+ * Same reasoning as the one for sections: at the gap, because that is where
+ * the person is already looking, and on no timer, because an undo that expires
+ * while somebody is scrolled elsewhere is a safety net that is not there when
+ * it is reached for.
+ */
+function rowUndo(blockId: string): Node[] {
+  const undo = getState().undo;
+  if (undo === undefined || undo.kind !== "row" || undo.block.id !== blockId) return [];
+  return [
+    el("div", { class: "undone" }, [
+      el("p", {}, [`Removed ${undo.label}.`]),
+      button({
+        label: `Undo removing ${undo.label}`,
+        variant: "primary",
+        onClick: () => undoRemove(),
+      }),
+    ]),
+  ];
+}
+
+/** Moves one element of a list, returning a new list. */
+function moved<T>(list: readonly T[], from: number, to: number): T[] {
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  if (item !== undefined) next.splice(to, 0, item);
+  return next;
+}
 
 /**
  * The section as it is right now, rather than as it was when this form was
@@ -290,22 +378,23 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
           }),
         ],
       }),
-      // Nothing to remove on the placeholder row, so it does not offer to.
-      ...(i < block.tiers.length
-        ? [
-            button({
-              label: `Remove item ${i + 1}`,
-              glyph: "×",
-              variant: "danger",
-              onClick: () => withTiers((tiers) => tiers.filter((_, j) => j !== i)),
-            }),
-          ]
-        : []),
+      // Move, reorder and remove. Nothing on the placeholder row, which is not
+      // a real item yet, so there is nothing to move or take away.
+      ...rowTools({
+        blockId: block.id,
+        noun: "item",
+        index: i,
+        count: block.tiers.length,
+        reorder: (from, to) => ({ ...nowBlock(block), tiers: moved(nowBlock(block).tiers, from, to) }),
+        without: (at) => ({ ...nowBlock(block), tiers: nowBlock(block).tiers.filter((_, j) => j !== at) }),
+        onChange,
+      }),
     ]),
   );
 
   return el("div", {}, [
     ...tiers,
+    ...rowUndo(block.id),
     button({
       label: "Add another item",
       variant: "primary",
@@ -360,21 +449,21 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
         value: item.caption ?? "",
         onInput: (v) => editItem(i, (it) => withOptional(it, "caption", v)),
       }),
-      ...(i < block.items.length
-        ? [
-            button({
-              label: `Remove image ${i + 1}`,
-              glyph: "×",
-              variant: "danger",
-              onClick: () => withItems((all) => all.filter((_, j) => j !== i)),
-            }),
-          ]
-        : []),
+      ...rowTools({
+        blockId: block.id,
+        noun: "image",
+        index: i,
+        count: block.items.length,
+        reorder: (from, to) => ({ ...nowBlock(block), items: moved(nowBlock(block).items, from, to) }),
+        without: (at) => ({ ...nowBlock(block), items: nowBlock(block).items.filter((_, j) => j !== at) }),
+        onChange,
+      }),
     ]),
   );
 
   return el("div", {}, [
     ...items,
+    ...rowUndo(block.id),
     button({
       label: "Add another image",
       variant: "primary",
@@ -426,11 +515,17 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
         hint: "Must start with https://",
         onInput: (url) => withLinks((all) => all.map((l, j) => (i === j ? { ...l, url } : l))),
       }),
-      button({
-        label: `Remove link ${i + 1}`,
-        glyph: "×",
-        variant: "danger",
-        onClick: () => withLinks((all) => all.filter((_, j) => j !== i)),
+      ...rowTools({
+        blockId: block.id,
+        noun: "link",
+        index: i,
+        count: (block.links ?? []).length,
+        reorder: (from, to) => ({ ...nowBlock(block), links: moved(nowBlock(block).links ?? [], from, to) }),
+        without: (at) => ({
+          ...nowBlock(block),
+          links: (nowBlock(block).links ?? []).filter((_, j) => j !== at),
+        }),
+        onChange,
       }),
     ]),
   );
@@ -477,6 +572,7 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
       },
     }),
     ...links,
+    ...rowUndo(block.id),
     button({
       label: "Add a link",
       variant: "primary",

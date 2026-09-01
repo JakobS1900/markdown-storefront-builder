@@ -47,7 +47,21 @@ export interface State {
    * The index is kept as well as the block, because putting a section back at
    * the end of the page is not putting it back. Feature 014, FR-024a.
    */
-  readonly undo?: { readonly block: Block; readonly index: number };
+  /**
+   * The one thing that can be put back, and how.
+   *
+   * A removed SECTION goes back at the index it came from. A removed ROW goes
+   * back by restoring the section as it was the moment before, which is one
+   * mechanism for price list items, gallery images and profile links rather
+   * than three.
+   *
+   * Removing a section was undoable and removing a row was not, which is
+   * backwards: a shop has three sections and thirty products, and a product
+   * holds far more typing than a section does.
+   */
+  readonly undo?:
+    | { readonly kind: "block"; readonly block: Block; readonly index: number }
+    | { readonly kind: "row"; readonly block: Block; readonly label: string };
   /**
    * The saved page whose removal is waiting on an answer.
    *
@@ -397,14 +411,42 @@ export function removeBlock(id: string): void {
   if (block === undefined) return;
 
   replaceBlocks(state.doc.blocks.filter((b) => b.id !== id));
-  set({ undo: { block, index } });
+  set({ undo: { kind: "block", block, index } });
   if (state.selectedBlockId === id) selectBlock(undefined);
 }
 
-/** Puts the last removed section back where it was. */
+/**
+ * Removes one row from a section and remembers the section as it was.
+ *
+ * The caller has already worked out what the section looks like without the
+ * row, because only the caller knows whether it is holding items, images or
+ * links. What this adds is the offer to put it back.
+ *
+ * Set after the change for the same reason `removeBlock` does it: every write
+ * funnels through `update`, which clears any offer already standing, so the
+ * ordering is what makes "the next unrelated action clears it" work.
+ */
+export function removeRow(id: string, next: Block, label: string): void {
+  const previous = state.doc.blocks.find((b) => b.id === id);
+  if (previous === undefined) return;
+
+  replaceBlocks(state.doc.blocks.map((b) => (b.id === id ? next : b)));
+  set({ undo: { kind: "row", block: previous, label } });
+}
+
+/** Puts back whatever was last removed, a section or a row inside one. */
 export function undoRemove(): void {
   const undo = state.undo;
   if (undo === undefined) return;
+
+  if (undo.kind === "row") {
+    // The section is put back wholesale rather than the row spliced in, so a
+    // row cannot land in the wrong place if anything else about the section
+    // moved. Nothing else can have moved, because that would have cleared the
+    // offer, and restoring the whole thing means that stays true for free.
+    replaceBlocks(state.doc.blocks.map((b) => (b.id === undo.block.id ? undo.block : b)));
+    return;
+  }
 
   const blocks = [...state.doc.blocks];
   // Clamped, because everything that could have changed the length also clears
