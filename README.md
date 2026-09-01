@@ -81,6 +81,9 @@ the app and clicking the first button, and it is written up as such.
 - **Colour contrast** runs axe in headless Chrome, which has real layout, over
   the example storefront in both the light and dark palettes. It refuses to
   report a pass unless real content was on screen when it measured.
+- **Updating** deploys a second build over a cached first one in a real browser
+  and checks a returning visitor ends up on the new one. A stale shell is a
+  blank page with no error, which is the worst kind of bug to ship to strangers.
 - **No secrets** and **no em or en dashes** each have their own scanner.
 
 Each gate was verified by making it fail on purpose, not by assuming it works.

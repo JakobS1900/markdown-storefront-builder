@@ -146,6 +146,23 @@ Verified firing on 2026-09-01 by weakening `--muted` in the light palette: it
 reported two failures at ratios of 1.52 and 1.58 against an expected 4.5, named
 the exact colours, and left the dark palette correctly passing.
 
+`npm run pwa-update` is the other browser gate, and also part of `verify`. It
+serves one build, lets the service worker cache it, deploys a second with a
+different asset hash and the first one deleted, and checks what a returning
+visitor gets. The PWA tests before it read `sw.js` as text and asserted it
+contained the right lines; none of them ever ran it.
+
+`MDSB_BREAK_SW=1` is its self test, and getting that right took two wrong
+attempts that are worth knowing:
+
+- **Reusing the cache id does not break updating.** The worker answers from
+  cache and refreshes in the background, so entries are overwritten with the
+  new build even in the same cache. The version stamp is the belt; the
+  background refresh is the braces, and the braces do the work.
+- **Breaking the worker being DEPLOYED changes nothing.** The worker in control
+  during a deploy is the one already installed. Only breaking that one strands
+  a visitor, which is what the flag now does.
+
 Constitution Principle I is enforced by ESLint, not by review:
 `engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,
 `Math.random`, or `new Date`. Verified firing on 2026-08-15.

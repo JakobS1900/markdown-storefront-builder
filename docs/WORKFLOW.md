@@ -112,6 +112,17 @@ usually a token in `app/src/styles.css` rather than an investigation. Change the
 token, rerun, and check BOTH schemes are still clean: the palettes are separate
 and fixing one has no effect on the other.
 
+## Service worker updates
+
+`npm run pwa-update`, which `npm run verify` runs. Needs Chrome, same
+`CHROME_PATH` override as the contrast gate.
+
+Run it whenever `app/public/sw.js` changes, and read its self test before
+trusting a change to that file: `MDSB_BREAK_SW=1 node scripts/pwa-update.mjs`
+must FAIL. Two things that look like breaks are not, and both are recorded in
+`CLAUDE.md`: reusing the cache id, and breaking the worker being deployed
+rather than the one already installed.
+
 ## What "done" means
 
 The command was run, the output was read, and it is quoted. The full gate passes:

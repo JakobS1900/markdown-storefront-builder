@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "secretscan": "node scripts/secret-scan.mjs",
     "a11y": "vitest run app/tests/a11y.test.ts",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run dashscan && npm run a11y && npm run contrast",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run secretscan && npm run dashscan && npm run a11y && npm run contrast && npm run pwa-update",
     "dashscan": "node scripts/dash-scan.mjs",
     "snapshot": "tsc --build --force && node scripts/write-parity-snapshot.mjs",
     "golden": "tsc --build --force && node scripts/write-golden.mjs",
@@ -24,7 +24,8 @@
     "android:sync": "npm run build:app && cap sync android",
     "android:apk": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug",
     "android:open": "cap open android",
-    "contrast": "npm run build:app && node scripts/contrast.mjs"
+    "contrast": "npm run build:app && node scripts/contrast.mjs",
+    "pwa-update": "npm run build:app && node scripts/pwa-update.mjs"
   },
   "devDependencies": {
     "@capacitor/android": "^8.5.0",
