@@ -126,9 +126,25 @@ looking one, that no placeholder stands in for a label, and that the touch
 target minimum is in the stylesheet. Verified firing on 2026-08-15 by stripping
 the aria-label from icon buttons.
 
-Its one honest gap: colour contrast is disabled, because jsdom does not lay
-anything out and asserting it there would produce a number that means nothing.
-That is covered by the manual pass in `docs/WORKFLOW.md`.
+Colour contrast is disabled in THAT gate, because jsdom does not lay anything
+out and asserting it there would produce a number that means nothing. It used
+to be the file's one honest gap, covered only by a manual pass nobody could
+rerun.
+
+`npm run contrast` closes it, and runs as part of `npm run verify`. Headless
+Chrome, the built app, axe with only the contrast rule, run twice: once with
+`prefers-color-scheme: light` and once with `dark`, because both palettes ship
+and testing one is testing half the users.
+
+It measures the bundled example storefront with a section opened, not the empty
+shell, and it refuses to report a pass unless at least three sections and three
+fields were actually on screen. A gate that measured an empty page would be
+green and worthless, which is a mistake this project has already made three
+times in one afternoon.
+
+Verified firing on 2026-09-01 by weakening `--muted` in the light palette: it
+reported two failures at ratios of 1.52 and 1.58 against an expected 4.5, named
+the exact colours, and left the dark palette correctly passing.
 
 Constitution Principle I is enforced by ESLint, not by review:
 `engine/src/**` cannot reference `document`, `window`, `fetch`, `Date.now`,

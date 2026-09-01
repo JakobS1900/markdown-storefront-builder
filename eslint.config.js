@@ -88,6 +88,12 @@ export default tseslint.config(
         process: "readonly",
         URL: "readonly",
         Buffer: "readonly",
+        // The contrast gate drives a real browser over the debugging protocol,
+        // so it needs the timer, fetch and socket globals Node has had since 18.
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        fetch: "readonly",
+        WebSocket: "readonly",
       },
     },
     rules: {

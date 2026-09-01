@@ -101,6 +101,17 @@ answer rather than a visible failure.
    afterwards, addressed by the control's own accessible name and never by its
    position. Position has destroyed the owner's work here once already.
 
+## Colour contrast
+
+`npm run contrast`, which `npm run verify` runs. It needs Chrome; override the
+path with `CHROME_PATH` if it is not in the default location.
+
+This replaced a manual checklist item. If it fails, the report names the
+element, both colours, the measured ratio and the required one, so the fix is
+usually a token in `app/src/styles.css` rather than an investigation. Change the
+token, rerun, and check BOTH schemes are still clean: the palettes are separate
+and fixing one has no effect on the other.
+
 ## What "done" means
 
 The command was run, the output was read, and it is quoted. The full gate passes:

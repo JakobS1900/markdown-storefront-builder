@@ -78,6 +78,9 @@ the app and clicking the first button, and it is written up as such.
 - **Accessibility** runs axe-core over the rendered interface, plus assertions a
   machine cannot make: every control has a real name, no placeholder stands in
   for a label, the touch target minimum is in the stylesheet.
+- **Colour contrast** runs axe in headless Chrome, which has real layout, over
+  the example storefront in both the light and dark palettes. It refuses to
+  report a pass unless real content was on screen when it measured.
 - **No secrets** and **no em or en dashes** each have their own scanner.
 
 Each gate was verified by making it fail on purpose, not by assuming it works.
