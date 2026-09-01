@@ -265,16 +265,38 @@ describe("menu", () => {
     expect(out).toContain("| Bust | USD 45 | Head and shoulders. 1 revision, PNG |");
   });
 
-  it("adds the currency only to a price that is purely a number", () => {
+  it("puts the currency against the first number in the price", () => {
+    // This asserted that ONLY a bare number got the symbol, and that anything
+    // containing a letter was left exactly as written. Building a real shop
+    // showed the cost: "18 each" and "from 25 per model" on one page published
+    // with the symbol on the first and not the second, and "from 25" is one of
+    // the commonest ways there is to write a price.
     const bare = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price: "45" }] });
     expect(bare).toContain("| A | USD 45 |");
 
-    // Anything with a letter in it is left exactly as written. An earlier
-    // version produced "USD DM me", which reads as the artist's mistake.
-    for (const price of ["DM me", "from 45", "USD 10", "ask"]) {
+    const from = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price: "from 45" }] });
+    expect(from).toContain("| A | from USD 45 |");
+  });
+
+  it("still leaves a price with no number in it exactly as written", () => {
+    // The half of the old rule that was right, and the reason it existed: a
+    // currency in front of a word reads as a mistake the seller made.
+    for (const price of ["DM me", "ask", "Free", "enquire"]) {
       const out = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price }] });
       expect(out).toContain(`| A | ${price} |`);
     }
+  });
+
+  it("does not add a second currency to a price that already has one", () => {
+    for (const price of ["USD 10", "45 USD"]) {
+      const out = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price }] });
+      expect(out).toContain(`| A | ${price} |`);
+    }
+  });
+
+  it("puts a symbol against the digits and a word in front with a space", () => {
+    const symbol = md({ id: "m", kind: "menu", currency: "$", tiers: [{ name: "A", price: "from 45" }] });
+    expect(symbol).toContain("from &#36;45");
   });
 
   it("degrades to a readable list without tables, and warns (FR-002)", () => {
@@ -520,13 +542,29 @@ describe("profile", () => {
     expect(md({ id: "p", kind: "profile", displayName: "Ari" })).toBe("### Ari\n");
   });
 
-  it("renders status in words a client understands", () => {
+  it("renders status in words that do not assume what is being sold", () => {
+    // This asserted "Commissions are OPEN". A shop selling 3D prints put that
+    // on the second line of its page, announcing a commission status for a
+    // business that does not take commissions. The wording has to serve a
+    // greengrocer and an illustrator equally, which is the rule the unit and
+    // details fields already follow.
     expect(md({ id: "p", kind: "profile", displayName: "Ari", status: "open" })).toContain(
-      "**Commissions are OPEN**",
+      "**Open for orders**",
+    );
+    expect(md({ id: "p", kind: "profile", displayName: "Ari", status: "closed" })).toContain(
+      "**Closed for orders**",
     );
     expect(md({ id: "p", kind: "profile", displayName: "Ari", status: "waitlist" })).toContain(
       "**Waitlist only**",
     );
+  });
+
+  it("says nothing about commissions anywhere in a profile", () => {
+    // The property behind the test above, so the word cannot creep back in.
+    for (const status of ["open", "closed", "waitlist"] as const) {
+      const out = md({ id: "p", kind: "profile", displayName: "Ari", status });
+      expect(out.toLowerCase()).not.toContain("commission");
+    }
   });
 
   it("emits links as a list, refusing unsafe ones (SC-003)", () => {
@@ -563,11 +601,11 @@ describe("profile", () => {
       [
         "### Ari",
         "",
-        "![](https://e.test/me.png)",
+        "![Ari](https://e.test/me.png)",
         "",
         "*Character artist*",
         "",
-        "**Commissions are OPEN**",
+        "**Open for orders**",
         "",
         "- [Bluesky](https://e.test/ari)",
         "",

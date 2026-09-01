@@ -16,7 +16,7 @@ export { compile } from "./compile.js";
  * failure would be the app telling an artist their image is fine while the
  * compiler silently drops it. One definition, one answer.
  */
-export { isSafeUrl } from "./link.js";
+export { isSafeUrl, isSafeLinkUrl } from "./link.js";
 export { TARGETS, PORTABLE, RENTRY, TEXT_IS, FALLBACK_TARGET, findTarget } from "./targets.js";
 export type { Capabilities, Target } from "./capabilities.js";
 export type {

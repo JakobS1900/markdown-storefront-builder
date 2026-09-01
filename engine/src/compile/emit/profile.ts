@@ -9,8 +9,13 @@ type Profile = Extract<Block, { kind: "profile" }>;
 
 /** How each status reads to a client, rather than how it is stored. */
 const STATUS_TEXT: Record<string, string> = {
-  open: "Commissions are OPEN",
-  closed: "Commissions are CLOSED",
+  // Not "Commissions are OPEN". Found by building a shop that sells 3D
+  // prints, where the second line of the page announced a commission
+  // status for a business that does not take commissions. The wording has
+  // to serve a greengrocer and an illustrator equally, which is the same
+  // rule the unit and details fields already follow.
+  open: "Open for orders",
+  closed: "Closed for orders",
   waitlist: "Waitlist only",
 };
 
@@ -38,7 +43,12 @@ export function emitProfile(block: Profile, target: Target, sink: DiagnosticSink
 
   if (block.avatarUrl !== undefined) {
     if (isSafeUrl(block.avatarUrl)) {
-      parts.push(`![](${encodeAddress(block.avatarUrl)})`);
+      // The seller's own name as the alt text, collapsed to one line the
+      // way a heading is: a newline inside alt text ends the image early and
+      // spills the rest of the name into the page. This was empty, so the one
+      // image on the page that identifies who is selling was the one image
+      // a screen reader could say nothing about.
+      parts.push(`![${escapeInline(block.displayName)}](${encodeAddress(block.avatarUrl)})`);
     } else {
       // Holistic review HB-6: this used to drop the avatar in silence while
       // every other refused address warned. SC-004 allows zero silent

@@ -12,7 +12,25 @@
 import { escapeText } from "./escape.js";
 
 /**
- * Whether an address may be emitted as a link.
+ * What the browser will see, rather than what was typed.
+ *
+ * Browsers strip whitespace and control characters before reading the scheme,
+ * so a tab inside "java<tab>script:" reaches the parser as "javascript:".
+ * Normalising here means a check sees what the browser will see, not the
+ * decorated version an attacker supplied.
+ *
+ * Shared by both checks below so they cannot drift apart. A scheme hidden from
+ * one but not the other would be a hole in whichever ended up laxer.
+ */
+function asBrowserSees(url: string): string {
+  // no-control-regex exists to catch control characters arriving by accident.
+  // These are the entire point.
+  // eslint-disable-next-line no-control-regex
+  return url.replace(/[\s\u0000-\u001f\u007f]/g, "");
+}
+
+/**
+ * Whether an address may be fetched as an image.
  *
  * Only http and https. Everything else, including `javascript:`, `data:`,
  * `vbscript:`, and `file:`, is refused and rendered as plain text by the
@@ -20,22 +38,54 @@ import { escapeText } from "./escape.js";
  *
  * An allow list rather than a deny list, because the set of dangerous schemes
  * is open ended and browsers keep adding to it, while the set of schemes an
- * artist needs on a commission page is two.
+ * image can arrive over is two.
  *
- * `mailto:` is refused too. It is not dangerous, but it is not something the
- * current contract offers a field for, so accepting it would be accepting
- * something nothing produces.
+ * This is the IMAGE rule. A LINK may also be `mailto:` or `tel:`, which is
+ * `isSafeLinkUrl` below. The two were one function until 2026-09-01, and the
+ * comment here used to justify refusing `mailto:` on the grounds that nothing
+ * produced one. Building a real page as a seller produced one immediately.
  */
 export function isSafeUrl(url: string): boolean {
-  // Browsers strip whitespace and control characters before reading the
-  // scheme, so a tab inside "java<tab>script:" reaches the parser as
-  // "javascript:". Stripping them here means this check sees what the
-  // browser will see, not the decorated version an attacker supplied.
-  // no-control-regex exists to catch control characters arriving by
-  // accident. These are the entire point.
-  // eslint-disable-next-line no-control-regex
-  const cleaned = url.replace(/[\s\u0000-\u001f\u007f]/g, "");
+  const cleaned = asBrowserSees(url);
   return /^https?:\/\/[^\s]+$/i.test(cleaned);
+}
+
+/**
+ * Whether an address may be emitted as a clickable link.
+ *
+ * Everything an image may be, plus `mailto:` and `tel:`.
+ *
+ * Found by building a real shop rather than by reading the compiler. A contact
+ * link went in, the address was refused, and the LABEL survived, so the page
+ * published a bullet reading "Email" that did nothing at all. That is worse
+ * than omitting it, because it reads as a mistake the seller made.
+ *
+ * Neither scheme can execute anything. They hand a string to a mail client or
+ * a dialler, which is the entire reason they exist. Both are still an allow
+ * list rather than a hole, because the shape is checked too: a bare `mailto:`,
+ * or one with a space in it, is refused like anything else.
+ */
+export function isSafeLinkUrl(url: string): boolean {
+  const cleaned = asBrowserSees(url);
+  if (isSafeUrl(url)) return true;
+
+  // For a contact address, normalising is not enough: it must not have needed
+  // normalising. `mailto:has space@example.com` survived the strip and became
+  // a clickable link to a mangled address, because the space was removed for
+  // the test and then percent encoded into the output. Caught by a test
+  // written for this file, not by review.
+  //
+  // Whitespace inside an email address or a phone number means the address is
+  // wrong, and silently repairing it is how you publish a contact link that
+  // reaches nobody.
+  if (cleaned !== url) return false;
+
+  // One @ with something either side and a dot in the domain. Deliberately not
+  // a full address grammar: this decides only whether to make it clickable,
+  // and the mail application is the authority on whether an address is real.
+  if (/^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(cleaned)) return true;
+  // Digits, with the punctuation a written phone number actually contains.
+  return /^tel:\+?[\d().-]{3,}$/i.test(cleaned);
 }
 
 /**

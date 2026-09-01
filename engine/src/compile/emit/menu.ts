@@ -100,27 +100,39 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
 }
 
 /**
- * Prefixes the currency, but only onto a price that is purely a number.
+ * Puts the currency against the first number in the price, if there is one.
  *
- * Artists write prices in every imaginable form, which is why the contract
- * stores them as text. "45" wants the currency in front of it. "DM me" does
- * not, and an earlier version of this produced "USD DM me", which is worse than
- * having no currency at all because it reads as a mistake the artist made.
+ * Sellers write prices in every imaginable form, which is why the contract
+ * stores them as text. "45" wants the currency. "DM me" does not, and an early
+ * version produced "USD DM me", which is worse than no currency at all because
+ * it reads as a mistake the seller made.
  *
- * The rule is therefore narrow on purpose: digits, separators, and symbols like
- * `+` get the currency. Anything containing a letter is left exactly as the
- * artist wrote it, on the assumption that they had a reason.
+ * The rule used to be that ONLY a bare number got the symbol: anything
+ * containing a letter was left alone, on the assumption the seller had a
+ * reason. Building a real shop showed what that costs. A page listing
+ * "18 each" beside "from 25 per model" published as "GBP18 each" and
+ * "from 25 per model", with the symbol on one line and not the next, and
+ * "from 25" is one of the commonest ways there is to write a price.
+ *
+ * So the test is now "does this contain a number" rather than "is this only a
+ * number", and the symbol goes immediately before the first digit. Everything
+ * the old rule protected is still protected, because a price with no digit in
+ * it is still left exactly as written.
  */
 function withCurrency(price: string, currency: string | undefined): string {
   if (currency === undefined || currency === "") return price;
-  const isBareNumber = /^[\d\s.,+\-/]+$/.test(price.trim());
-  if (!isBareNumber) return price;
-  // "USD 20" wants the space and "$ 20" does not. A currency written as a word
+  // Somebody who typed the symbol themselves does not want a second one. The
+  // old rule got this for free by refusing anything with a symbol in it.
+  if (price.includes(currency)) return price;
+  const digit = /\d/.exec(price);
+  if (digit === null) return price;
+  // "USD 20" wants the space and "$20" does not. A currency written as a word
   // or a code is read as one, and a symbol belongs against the digits. Became
   // visible once units arrived, because "$ 20 per lb" has the space in the one
   // place a price should not.
   const symbol = !/[a-z]/i.test(currency);
-  return symbol ? `${currency}${price}` : `${currency} ${price}`;
+  const at = digit.index;
+  return `${price.slice(0, at)}${currency}${symbol ? "" : " "}${price.slice(at)}`;
 }
 
 /**

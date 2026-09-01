@@ -2,7 +2,7 @@
 
 *\| pipe \| table \|*
 
-**Commissions are OPEN**
+**Open for orders**
 
 - [safe](https://example.test/ok)
 - unsafe

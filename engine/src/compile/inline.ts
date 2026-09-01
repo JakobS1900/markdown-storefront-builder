@@ -24,13 +24,13 @@
  * and gets escaped, which is exactly the behaviour before this feature existed.
  */
 import { escapeText } from "./escape.js";
-import { encodeAddress, isSafeUrl } from "./link.js";
+import { encodeAddress, isSafeLinkUrl } from "./link.js";
 
 export type Node =
   | { readonly kind: "text"; readonly value: string }
   | { readonly kind: "strong"; readonly children: readonly Node[] }
   | { readonly kind: "em"; readonly children: readonly Node[] }
-  /** `url` has already passed `isSafeUrl`. An unsafe one never becomes a link. */
+  /** `url` has already passed `isSafeLinkUrl`. An unsafe one never becomes a link. */
   | { readonly kind: "link"; readonly url: string; readonly children: readonly Node[] };
 
 /**
@@ -76,7 +76,7 @@ export function parseInline(text: string, depth = 0): Node[] {
       // An unsafe address never becomes a link. The label and the raw address
       // are kept as text, so the artist can see what they wrote and fix it,
       // rather than having it silently vanish.
-      if (isSafeUrl(linkUrl)) {
+      if (isSafeLinkUrl(linkUrl)) {
         nodes.push({
           kind: "link",
           url: linkUrl,

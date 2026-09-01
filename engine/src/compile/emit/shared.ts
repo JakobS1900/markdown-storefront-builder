@@ -8,7 +8,7 @@
 import type { Target } from "../capabilities.js";
 import type { DiagnosticSink } from "../diagnostics.js";
 import { escapeInline, escapeText } from "../escape.js";
-import { emitLink, isSafeUrl } from "../link.js";
+import { emitLink, isSafeLinkUrl } from "../link.js";
 
 /**
  * The heading level a section's own heading uses.
@@ -54,13 +54,13 @@ export function safeLink(
   blockId: string,
   sink: DiagnosticSink,
 ): string {
-  if (isSafeUrl(url)) return emitLink(label, url);
+  if (isSafeLinkUrl(url)) return emitLink(label, url);
 
   sink.add({
     code: "link_scheme_refused",
     severity: "warning",
     blockId,
-    message: `One of your links does not start with http:// or https://, so it has been left as plain text rather than made clickable. Links that use other kinds of address are not safe to publish.`,
+    message: `One of your links is not a web address, an email address, or a phone number, so it has been left as plain text rather than made clickable. Links need to start with http://, https://, mailto:, or tel:.`,
   });
 
   return escapeText(label);

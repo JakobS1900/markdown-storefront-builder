@@ -1,10 +1,10 @@
 ### Ari
 
-![](https://example.test/me.png)
+![Ari](https://example.test/me.png)
 
 *Character artist, mostly fantasy*
 
-**Commissions are OPEN**
+**Open for orders**
 
 - [Bluesky](https://example.test/ari)
 - [Ko-fi](https://example.test/kofi)
