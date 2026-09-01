@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "target": "rentry",
+  "title": "Ridgeline Carry",
+  "blocks": [
+    {
+      "id": "notice",
+      "kind": "prose",
+      "text": "*This is a demonstration page. Ridgeline Carry is not a real shop: the products, prices, shipping rates and warranty terms below are invented, and every product photograph is a placeholder. It was built to test a tool that turns a structured document into Markdown for hosts like this one.*"
+    },
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Ridgeline Carry",
+      "avatarUrl": "https://placehold.co/400x400/1f1d1b/d8cfc2.png?text=Ridgeline%20Carry",
+      "tagline": "Small-batch everyday carry. Machined in Sheffield, shipped worldwide.",
+      "status": "open",
+      "links": [
+        {
+          "label": "Instagram",
+          "url": "https://instagram.com/ridgelinecarry"
+        },
+        {
+          "label": "Email us",
+          "url": "https://ridgelinecarry.example/contact"
+        },
+        {
+          "label": "Order form",
+          "url": "https://ridgelinecarry.example/order"
+        }
+      ],
+      "paymentMethods": [
+        "PayPal",
+        "Stripe",
+        "Bank transfer",
+        "Wise"
+      ]
+    },
+    {
+      "id": "intro",
+      "kind": "prose",
+      "text": "Everything here is made in runs of forty or fewer, finished by hand, and checked twice before it goes in a box.\n\nStock is **live**: if an item is listed, it is on the shelf. When a run sells out the line comes off this page rather than sitting here as a *coming soon*.\n\nNew drops go out to the [mailing list](https://ridgelinecarry.example/list) two days before they appear here."
+    },
+    {
+      "id": "knives",
+      "kind": "menu",
+      "heading": "Folding knives",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Ridgeline Mk III",
+          "price": "$185",
+          "blurb": "Our flagship. Three-inch drop point, titanium frame lock, tumbled finish.",
+          "includes": [
+            "CPM-S35VN blade, 59 HRC",
+            "6AL4V titanium handle, bead blasted",
+            "Bronze phosphor washers",
+            "Deep-carry titanium clip, reversible"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Mk%20III%20PLACEHOLDER"
+        },
+        {
+          "name": "Ridgeline Mk III, Damascus",
+          "price": "$310",
+          "blurb": "The same knife with a raindrop pattern billet. Each one differs.",
+          "includes": [
+            "Damasteel RWL34 raindrop billet",
+            "Anodised titanium handle, your choice of bronze or violet",
+            "Individually numbered, 1 of 40"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Mk%20III%20Damascus%20PLACEHOLDER"
+        },
+        {
+          "name": "Foreman, fixed blade",
+          "price": "$140",
+          "blurb": "Full tang work knife. Nothing on it that can fail in the wet.",
+          "includes": [
+            "80CrV2 carbon steel, forced patina",
+            "Micarta scales",
+            "Kydex sheath with belt loop"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Foreman%20PLACEHOLDER"
+        }
+      ],
+      "addOns": [
+        {
+          "name": "Deep-carry clip, bronze",
+          "price": "$28"
+        },
+        {
+          "name": "Sharpening and re-tune, per knife",
+          "price": "$35"
+        },
+        {
+          "name": "Laser engraving, up to 20 characters",
+          "price": "$20"
+        }
+      ]
+    },
+    {
+      "id": "lights",
+      "kind": "menu",
+      "heading": "Lights",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Pocket Lumen 1000",
+          "price": "$95",
+          "blurb": "Titanium body, 1000 lumen turbo, USB-C in the tail.",
+          "includes": [
+            "Nichia 519A, 4500K",
+            "18350 cell and charger included",
+            "Magnetic tailcap"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Pocket%20Lumen%201000%20PLACEHOLDER"
+        },
+        {
+          "name": "Keychain Lumen 250",
+          "price": "$46",
+          "blurb": "The one you actually carry. Twenty grams with the cell in it.",
+          "includes": [
+            "Two output levels",
+            "10180 cell, USB-C",
+            "Split ring and lanyard hole"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Keychain%20Lumen%20250%20PLACEHOLDER"
+        }
+      ]
+    },
+    {
+      "id": "carry",
+      "kind": "menu",
+      "heading": "Wallets and organisation",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Bifold, horween shell cordovan",
+          "price": "$130",
+          "blurb": "Four cards and folded notes. Breaks in at about a fortnight.",
+          "includes": [
+            "Horween shell cordovan",
+            "Hand-stitched with waxed linen",
+            "Colours: colour 8, natural, navy"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Bifold%20PLACEHOLDER"
+        },
+        {
+          "name": "Slip case, waxed canvas",
+          "price": "$58",
+          "blurb": "Holds a knife, a light and a pen without them arguing.",
+          "includes": [
+            "10oz waxed canvas",
+            "Wool felt lining",
+            "Three elastic loops"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Slip%20case%20PLACEHOLDER"
+        },
+        {
+          "name": "Tray, stitched leather",
+          "price": "$44",
+          "blurb": "For the top of a chest of drawers. Folds flat for travel.",
+          "includes": [
+            "Vegetable-tanned leather",
+            "Brass press studs"
+          ],
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=Leather%20tray%20PLACEHOLDER"
+        }
+      ],
+      "addOns": [
+        {
+          "name": "Monogram, blind debossed",
+          "price": "$15"
+        },
+        {
+          "name": "Gift box and tissue",
+          "price": "$8"
+        }
+      ]
+    },
+    {
+      "id": "gallery",
+      "kind": "gallery",
+      "heading": "In hand",
+      "layout": "grid",
+      "items": [
+        {
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=In%20hand%201%20PLACEHOLDER",
+          "caption": "Mk III, bronze anodised"
+        },
+        {
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=In%20hand%202%20PLACEHOLDER",
+          "caption": "Foreman with a forced patina"
+        },
+        {
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=In%20hand%203%20PLACEHOLDER",
+          "caption": "Pocket Lumen, 18350 tube"
+        },
+        {
+          "imageUrl": "https://placehold.co/640x480/1f1d1b/d8cfc2.png?text=In%20hand%204%20PLACEHOLDER",
+          "caption": "Bifold after a year of daily use"
+        }
+      ]
+    },
+    {
+      "id": "rule-1",
+      "kind": "divider"
+    },
+    {
+      "id": "ordering",
+      "kind": "prose",
+      "heading": "How to order",
+      "text": "- Send the [order form](https://ridgelinecarry.example/order) with the item name and any options.\n- We reply within two working days with a total and an invoice.\n- Work starts when the invoice is paid. Nothing is held without payment.\n- You get a photograph before it is boxed."
+    },
+    {
+      "id": "shipping",
+      "kind": "prose",
+      "heading": "Shipping",
+      "text": "Everything ships tracked and signed-for. Cut-off is 2pm UK time.\n\n- **United Kingdom**, Royal Mail Special Delivery, $9, next working day.\n\n- **Europe**, DHL, $22, three to five working days.\n\n- **United States and Canada**, DHL, $28, four to seven working days.\n\n- **Rest of world**, DHL, $34, seven to fourteen working days.\n\nOrders over $250 ship free within the UK and Europe. Import duty and local taxes are the buyer's responsibility and are not included in the price above.\n\nKnives cannot be shipped to some countries and to some US states. If we cannot legally ship to you we will say so before taking payment, not after."
+    },
+    {
+      "id": "returns",
+      "kind": "prose",
+      "heading": "Returns and warranty",
+      "text": "Unused items can go back within 30 days of arrival for a full refund, less return postage. Say so by email first so we can expect it.\n\nAnything made to order, engraved or monogrammed cannot be returned unless it is faulty, because we cannot sell it to anyone else.\n\nEverything carries a *lifetime warranty against manufacturing defect*: pivots, locks, stitching, and finish. Wear, corrosion from being left wet, and damage from prying or throwing are not defects. We will still fix those, at cost, and tell you the price first."
+    },
+    {
+      "id": "terms",
+      "kind": "prose",
+      "heading": "Terms and conditions",
+      "text": "- **Age.** Bladed items are sold only to buyers aged 18 or over. Placing an order is a declaration that you are.\n- **Lead time.** In-stock items leave within three working days. Made-to-order runs are quoted at the time of ordering and are typically four to six weeks.\n- **Prices** are in US dollars and include UK VAT where it applies. The price you are invoiced is the price at the time of the invoice.\n- **Cancellation.** An order can be cancelled for a full refund at any point before work starts on it.\n- **Photographs** on this page are of the actual production items. Natural material varies; grain, patina and anodised colour will not match a photograph exactly.\n- **Contact.** hello@ridgelinecarry.example, replies within two working days, Monday to Friday."
+    }
+  ]
+}

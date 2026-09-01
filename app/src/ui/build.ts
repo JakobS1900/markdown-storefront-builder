@@ -25,6 +25,7 @@ import {
   update,
   type State,
 } from "../store.js";
+import { openBackup } from "../import.js";
 import { announce, button, disclosure, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
 
@@ -226,6 +227,53 @@ function pageList(state: State): HTMLElement[] {
   ];
 }
 
+/**
+ * What somebody sees before they have written anything.
+ *
+ * The web build has always opened on a blank editor, which demonstrates
+ * nothing. A person handed a link to see whether the thing works arrives at an
+ * empty form and a row of buttons, and has to imagine the rest.
+ *
+ * So the empty state offers a real page. It goes through `openBackup`, the same
+ * path the import uses, which means a file that does not parse is refused here
+ * exactly as a bad backup is, and the example arrives as its own page instead
+ * of overwriting anything. The address is relative because the app is served
+ * from a subdirectory on the web and from the root of a custom scheme inside
+ * the Android shell, and an absolute path is wrong for one of those.
+ */
+function emptyState(): HTMLElement[] {
+  const load = button({
+    label: "See an example page",
+    variant: "primary",
+    onClick: () => {
+      load.disabled = true;
+      announce("Loading an example.");
+      void fetch("example.json")
+        .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+        .then((text) => openBackup(text))
+        .catch(() => ({ ok: false, message: "The example could not be loaded. Nothing has been changed." }))
+        .then((result) => {
+          load.disabled = false;
+          // Its own words on success. `openBackup` says "the page you had open
+          // is still saved", which is true of an import and nonsense to
+          // somebody who arrived thirty seconds ago and had no page at all.
+          announce(
+            result.ok
+              ? "Opened an example page. Change anything you like, or start your own from Your pages."
+              : result.message,
+          );
+        });
+    },
+  });
+
+  return [
+    el("p", { class: "empty" }, [
+      "Your page is empty. Add a section below to start. Most people begin with About you.",
+    ]),
+    el("div", { class: "adders" }, [load]),
+  ];
+}
+
 export function buildSurface(container: HTMLElement): void {
   const state = getState();
   const { blocks } = state.doc;
@@ -366,13 +414,7 @@ export function buildSurface(container: HTMLElement): void {
           update(next as typeof state.doc);
         },
       }),
-      ...(blocks.length === 0
-        ? [
-            el("p", { class: "empty" }, [
-              "Your page is empty. Add a section below to start. Most people begin with About you.",
-            ]),
-          ]
-        : [list]),
+      ...(blocks.length === 0 ? emptyState() : [list]),
       el("h2", { class: "sr-only" }, ["Add a section"]),
       adders,
     ]),
