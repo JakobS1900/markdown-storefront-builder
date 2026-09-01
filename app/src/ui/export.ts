@@ -9,7 +9,7 @@
  * permissions are refused often enough on mobile browsers that a copy button
  * alone would strand people, and "select all and copy by hand" has to work.
  */
-import { compile, findTarget, serializeDocument } from "@mdsb/engine";
+import { PORTABLE, compile, findTarget, serializeDocument } from "@mdsb/engine";
 
 import { getState } from "../store.js";
 import { handOff } from "../files.js";
@@ -24,6 +24,12 @@ const WALKTHROUGH: Record<string, string[]> = {
     "Paste your page in.",
     "Set a custom URL and an edit code, and write the edit code down. You cannot change the page later without it.",
     "Press Go.",
+  ],
+  "text.is": [
+    "Open text.is in a new tab.",
+    "Paste your page into the big box.",
+    "Set a custom URL and an edit code, and write the edit code down. You cannot change the page later without it.",
+    "Press Publish.",
   ],
   portable: [
     "Open the site you want to post on.",
@@ -145,8 +151,16 @@ export function exportSurface(container: HTMLElement): void {
       el("div", { class: "adders" }, [
         copy,
         button({
-          label: "Save as a file",
-          onClick: () => save("page.md", result.markdown, "text/markdown"),
+          label: "Save as a .md file",
+          onClick: () => {
+            // A file is not a host. The box above is tuned for the one site the
+            // artist picked, and a .md file ends up somewhere else entirely:
+            // GitHub, Obsidian, a text editor, or a different paste site next
+            // year. So the file is compiled portable rather than handed the
+            // host-specific output, which is what this button used to do.
+            const portable = compile(getState().doc, PORTABLE);
+            save("page.md", portable.markdown, "text/markdown");
+          },
         }),
         button({
           label: "Save a backup you can reopen here",

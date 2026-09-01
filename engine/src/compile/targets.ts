@@ -27,12 +27,13 @@ export const PORTABLE: Target = {
     maxHeadingLevel: 6,
     thematicBreak: "***",
     tables: true,
-    hardBreak: "backslash",
+    hardBreak: "spaces",
     escapeStyle: "commonmark",
   },
   sources: {
     maxHeadingLevel: "CommonMark specification, ATX headings are levels 1 to 6",
-    hardBreak: "CommonMark specification, a backslash at end of line is a hard break",
+    hardBreak:
+      "CommonMark specification, section 6.12: BOTH two trailing spaces and a trailing backslash are hard breaks. This was the backslash until 2026-09-01, on the reasoning that it is the form a specification names first and the form that survives an editor stripping trailing whitespace. That reasoning was about the specification rather than about hosts, and this target's entire job is the hosts. Of the three verified, the backslash is a hard break on none of the Python-Markdown ones: rentry swallows it (2026-08-18) and text.is is worse, consuming the newline and the joining space so two sentences run together (2026-09-01). Two trailing spaces work on every host verified and are equally valid CommonMark, so the target named 'works anywhere' now emits the form that does. The cost is real and accepted: an editor that strips trailing whitespace silently removes the break, which loses a line break, where the backslash form loses the space between two words on a live page",
     tables: "GFM specification, pipe tables. Part of the declared portable baseline",
     thematicBreak: "CommonMark specification, thematic break. Chosen over --- per review R-1",
     escapeStyle: "CommonMark specification, backslash escapes for ASCII punctuation",
@@ -70,7 +71,48 @@ export const RENTRY: Target = {
   },
 };
 
-export const TARGETS: readonly Target[] = [PORTABLE, RENTRY];
+/**
+ * text.is. A Markdown pastebin, free, no account, custom URLs and edit codes.
+ *
+ * Every value here was observed on 2026-09-01 by driving the host's own
+ * renderer at `/markdownx/markdownify/`, which is the endpoint its pages are
+ * rendered by. Recorded in `docs/research/2026-09-01-textis-verification.md`.
+ *
+ * It was tempting to copy rentry's values wholesale. Both run Python-Markdown
+ * behind django-markdownx, and the first version of the research said so and
+ * stopped there. They are not the same host: a trailing backslash is literal
+ * text on rentry and DESTRUCTIVE here, eating the newline and the space that
+ * would have joined the two lines, and the set of characters a backslash
+ * cannot protect is three on rentry and one here. A family resemblance is not
+ * an observation, which is the rule FR-014 already states.
+ */
+export const TEXT_IS: Target = {
+  id: "text.is",
+  name: "text.is",
+  capabilities: {
+    maxHeadingLevel: 6,
+    thematicBreak: "***",
+    tables: true,
+    hardBreak: "spaces",
+    escapeStyle: "commonmark",
+    maxBytes: 200000,
+  },
+  sources: {
+    maxHeadingLevel:
+      "Observed 2026-09-01: # through ###### each produced h1 to h6 in the host's own renderer",
+    hardBreak:
+      "Observed 2026-09-01: two trailing spaces produced <br>. A trailing backslash is destructive here, joining EEE and FFF into EEEFFF with the newline and the space both consumed, so the CommonMark form must never be emitted for this host. A plain single newline also produces <br>, because nl2br is on, which is why nothing may be soft wrapped",
+    tables:
+      "Observed 2026-09-01: a GFM pipe table produced table and th elements",
+    thematicBreak: "Observed 2026-09-01: *** produced an hr",
+    escapeStyle:
+      "Observed 2026-09-01, one line per character, twenty nine characters: the backslash was consumed for every one of them except the tilde. That is narrower than rentry, where it also fails for the caret and the dollar sign. All three are emitted as numeric character references regardless, and those were confirmed here to render as the character the seller typed, with a doubled entity tilde staying literal text while a real one is still struck through",
+    maxBytes:
+      "Observed 2026-09-01: the paste form carries maxlength=\"200000\". That counts characters and this field counts bytes, so it is recorded as bytes deliberately: a page inside 200000 bytes holds at most 200000 characters, so the limit is conservative in the safe direction rather than assumed",
+  },
+};
+
+export const TARGETS: readonly Target[] = [PORTABLE, RENTRY, TEXT_IS];
 
 /** The target used when a page names a host this build does not know. */
 export const FALLBACK_TARGET = PORTABLE;

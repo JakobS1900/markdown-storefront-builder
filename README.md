@@ -83,13 +83,21 @@ Each gate was verified by making it fail on purpose, not by assuming it works.
 
 ## Known limitations, stated rather than buried
 
-**The two hosts barely differ, though they no longer agree entirely.** They
-diverge on exactly one thing: the hard line break, where rentry needs two
-trailing spaces and the portable baseline uses the CommonMark backslash. That
-divergence exists because live verification found the backslash form silently
-broken on rentry, not because it was designed in. Everything else in the current
-section types renders the same on both, so the compatibility machinery is still
-mostly proved by synthetic hosts in the tests.
+**The three hosts barely differ, and currently agree entirely.** rentry,
+text.is, and the portable baseline produce byte identical output for every
+fixture. That was not always true. Until 2026-09-01 portable used the
+CommonMark backslash hard break and the other two used two trailing spaces,
+because live verification had found the backslash silently broken on rentry.
+Verifying text.is found it worse there, consuming the newline and the space so
+two sentences publish as one word, which meant the backslash was a working hard
+break on none of the real hosts and only on the specification. Portable moved
+to the form that works, and the divergence closed.
+
+So the compatibility machinery is still mostly proved by synthetic hosts in the
+tests rather than by disagreement between the shipped ones. What the real hosts
+have proved is narrower and more useful: that a value nobody checked is usually
+wrong. Every capability on every host cites the observation it came from, and
+`docs/research/` holds the transcripts.
 
 **The published build has no image uploading, on purpose.** There is no upload
 button. The image field takes a web address, and tells an artist to upload at

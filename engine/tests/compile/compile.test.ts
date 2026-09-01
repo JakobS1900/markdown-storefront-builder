@@ -212,10 +212,19 @@ describe("FR-015: output over a host's limit warns and is returned in full", () 
     expect(out.diagnostics.some((d) => d.code === "size_limit_exceeded")).toBe(true);
   });
 
-  it("neither shipped host declares a limit, so neither can warn", () => {
-    for (const target of TARGETS) {
-      expect(target.capabilities.maxBytes).toBeUndefined();
-    }
+  it("declares a limit only for the host that documents one", () => {
+    // This read "neither shipped host declares a limit, so neither can warn",
+    // which was true of the two hosts that existed. text.is is the first with
+    // a limit anybody can point at: its paste form carries maxlength="200000".
+    //
+    // The rule the original was protecting still holds and is what this now
+    // checks: an absent limit means undocumented, never unlimited. rentry
+    // documents no limit, so it stays undefined rather than being given a
+    // generous number that would be a guess written down.
+    const declared = TARGETS.filter((t) => t.capabilities.maxBytes !== undefined);
+    expect(declared.map((t) => t.id)).toEqual(["text.is"]);
+    expect(RENTRY.capabilities.maxBytes).toBeUndefined();
+    expect(PORTABLE.capabilities.maxBytes).toBeUndefined();
   });
 });
 

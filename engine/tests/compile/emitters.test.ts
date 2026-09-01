@@ -50,9 +50,31 @@ describe("prose", () => {
     expect(md({ id: "p", kind: "prose", text: "One.\n\nTwo." })).toBe("One.\n\nTwo.\n");
   });
 
-  it("turns a single newline into a hard line break with no trailing space", () => {
+  it("turns a single newline into a hard line break, using trailing spaces", () => {
+    // This asserted the backslash form and, separately, that no line in the
+    // output ends in whitespace. Both were deliberate: the backslash is the
+    // form CommonMark names first, and trailing spaces are invisible and get
+    // stripped by editors, which makes them a fragile thing to depend on.
+    //
+    // That reasoning was about the specification. This target's job is hosts.
+    // The backslash is a hard break on neither Python-Markdown host verified:
+    // rentry swallows it, and text.is consumes the newline and the joining
+    // space so two sentences run together as "each.Refunds". Two trailing
+    // spaces are equally valid CommonMark and worked on every renderer probed.
+    //
+    // The old property is not gone, it is narrower: no line may carry trailing
+    // whitespace EXCEPT one that is deliberately ending in a hard break. A
+    // stray space anywhere else is still a defect.
     const out = md({ id: "p", kind: "prose", text: "Line one\nLine two" });
-    expect(out).toBe("Line one\\\nLine two\n");
+    expect(out).toBe("Line one  \nLine two\n");
+    for (const line of out.split("\n")) {
+      if (line.endsWith("  ")) continue;
+      expect(line).toBe(line.replace(/[ \t]+$/, ""));
+    }
+  });
+
+  it("leaves no trailing whitespace on a line that is not a hard break", () => {
+    const out = md({ id: "p", kind: "prose", text: "One.\n\nTwo.\n\n- a\n- b" });
     for (const line of out.split("\n")) expect(line).toBe(line.replace(/[ \t]+$/, ""));
   });
 
