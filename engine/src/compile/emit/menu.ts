@@ -1,9 +1,9 @@
 import type { Block } from "../../document/types.js";
 import type { Target } from "../capabilities.js";
 import type { DiagnosticSink } from "../diagnostics.js";
-import { escapeText } from "../escape.js";
+import { escapeInline, escapeText } from "../escape.js";
 import { encodeAddress, isSafeUrl } from "../link.js";
-import { bulletList, cell, joinParts, sectionHeading } from "./shared.js";
+import { SECTION_HEADING_LEVEL, bulletList, cell, joinParts, sectionHeading } from "./shared.js";
 
 type Menu = Extract<Block, { kind: "menu" }>;
 type Tier = Menu["tiers"][number];
@@ -61,11 +61,29 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
   }
 
   if (tiers.length > 0) {
-    parts.push(
-      target.capabilities.tables
-        ? tierTable(tiers, block.currency)
-        : tierList(tiers, block.currency, block.id, target, sink),
-    );
+    // One item per block, rather than one table for the section, but only where
+    // somebody is actually pricing by quantity. FR-030 and FR-031.
+    //
+    // The per item layout buys room for a quantity table and costs two real
+    // things: the customer can no longer read down a single price column, and
+    // twelve items become twelve tables to scroll past. An artist selling three
+    // commission tiers would pay both and get nothing back, so they do not pay
+    // them. Same rule the optional columns follow, applied to the whole shape.
+    //
+    // The condition is on the section and not the item, because two layouts
+    // inside one price list would read as a rendering fault rather than a
+    // feature.
+    const perItem = tiers.some((t) => realQuantities(t).length > 0);
+    if (perItem) {
+      if (!target.capabilities.tables) warnNoTables(block.id, target, sink);
+      parts.push(tiers.map((t) => tierBlock(t, block.currency, target)).join("\n\n"));
+    } else {
+      parts.push(
+        target.capabilities.tables
+          ? tierTable(tiers, block.currency)
+          : tierList(tiers, block.currency, block.id, target, sink),
+      );
+    }
   }
 
   if (block.addOns !== undefined && block.addOns.length > 0) {
@@ -155,6 +173,96 @@ function realDetails(tier: Tier): readonly { label: string; value: string }[] {
     .filter((d) => d.label !== "" && d.value !== "");
 }
 
+/**
+ * The quantity breaks an item actually has.
+ *
+ * Half a break is one somebody started and abandoned, and it is dropped for the
+ * same reason a half filled detail is: an empty row is not a thing anyone meant
+ * to publish. FR-029.
+ */
+function realQuantities(tier: Tier): readonly { amount: string; price: string }[] {
+  if (tier.quantities === undefined) return [];
+  return tier.quantities
+    .map((q) => ({ amount: q.amount.trim(), price: q.price.trim() }))
+    .filter((q) => q.amount !== "" && q.price !== "");
+}
+
+/** Both table-less paths say the same thing, so they say it in one place. */
+function warnNoTables(blockId: string, target: Target, sink: DiagnosticSink): void {
+  sink.add({
+    code: "table_unsupported",
+    severity: "warning",
+    blockId,
+    capability: "tables",
+    message: `${target.name} does not support tables, so your pricing has been laid out as a list instead. It will still read correctly, just without the columns.`,
+  });
+}
+
+/**
+ * Everything about an item other than its name and price, as blocks.
+ *
+ * Shared by the list fallback and the per item layout so the two cannot drift.
+ * The order is the one the fallback has always used, which is what keeps the
+ * golden files byte identical.
+ */
+function itemBody(tier: Tier): string[] {
+  const lines: string[] = [];
+  if (tier.blurb !== undefined && tier.blurb !== "") lines.push(escapeText(tier.blurb));
+  const image = tierImage(tier);
+  if (image !== "") lines.push(image);
+  const includes = tier.includes === undefined ? undefined : bulletList(tier.includes.map(escapeText));
+  if (includes !== undefined) lines.push(includes);
+  const details = bulletList(
+    realDetails(tier).map((d) => `${escapeText(d.label)}: ${escapeText(d.value)}`),
+  );
+  if (details !== undefined) lines.push(details);
+  return lines;
+}
+
+/**
+ * One item as its own block: a heading carrying the name and price, then the
+ * quantities, then everything else.
+ *
+ * The heading must sit strictly below the section's, and on a host that caps
+ * headings at the section level it cannot, so it becomes bold instead. An item
+ * rendered at the same level as the section it belongs to would read as a new
+ * section, which is worse than not being a heading at all.
+ */
+function tierBlock(tier: Tier, currency: string | undefined, target: Target): string {
+  // An item can legitimately have only one half: "Sketch" with the price still
+  // to come, or a blank name against "DM me". A heading reading ", $20" would
+  // look like the emitter lost something.
+  const title = [tier.name.trim(), pricedAs(tier, currency).trim()]
+    .filter((s) => s !== "")
+    .map(escapeInline)
+    .join(", ");
+
+  const level = SECTION_HEADING_LEVEL + 1;
+  const heading =
+    level <= target.capabilities.maxHeadingLevel ? `${"#".repeat(level)} ${title}` : `**${title}**`;
+
+  const quantities = realQuantities(tier);
+  const parts = [heading];
+  if (quantities.length > 0) {
+    parts.push(
+      target.capabilities.tables
+        ? [
+            "| Quantity | Price |",
+            "| --- | --- |",
+            ...quantities.map(
+              (q) => `| ${cell(q.amount)} | ${cell(withCurrency(q.price, currency))} |`,
+            ),
+          ].join("\n")
+        : // FR-032. This layout was chosen over the alternative precisely
+          // because it still reads correctly here.
+          (bulletList(
+            quantities.map((q) => `${escapeText(q.amount)}: ${escapeText(withCurrency(q.price, currency))}`),
+          ) ?? ""),
+    );
+  }
+  return [...parts, ...itemBody(tier)].join("\n\n");
+}
+
 function tierTable(tiers: readonly Tier[], currency: string | undefined): string {
   // The Example column appears only when at least one tier has a usable image.
   // An empty column on every row would be a worse table for everyone who does
@@ -212,31 +320,13 @@ function tierList(
   target: Target,
   sink: DiagnosticSink,
 ): string {
-  sink.add({
-    code: "table_unsupported",
-    severity: "warning",
-    blockId,
-    capability: "tables",
-    message: `${target.name} does not support tables, so your pricing has been laid out as a list instead. It will still read correctly, just without the columns.`,
-  });
+  warnNoTables(blockId, target, sink);
 
   return tiers
-    .map((t) => {
-      const lines = [
-        `**${escapeText(t.name)}**: ${escapeText(pricedAs(t, currency))}`,
-      ];
-      if (t.blurb !== undefined && t.blurb !== "") lines.push(escapeText(t.blurb));
-      const image = tierImage(t);
-      if (image !== "") lines.push(image);
-      const includes = t.includes === undefined ? undefined : bulletList(t.includes.map(escapeText));
-      if (includes !== undefined) lines.push(includes);
-      // Details follow the item as a list, which is what the fallback already
-      // does for what is included.
-      const details = bulletList(
-        realDetails(t).map((d) => `${escapeText(d.label)}: ${escapeText(d.value)}`),
-      );
-      if (details !== undefined) lines.push(details);
-      return lines.join("\n\n");
-    })
+    .map((t) =>
+      // Details follow the item as a list, which is what this fallback already
+      // does for what is included. See `itemBody`.
+      [`**${escapeText(t.name)}**: ${escapeText(pricedAs(t, currency))}`, ...itemBody(t)].join("\n\n"),
+    )
     .join("\n\n");
 }

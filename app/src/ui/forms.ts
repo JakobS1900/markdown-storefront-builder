@@ -200,6 +200,37 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         hint: 'Leave empty for one of something. Or: "per lb", "each", "per hour".',
         onInput: (v) => editTier(i, (t) => withOptional(t, "unit", v)),
       }),
+      // Kept at the top level rather than folded away, even though it makes an
+      // already long form one field longer. It is the only field here that
+      // changes how the whole section is laid out, and a control with that much
+      // reach that nobody can find is worse than the extra scroll.
+      field({
+        label: "Bulk pricing (optional)",
+        value: (tier.quantities ?? []).map((q) => `${q.amount} = ${q.price}`).join("\n"),
+        multiline: true,
+        hint: 'One per line, as "5 lb = 90". Leave empty if you sell one at a time.',
+        onInput: (v) => {
+          // Lines rather than a pair of boxes per break, for the reason the
+          // details field is: three prices would otherwise be six controls plus
+          // an add and a remove for each, on a phone. Either separator is
+          // accepted so somebody typing a colon out of habit is not punished.
+          const parsed = v
+            .split("\n")
+            .map((line) => {
+              const cuts = [line.indexOf("="), line.indexOf(":")].filter((n) => n !== -1);
+              if (cuts.length === 0) return { amount: line.trim(), price: "" };
+              const at = Math.min(...cuts);
+              return { amount: line.slice(0, at).trim(), price: line.slice(at + 1).trim() };
+            })
+            .filter((q) => q.amount !== "" || q.price !== "");
+          editTier(i, (t) => {
+            const next = { ...t } as Record<string, unknown>;
+            if (parsed.length === 0) delete next["quantities"];
+            else next["quantities"] = parsed;
+            return next as Tier;
+          });
+        },
+      }),
       disclosure({
         summary: "More details",
         children: [
