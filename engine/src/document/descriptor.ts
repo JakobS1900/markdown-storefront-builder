@@ -43,13 +43,32 @@ export type FieldSpec =
   | { readonly name: string; readonly type: "objectArray"; readonly required: boolean; readonly of: readonly FieldSpec[] }
   | { readonly name: string; readonly type: "blockArray"; readonly required: boolean };
 
+/** A labelled fact about an item. Colour: black. Origin: Ecuador. */
+export const MENU_DETAIL_FIELDS = [
+  { name: "label", type: "string", required: true },
+  { name: "value", type: "string", required: true },
+] as const satisfies readonly FieldSpec[];
+
 export const MENU_TIER_FIELDS = [
   { name: "name", type: "string", required: true },
   // A string, not a number. Artists write "45", "from 45", "45+", and "DM me".
   // A numeric type would either reject real prices or discard what they wrote.
   { name: "price", type: "string", required: true },
+  // What one of the price buys: "per lb", "each", "per dozen", "per hour".
+  //
+  // Twenty dollars of bananas is not a price until you know it buys a pound.
+  // Free text rather than a list, because the set of things people sell by is
+  // not enumerable, and a list that is missing somebody's unit is worse than no
+  // list at all. It sits beside the price rather than in the name, because
+  // "Bananas, per lb" answers a different question from "$20 per lb".
+  { name: "unit", type: "string", required: false },
   { name: "blurb", type: "string", required: false },
   { name: "includes", type: "stringArray", required: false },
+  // Labelled facts, with the labels chosen by the seller. Colour, size, weight,
+  // storage, origin. Free labels for the same reason `unit` is free text: this
+  // has to serve a knife maker, a greengrocer and somebody selling phones
+  // without any of them being second class.
+  { name: "details", type: "objectArray", required: false, of: MENU_DETAIL_FIELDS },
   { name: "imageUrl", type: "string", required: false },
 ] as const satisfies readonly FieldSpec[];
 

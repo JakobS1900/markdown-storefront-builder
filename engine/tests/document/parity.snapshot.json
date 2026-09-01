@@ -79,6 +79,11 @@
             "type": "string"
           },
           {
+            "name": "unit",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "blurb",
             "required": false,
             "type": "string"
@@ -87,6 +92,23 @@
             "name": "includes",
             "required": false,
             "type": "stringArray"
+          },
+          {
+            "name": "details",
+            "of": [
+              {
+                "name": "label",
+                "required": true,
+                "type": "string"
+              },
+              {
+                "name": "value",
+                "required": true,
+                "type": "string"
+              }
+            ],
+            "required": false,
+            "type": "objectArray"
           },
           {
             "name": "imageUrl",
