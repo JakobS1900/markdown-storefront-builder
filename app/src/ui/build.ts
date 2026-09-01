@@ -61,6 +61,29 @@ function summarise(block: Block): string {
   }
 }
 
+/**
+ * Brings a just-opened section to the top of the screen.
+ *
+ * Measured at 360 by 720, the phone this was built on: opening a price section
+ * rendered seven fields and put none of them in view. Pressing a control and
+ * seeing nothing change is indistinguishable from the control not working, and
+ * the artist has to guess that the answer is to scroll.
+ *
+ * There are two ways into an open section and both had the problem: pressing
+ * Open on a row, and adding a section, which selects what it adds. The first
+ * measurement only caught one of them.
+ *
+ * Selecting repaints synchronously, so the row exists by the time this runs.
+ * Guarded because jsdom has no layout and no scrollIntoView, and a test
+ * environment should not be what decides whether this ships.
+ */
+function revealSection(blockId: string): void {
+  const row = document.querySelector(`[aria-controls="editor-${blockId}"]`);
+  if (row instanceof HTMLElement && typeof row.scrollIntoView === "function") {
+    row.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+}
+
 /** When a page was last written, short enough to sit beside its title. */
 function lastEdited(at: number): string {
   const when = new Date(at);
@@ -338,7 +361,23 @@ export function buildSurface(container: HTMLElement): void {
               // an element that does not exist is a dangling reference, not a
               // hint about one that might appear later.
               ...(selected ? { controls: editorId } : {}),
-              onClick: () => selectBlock(selected ? undefined : block.id),
+              onClick: () => {
+                const opening = !selected;
+                selectBlock(opening ? block.id : undefined);
+                // Bring the row it opened to the top of the screen.
+                //
+                // Measured at 360 by 720, which is the phone this was built on:
+                // opening a price section put seven fields on the page and none
+                // of them in view. Pressing "Open" and seeing nothing change is
+                // the disorientation an accordion is warned about, and the
+                // artist has to guess that the answer is to scroll.
+                //
+                // Selecting repaints synchronously, so by here the new row
+                // exists. Guarded because jsdom has no layout and no
+                // scrollIntoView, and a test environment should not decide
+                // whether this ships.
+                if (opening) revealSection(block.id);
+              },
             }),
             el("div", { class: "block-tools" }, [
               button({
@@ -392,8 +431,12 @@ export function buildSurface(container: HTMLElement): void {
         label: KIND_LABEL[kind],
         variant: "primary",
         onClick: () => {
-          addBlock(blankBlock(kind));
+          const block = blankBlock(kind);
+          addBlock(block);
           announce(`Added ${KIND_LABEL[kind]}`);
+          // Adding selects what it added, so the same problem applies: the new
+          // section's fields render below the buttons that were just pressed.
+          revealSection(block.id);
         },
       }),
     ),

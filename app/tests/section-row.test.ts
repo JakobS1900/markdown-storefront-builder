@@ -15,7 +15,7 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { addBlock, getState, init, subscribe } from "../src/store.js";
+import { addBlock, getState, init, selectBlock, subscribe } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -104,5 +104,76 @@ describe("the section row", () => {
     addBlock(blankBlock("menu"));
 
     expect(row().textContent).toContain("Prices: 1 item");
+  });
+});
+
+describe("opening a section brings it into view", () => {
+  it("scrolls the row it just opened to the top", () => {
+    // Measured at 360 by 720: opening a price section rendered seven fields and
+    // put none of them on screen. Pressing a control and seeing nothing change
+    // is indistinguishable from the control not working.
+    const root = live();
+    addBlock(blankBlock("menu"));
+    selectBlock(undefined);
+    renderShell(root);
+
+    const calls: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element) {
+      calls.push(this.getAttribute("aria-controls") ?? this.tagName);
+    };
+
+    try {
+      const open = [...document.querySelectorAll<HTMLButtonElement>(".block-row > button:first-child")][0];
+      open?.click();
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatch(/^editor-/);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it("scrolls to a section that was just added, which is the commoner route in", () => {
+    const root = live();
+    renderShell(root);
+
+    const calls: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function scrollIntoView(this: Element) {
+      calls.push(this.getAttribute("aria-controls") ?? this.tagName);
+    };
+
+    try {
+      const prices = [...document.querySelectorAll<HTMLButtonElement>(".adders button")].find(
+        (b) => b.textContent === "Prices",
+      );
+      prices?.click();
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatch(/^editor-/);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it("does not scroll when the section is being closed", () => {
+    const root = live();
+    addBlock(blankBlock("menu"));
+    renderShell(root);
+
+    const calls: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function scrollIntoView() {
+      calls.push("called");
+    };
+
+    try {
+      // addBlock selects what it adds, so this row is already open.
+      const close = [...document.querySelectorAll<HTMLButtonElement>(".block-row > button:first-child")][0];
+      expect(close?.getAttribute("aria-expanded")).toBe("true");
+      close?.click();
+      expect(calls).toHaveLength(0);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
   });
 });
