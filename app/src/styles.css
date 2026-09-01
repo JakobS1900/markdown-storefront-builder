@@ -231,29 +231,28 @@ main {
 }
 
 /*
- * The row while it is asking whether to remove the section.
+ * The offer to put back what was just removed.
  *
- * The question takes the full width and the two answers sit under it, rather
- * than squeezing three words into the space three icons used to share. Keep is
- * first and is the accented button, because the safe answer should be the one
- * the thumb reaches and the eye lands on.
+ * It sits in the list at the index the section came from, so the gap it leaves
+ * is where the artist was already looking. Accented like the safe answer it
+ * replaces, and it does not expire, so it does not need to catch the eye the
+ * way a disappearing snackbar does.
  */
-.block-row.confirm {
+.undone {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.6rem;
+  margin-bottom: 0.75rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
 }
 
-.block-row.confirm .ask {
-  flex: 1 1 100%;
+.undone p {
   margin: 0;
-  font-weight: 600;
-}
-
-.block-row.confirm .block-tools {
-  flex: 1 1 auto;
-  gap: 0.5rem;
-  padding: 0;
 }
 
 .block-editor {

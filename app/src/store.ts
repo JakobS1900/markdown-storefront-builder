@@ -36,16 +36,18 @@ export interface State {
   readonly surface: Surface;
   readonly selectedBlockId?: string;
   /**
-   * The section whose removal is waiting on an answer.
+   * The section most recently removed, and where it was.
    *
-   * Removal is the one action here that destroys work and cannot be undone, and
-   * its control sits between "move up" and "move down" in three touch targets
-   * side by side on a phone. So it asks, and the question is state rather than
-   * a native `confirm()`: the interface rebuilds its DOM on every change and a
-   * modal would block that loop, quite apart from the answer belonging next to
-   * the row it concerns.
+   * Removal used to ask first. A confirmation is the wrong tool for something
+   * reversible, because people automate their answer to it: it gets clicked
+   * through unread, so it taxes every deliberate removal and fails to stop the
+   * accidental one. The accident it was built for was really about spacing, and
+   * that was fixed by spacing the controls apart.
+   *
+   * The index is kept as well as the block, because putting a section back at
+   * the end of the page is not putting it back. Feature 014, FR-024a.
    */
-  readonly pendingDeleteId?: string;
+  readonly undo?: { readonly block: Block; readonly index: number };
   /**
    * The saved page whose removal is waiting on an answer.
    *
@@ -226,23 +228,17 @@ function setQuietly(next: Patch): void {
 
 export function setSurface(surface: Surface): void {
   // An unanswered question does not follow the artist to another screen and
-  // wait there. Leaving is an answer, and the safe one. Both questions, because
-  // either one left standing is a destructive control armed on a screen nobody
-  // is looking at.
-  set({ surface, pendingDeleteId: undefined, pendingPageDeleteId: undefined });
+  // wait there. Leaving is an answer, and the safe one.
+  //
+  // The undo offer goes too. It is not on a timer, on purpose, but leaving the
+  // screen is the artist doing something else, and an offer that outlives the
+  // work that replaced it is how an undo puts a section back into a page that
+  // has changed underneath it.
+  set({ surface, pendingPageDeleteId: undefined, undo: undefined });
 }
 
 export function selectBlock(selectedBlockId: string | undefined): void {
   set(selectedBlockId === undefined ? { selectedBlockId: undefined } : { selectedBlockId });
-}
-
-/** Asks before removing a section. Nothing is removed until `removeBlock`. */
-export function askDelete(id: string): void {
-  set({ pendingDeleteId: id });
-}
-
-export function cancelDelete(): void {
-  set({ pendingDeleteId: undefined });
 }
 
 /** Asks before removing a saved page. Nothing is removed until `removePage`. */
@@ -320,6 +316,23 @@ function typing(): boolean {
 }
 
 export function update(doc: Document): void {
+  // Anything the artist does next takes the undo offer away. Typing counts:
+  // somebody who removed a section and started writing has moved on, and an
+  // offer that outlives the work replacing it restores a section into a page
+  // that is no longer the one it left. `removeBlock` sets its own offer after
+  // calling through here, which is why this does not need to know the
+  // difference.
+  //
+  // Cleared by deleting the key rather than assigning undefined, the same way
+  // `set` does it. `exactOptionalPropertyTypes` is on, so absent and undefined
+  // are different types here, and spreading one over the other is the mistake
+  // the compiler is there to catch.
+  if (state.undo !== undefined) {
+    const withoutUndo: Record<string, unknown> = { ...state };
+    delete withoutUndo["undo"];
+    state = withoutUndo as unknown as State;
+  }
+
   // Only the contents changed, so what is on screen is still the right set of
   // controls and the one being typed into is already correct. Anything that
   // adds, removes, reorders, or retargets repaints at once, unless somebody is
@@ -343,10 +356,35 @@ export function addBlock(block: Block): void {
   selectBlock(block.id);
 }
 
+/**
+ * Removes a section and remembers how to put it back.
+ *
+ * The offer is set after the removal, not before, because `replaceBlocks` funnels
+ * through `update`, which clears any offer that was already standing. That
+ * ordering is what makes "the next unrelated action clears it" work without a
+ * separate flag saying which action was this one.
+ */
 export function removeBlock(id: string): void {
+  const index = state.doc.blocks.findIndex((b) => b.id === id);
+  const block = state.doc.blocks[index];
+  if (block === undefined) return;
+
   replaceBlocks(state.doc.blocks.filter((b) => b.id !== id));
-  if (state.pendingDeleteId === id) cancelDelete();
+  set({ undo: { block, index } });
   if (state.selectedBlockId === id) selectBlock(undefined);
+}
+
+/** Puts the last removed section back where it was. */
+export function undoRemove(): void {
+  const undo = state.undo;
+  if (undo === undefined) return;
+
+  const blocks = [...state.doc.blocks];
+  // Clamped, because everything that could have changed the length also clears
+  // the offer, so this cannot be out of range. Clamping anyway costs nothing
+  // and means a future caller cannot make it throw.
+  blocks.splice(Math.min(undo.index, blocks.length), 0, undo.block);
+  replaceBlocks(blocks);
 }
 
 /** Moves a block one position. Returns silently when it is already at the end. */
@@ -435,7 +473,7 @@ export async function openPage(id: string): Promise<void> {
     return;
   }
 
-  set({ pageId: stored.id, doc: result.document, status: { kind: "idle" }, selectedBlockId: undefined });
+  set({ pageId: stored.id, doc: result.document, status: { kind: "idle" }, selectedBlockId: undefined, undo: undefined });
 }
 
 /**
@@ -446,7 +484,7 @@ export async function openPage(id: string): Promise<void> {
  * mean a page could be written before anyone had checked it parses.
  */
 export function adopt(pageId: string, doc: Document): void {
-  set({ pageId, doc, status: { kind: "idle" }, selectedBlockId: undefined, pendingDeleteId: undefined });
+  set({ pageId, doc, status: { kind: "idle" }, selectedBlockId: undefined, undo: undefined });
 }
 
 /**
@@ -462,8 +500,8 @@ export async function newPage(target: string): Promise<void> {
     doc: emptyDocument(target),
     status: { kind: "idle" },
     selectedBlockId: undefined,
-    pendingDeleteId: undefined,
     pendingPageDeleteId: undefined,
+    undo: undefined,
   });
   await save();
   await refreshPages();

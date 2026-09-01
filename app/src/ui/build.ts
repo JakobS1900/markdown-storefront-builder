@@ -10,9 +10,7 @@ import type { Block } from "@mdsb/engine";
 
 import {
   addBlock,
-  askDelete,
   askPageDelete,
-  cancelDelete,
   cancelPageDelete,
   getState,
   moveBlock,
@@ -21,6 +19,7 @@ import {
   removeBlock,
   removePage,
   selectBlock,
+  undoRemove,
   updateBlock,
   update,
   type State,
@@ -307,47 +306,11 @@ export function buildSurface(container: HTMLElement): void {
     blocks.map((block, i) => {
       const selected = state.selectedBlockId === block.id;
       const kind = KIND_LABEL[block.kind];
-      const asking = state.pendingDeleteId === block.id;
       // Prefixed because a block id is a UUID and may start with a digit.
       const editorId = `editor-${block.id}`;
 
-      // While a section is being asked about, its row holds the question and
-      // nothing else. The move controls sit either side of the delete control
-      // and are 44px apart, so leaving them there during the one interaction
-      // that cannot be undone is asking for the mis-tap all over again.
-      const row = asking
-        ? el(
-            "div",
-            {
-              class: "block-row confirm",
-              role: "group",
-              "aria-label": `Delete ${kind}?`,
-            },
-            [
-              el("p", { class: "ask" }, [
-                `Delete ${kind}? This cannot be undone.`,
-              ]),
-              el("div", { class: "block-tools" }, [
-                button({
-                  label: `Keep ${kind}`,
-                  variant: "primary",
-                  onClick: () => {
-                    cancelDelete();
-                    announce(`Kept ${kind}`);
-                  },
-                }),
-                button({
-                  label: `Yes, delete ${kind}`,
-                  variant: "danger",
-                  onClick: () => {
-                    removeBlock(block.id);
-                    announce(`Deleted ${kind}`);
-                  },
-                }),
-              ]),
-            ],
-          )
-        : el("div", { class: "block-row" }, [
+      const row = el("div", { class: "block-row" }, [
+
             // It says which way it will go. It used to read "Edit" whether the
             // section was open or shut, so the button offering to edit was the
             // one that took the editor away, and the only sign it was already
@@ -399,12 +362,12 @@ export function buildSurface(container: HTMLElement): void {
                 },
               }),
               button({
-                label: `Delete ${kind}`,
+                label: `Remove ${kind}`,
                 glyph: "×",
                 variant: "danger",
                 onClick: () => {
-                  askDelete(block.id);
-                  announce(`Delete ${kind}? Nothing has been removed yet.`);
+                  removeBlock(block.id);
+                  announce(`Removed ${kind}. Undo is where it was, in the list.`);
                 },
               }),
             ]),
@@ -422,6 +385,30 @@ export function buildSurface(container: HTMLElement): void {
       ]);
     }),
   );
+
+  // The offer to put back what was just removed, sitting at the index it came
+  // from. The gap it leaves is where the artist was already looking, which is
+  // most of why it is here rather than floating over the tab bar. It is not on
+  // a timer: FR-024b, because an undo that expires while somebody is scrolled
+  // elsewhere is a safety net that is not there when it is reached for.
+  if (state.undo !== undefined) {
+    const { block, index } = state.undo;
+    const kind = KIND_LABEL[block.kind];
+    list.insertBefore(
+      el("li", { class: "undone" }, [
+        el("p", {}, [`Removed ${kind}.`]),
+        button({
+          label: `Undo removing ${kind}`,
+          variant: "primary",
+          onClick: () => {
+            undoRemove();
+            announce(`${kind} is back.`);
+          },
+        }),
+      ]),
+      list.children[index] ?? null,
+    );
+  }
 
   const adders = el(
     "div",
@@ -457,7 +444,7 @@ export function buildSurface(container: HTMLElement): void {
           update(next as typeof state.doc);
         },
       }),
-      ...(blocks.length === 0 ? emptyState() : [list]),
+      ...(blocks.length === 0 && state.undo === undefined ? emptyState() : [list]),
       el("h2", { class: "sr-only" }, ["Add a section"]),
       adders,
     ]),

@@ -36,6 +36,8 @@ answerable without reading fifty commit messages.
 | [010 field work](010-field-work/) | ongoing since 2026-08-25 | after the fact | no | no | no | no |
 | [011 page list](011-page-list/) | 2026-08-31 | **before** | no | no | no | no |
 | [012 page lifecycle](012-page-lifecycle/) | 2026-08-31 | **before** | no | no | no | no |
+| [013 narrow escaping](013-narrow-escaping/) | 2026-08-31 | **before** | no | no | no | no |
+| [014 undo instead of confirm](014-undo-instead-of-confirm/) | 2026-09-01 | **before** | no | no | no | no |
 
 Features 011 and 012 are the first since 003 whose specs were written before the
 code. Neither has a plan or a task list, because each is one screen's worth of
@@ -47,6 +49,13 @@ out; 012 is those two things, and it opens by amending a requirement 011 had got
 right for a switcher and wrong for what the group became. The amendment is
 recorded in 012 rather than edited into 011, because a specification that
 quietly changes to match the code is worth nothing.
+
+014 does the same thing to a decision two features older, and is the clearest
+example of why these documents are worth writing. It removes the confirmation
+that feature 010 added after a real mis-tap, and it has to argue with that
+earlier reasoning rather than pretend it was never made. The mis-tap was real;
+the confirmation was the wrong fix for it, and the right one was four pixels of
+spacing.
 
 Plan, tasks and review columns are left honestly empty. Writing a retrospective
 "plan" for work already finished would be fiction, and a retrospective task list

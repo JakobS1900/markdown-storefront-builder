@@ -245,12 +245,15 @@ export function renderShell(root: HTMLElement): void {
   restoreOpenGroups(openGroups);
   restoreCaret(caret);
 
-  // A question that has just appeared takes focus, on the safe answer. The
-  // button that raised it no longer exists, so without this a keyboard or
-  // switch user is left at the top of the document hunting for what changed.
-  // Only when nothing else holds focus, so a later repaint cannot snatch it
-  // back from whichever answer the artist has tabbed to.
-  if (state.pendingDeleteId !== undefined && document.activeElement === document.body) {
-    document.querySelector<HTMLElement>(".block-row.confirm .btn.primary")?.focus({ preventScroll: true });
+  // An offer to undo takes focus when nothing else holds it. The control that
+  // was pressed has gone with the section it removed, so without this a
+  // keyboard or switch user is left at the top of the document with no idea
+  // what changed, and the way back is the thing they cannot find.
+  //
+  // This replaces the same handling for the delete question, which asked before
+  // removing anything. Only when nothing else holds focus, so a later repaint
+  // cannot snatch it back from wherever the artist has since tabbed to.
+  if (state.undo !== undefined && document.activeElement === document.body) {
+    document.querySelector<HTMLElement>(".undone .btn")?.focus({ preventScroll: true });
   }
 }
