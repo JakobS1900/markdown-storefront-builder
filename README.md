@@ -11,6 +11,14 @@ for every compromise made on the way.
 Works on a phone, installs to a home screen, and runs with no network. Nothing
 is sent anywhere: storage, compilation, and preview are all local.
 
+**On a phone:** the same code wrapped natively for Android. Download the signed
+APK from [Releases](https://github.com/JakobS1900/markdown-storefront-builder/releases),
+or read `docs/RELEASE.md` to build your own.
+
+**A page it produced:** [rentry.co/q7nyo28n](https://rentry.co/q7nyo28n), a
+complete storefront with price tables, a gallery, shipping bands and terms.
+Twelve sections in, 6,673 characters of Markdown out, pasted into the real host.
+
 **Case study:** [jakobs1900.github.io/portfolio/storefront-builder.html](https://jakobs1900.github.io/portfolio/storefront-builder.html)
 
 ## Running it
@@ -18,7 +26,7 @@ is sent anywhere: storage, compilation, and preview are all local.
 ```powershell
 npm install     # from PowerShell, not Git Bash. See CLAUDE.md for why
 npm run dev     # the app
-npm run verify  # typecheck, lint, 529 tests, secret scan, dash scan, accessibility
+npm run verify  # typecheck, lint, 734 tests, secret scan, dash scan, accessibility
 ```
 
 ## What is where
@@ -29,7 +37,8 @@ npm run verify  # typecheck, lint, 529 tests, secret scan, dash scan, accessibil
 | `engine/src/compile/` | The compiler. Hosts described as data, one emitter per section type, and a lint pass that reports every compromise. |
 | `engine/tests/compile/golden/` | Expected output, byte compared. Readable Markdown, so a human can judge a diff. |
 | `app/` | The editor. Mobile first, local only, no account, no framework. |
-| `specs/` | Every specification, architecture review, and holistic review, committed beside the code they describe. |
+| `android/` | The native shell. A Capacitor wrapper, a back handler, and a file handoff, because a `download` attribute does nothing in a WebView. |
+| `specs/` | Every specification, committed beside the code. `specs/README.md` says which ones were written before the code and which after, because most were after. |
 
 ## The parts worth reading
 
@@ -114,4 +123,18 @@ dead key looks exactly like a busy afternoon.
 
 ## Licence
 
-Not yet chosen.
+[PolyForm Noncommercial 1.0.0](LICENSE.md). Read it, learn from it, change it,
+build it for yourself, and use it for anything that is not commercial, which
+includes selling your own commissions from a page it made.
+
+What it does not allow is selling this software, publishing it to an app store,
+or folding it into something you charge for. Those are mine, because a paid
+Android build is where this pays for itself.
+
+If you want to do something the licence does not allow, ask:
+jakob.stanfield@ras-software.com
+
+GitHub will show this as "Other" rather than a recognised licence. That is
+GitHub's list being short, not the licence being unusual: PolyForm is a
+standard family, and the text in `LICENSE.md` is the licensor's own, fetched
+verbatim rather than retyped.
