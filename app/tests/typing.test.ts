@@ -229,7 +229,18 @@ describe("the repaint that was deferred still happens", () => {
   // Deferring is only correct if it arrives. A version that simply stopped
   // repainting would pass every test above and leave the collapsed summary of
   // a section permanently stale.
-  it("catches the interface up once typing stops, without dropping the caret", async () => {
+  it("waits for the field to be left, and only then catches up", async () => {
+    // This used to assert that the interface caught up 200ms after the last
+    // keystroke and put the caret back afterwards. Putting the caret back is
+    // the tell: it had been taken away, because catching up rebuilds the DOM
+    // and the focused input goes with it. Android binds its keyboard to that
+    // element, so the rebuild tore the connection down mid-word, and a Pixel
+    // reported single characters going missing and swiped words coming out
+    // wrong. Feature 015.
+    //
+    // The contract now is stronger and simpler: while a field has focus,
+    // nothing repaints at all. The caret cannot be dropped because it is never
+    // picked up, and the summary being briefly stale is the price.
     vi.useFakeTimers();
     try {
       live();
@@ -240,16 +251,18 @@ describe("the repaint that was deferred still happens", () => {
       const startLabel = labelOf(start);
       typeWord("Ari");
 
-      // The row summary still shows the old value: nothing has repainted.
-      expect(document.querySelector(".block-row")?.textContent ?? "").not.toContain("Ari");
+      await vi.advanceTimersByTimeAsync(400);
 
+      // Deliberately still stale, and the field is untouched.
+      expect(document.querySelector(".block-row")?.textContent ?? "").not.toContain("Ari");
+      expect(focused()).toBe(start);
+      expect(start.value).toBe("Ari");
+      expect(labelOf(start)).toBe(startLabel);
+
+      start.blur();
       await vi.advanceTimersByTimeAsync(400);
 
       expect(document.querySelector(".block-row")?.textContent ?? "").toContain("Ari");
-      const after = focused();
-      expect(after, "the deferred repaint threw the caret away").not.toBeNull();
-      expect(labelOf(after as Element)).toBe(startLabel);
-      expect((after as HTMLInputElement).value).toBe("Ari");
     } finally {
       vi.useRealTimers();
     }
@@ -327,7 +340,7 @@ describe("the field being typed into is never swapped out underneath the typist"
     expect(after.tiers).toEqual([{ name: "F", price: "" }]);
   });
 
-  it("catches the interface up once typing stops", async () => {
+  it("catches the interface up once the field is left", async () => {
     vi.useFakeTimers();
     try {
       live();
@@ -337,10 +350,18 @@ describe("the field being typed into is never swapped out underneath the typist"
       updateBlock(block.id, { ...block, tiers: [] });
       selectBlock(block.id);
 
-      fieldByLabel("Item").focus();
+      const item = fieldByLabel("Item");
+      item.focus();
       pressKey("F");
       expect(document.querySelector(".block-row")?.textContent ?? "").toContain("0 items");
 
+      await vi.advanceTimersByTimeAsync(400);
+      // Typing the first character into a placeholder row genuinely adds a row,
+      // and that used to repaint here, taking the field away between keystrokes.
+      expect(document.querySelector(".block-row")?.textContent ?? "").toContain("0 items");
+      expect(document.activeElement).toBe(item);
+
+      item.blur();
       await vi.advanceTimersByTimeAsync(400);
 
       expect(document.querySelector(".block-row")?.textContent ?? "").toContain("1 item");

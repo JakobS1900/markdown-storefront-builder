@@ -168,6 +168,28 @@ function repaint(): void {
     clearTimeout(pendingRepaint);
     pendingRepaint = undefined;
   }
+
+  // Nothing repaints while a field has focus. This is the only place that can
+  // enforce it, which is why the guard lives here rather than at each caller.
+  //
+  // Deferring the repaint that a keystroke causes was only ever half of it.
+  // Every other path into `set` repaints at once, and one of them fires during
+  // exactly the wrong moment: the first save of a new page re-reads the page
+  // list, which is a `set`, which rebuilt the interface under the field being
+  // typed into. `replaceChildren` destroys the focused input and Android tears
+  // down the InputConnection bound to it, so a character committed in that
+  // window has nowhere to land. Reported on a Pixel as single letters going
+  // missing at random, and as whole swiped words coming out wrong: a gesture
+  // commits nothing until it ends, so the repaint lands mid-word and writes the
+  // document back over a word the document has never been told about.
+  //
+  // Deferred rather than dropped. The moment focus leaves, everything that was
+  // waiting paints at once.
+  if (typing()) {
+    repaintSoon();
+    return;
+  }
+
   for (const listener of listeners) listener(state);
 }
 
@@ -175,6 +197,7 @@ function repaintSoon(): void {
   if (pendingRepaint !== undefined) clearTimeout(pendingRepaint);
   pendingRepaint = setTimeout(() => {
     pendingRepaint = undefined;
+
     repaint();
   }, QUIET_MS);
 }
@@ -311,6 +334,10 @@ export function setTarget(target: string): void {
  * what rules out the injection and leaves the app.
  */
 function typing(): boolean {
+  // No DOM at all means nobody is typing. This used to be consulted only from
+  // `update`, which cannot run without a document, and moving it into `repaint`
+  // put it on a path the store takes with no browser present, where it threw.
+  if (typeof document === "undefined") return false;
   const active = document.activeElement;
   return active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
 }
