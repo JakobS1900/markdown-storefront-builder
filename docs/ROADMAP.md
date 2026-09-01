@@ -186,11 +186,13 @@ was found on the device, which is where everything is found now.
       that does not exist. Procedure and the recovery position are in
       `docs/RELEASE.md`.
 
-      **Distribution is still missing and this box does not claim it.** There is
-      no listing and no download page: a signed APK is a file, and nobody can
-      get it yet. The Play Store route additionally needs an account, a privacy
-      policy, a content rating and artwork, and is worth taking mainly because
-      Play App Signing would make the key above replaceable rather than fatal.
+      **Distribution is GitHub Releases, deliberately.** The signed APK is
+      attached to a tagged release and the web version needs no install at all.
+      There will be no Play listing: Google charges a registration fee to
+      publish, and this is a free app. The cost is real and is recorded in
+      `docs/RELEASE.md` rather than glossed over: no store search, no automatic
+      updates, and a one time "allow from this source" prompt for anyone
+      installing the APK.
 - [ ] **5.9 A second device.** Everything above was verified on one Moto G7 on
       Android 10. The keyboard inset bug was specific to that era of Android, so
       the fix for it is the least portable thing in the project.

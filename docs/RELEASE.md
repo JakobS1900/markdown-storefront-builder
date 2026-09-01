@@ -3,11 +3,11 @@
 ## What exists
 
 A release build of the Android app, signed with a key held outside this
-repository. Roadmap 5.8.
+repository, published as a GitHub Release. Roadmap 5.8.
 
-There is still no listing anywhere. A signed APK is a file: it can be handed to
-someone, put behind a link, or uploaded to a store. Nothing has been uploaded,
-and the section at the bottom says what each of those would actually require.
+    https://github.com/JakobS1900/markdown-storefront-builder/releases
+
+That is the whole distribution story and it is a deliberate one. See below.
 
 ## The key
 
@@ -86,13 +86,26 @@ first, and **uninstalling deletes every page saved in the app**. Export a backup
 from the Copy screen first, or copy the record out over adb, and check it before
 uninstalling rather than after.
 
+## Distribution
+
+GitHub Releases, and nothing else. The signed APK is attached to a tagged
+release, the web version needs no install at all, and both are free.
+
+**There is no Play listing and there is not going to be one.** Google charges a
+developer registration fee to publish, and this app is not worth paying a toll
+to give away. The cost of that decision is real and worth writing down rather
+than pretending it away: no store search, no automatic updates, and every
+installer has to allow an APK from outside the store once. In exchange, nobody
+needs an account to get it and no platform sits between the app and the person
+using it.
+
+`bundleRelease` still produces an `.aab`, because the Android build produces one
+whether or not anybody wants it. Nothing here uploads it.
+
+Play App Signing would have made the signing key replaceable rather than fatal,
+and skipping the store gives that up too. Back the key up. See above.
+
 ## What is still missing
 
-- **A place to get it.** No store listing, no download page, no link.
-- **Play Store**, if that is the route: a developer account, a privacy policy,
-  a content rating, store artwork, and enrolment in Play App Signing. That last
-  one is worth doing, because Google then holds the key that signs what users
-  install and the key above becomes an upload key, which **can** be replaced if
-  it is lost. It is the only way to make this key non-fatal.
 - **A second device.** Roadmap 5.9. Everything has been verified on one Moto G7
   on Android 10, and the keyboard inset fix is the least portable thing here.

@@ -123,18 +123,10 @@ dead key looks exactly like a busy afternoon.
 
 ## Licence
 
-[PolyForm Noncommercial 1.0.0](LICENSE.md). Read it, learn from it, change it,
-build it for yourself, and use it for anything that is not commercial, which
-includes selling your own commissions from a page it made.
+[MIT](LICENSE). Do what you like with it, including commercially. Keep the
+copyright notice and it is yours to use.
 
-What it does not allow is selling this software, publishing it to an app store,
-or folding it into something you charge for. Those are mine, because a paid
-Android build is where this pays for itself.
-
-If you want to do something the licence does not allow, ask:
-jakob.stanfield@ras-software.com
-
-GitHub will show this as "Other" rather than a recognised licence. That is
-GitHub's list being short, not the licence being unusual: PolyForm is a
-standard family, and the text in `LICENSE.md` is the licensor's own, fetched
-verbatim rather than retyped.
+It briefly carried a noncommercial licence, while the plan was a paid Android
+build. That plan is gone, so the restriction went with it. There is no store
+listing and there is not going to be one: the app is free here, the web version
+is free, and neither is going to grow a price.
