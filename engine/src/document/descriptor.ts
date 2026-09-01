@@ -49,6 +49,18 @@ export const MENU_DETAIL_FIELDS = [
   { name: "value", type: "string", required: true },
 ] as const satisfies readonly FieldSpec[];
 
+/**
+ * How much of the item, and what that much costs. One lb for 20, five for 90.
+ *
+ * Both halves are text for the reason `price` is text: people write "a dozen",
+ * "5 lb" and "2+", and a numeric type would either refuse those or quietly
+ * discard what somebody wrote.
+ */
+export const MENU_QUANTITY_FIELDS = [
+  { name: "amount", type: "string", required: true },
+  { name: "price", type: "string", required: true },
+] as const satisfies readonly FieldSpec[];
+
 export const MENU_TIER_FIELDS = [
   { name: "name", type: "string", required: true },
   // A string, not a number. Artists write "45", "from 45", "45+", and "DM me".
@@ -69,6 +81,11 @@ export const MENU_TIER_FIELDS = [
   // has to serve a knife maker, a greengrocer and somebody selling phones
   // without any of them being second class.
   { name: "details", type: "objectArray", required: false, of: MENU_DETAIL_FIELDS },
+  // Bulk pricing. Feature 016 declined this and said why, and feature 017
+  // reverses that after the substitute it relied on was tried: a second row
+  // reading "Bananas, 5 lb" states that this is a different product, because
+  // that is what a sibling row means. A bulk price is a property of one item.
+  { name: "quantities", type: "objectArray", required: false, of: MENU_QUANTITY_FIELDS },
   { name: "imageUrl", type: "string", required: false },
 ] as const satisfies readonly FieldSpec[];
 

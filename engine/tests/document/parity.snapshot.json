@@ -111,6 +111,23 @@
             "type": "objectArray"
           },
           {
+            "name": "quantities",
+            "of": [
+              {
+                "name": "amount",
+                "required": true,
+                "type": "string"
+              },
+              {
+                "name": "price",
+                "required": true,
+                "type": "string"
+              }
+            ],
+            "required": false,
+            "type": "objectArray"
+          },
+          {
             "name": "imageUrl",
             "required": false,
             "type": "string"
