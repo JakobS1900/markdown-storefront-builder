@@ -70,6 +70,37 @@ fixture is added.
 5. Any divergence is a defect in the target record, not in the fixture. Correct
    the record, regenerate the goldens, and note the source.
 
+## Device verification checklist
+
+Run whenever the Android build ships something that has to be seen working. The
+order matters: every step here exists because skipping it produced a wrong
+answer rather than a visible failure.
+
+1. `adb devices -l`, and check `dumpsys power` for `mWakefulness`. A dozing
+   screen has hung four runs and, on 2026-09-01, produced three identical white
+   screenshots that were read as the app failing to render. It had been working
+   the whole time.
+2. `adb shell svc power stayon usb` for the length of the run, and
+   `svc power stayon false` afterwards. It is the owner's device setting.
+3. Build with `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"`. The machine's
+   global `JAVA_HOME` is JDK 8 and Gradle refuses it; JDK 17 fails differently.
+4. Bump `versionCode` before building, and install with `-r` and the same
+   signing key. **Never uninstall to install.** That erases the owner's saved
+   pages, which is the one thing this project must not do.
+5. `MSYS_NO_PATHCONV=1` for `adb shell` as well as `adb pull`, or `screencap`
+   prints its usage text instead of capturing.
+6. Re-check wakefulness IMMEDIATELY BEFORE each capture, not once per run. A
+   capture under roughly 20 kB is a sleeping screen until proven otherwise.
+7. A release build is not inspectable, which is correct. When a defect needs
+   real evidence rather than a screenshot, rebuild with
+   `webContentsDebuggingEnabled` in `capacitor.config.json`, signed with the
+   SAME key so the update installs over the top and the owner's pages survive.
+   Remove it, rebuild, reinstall, and confirm no debug socket answers before
+   walking away.
+8. Anything typed into one of the owner's pages during a check is removed
+   afterwards, addressed by the control's own accessible name and never by its
+   position. Position has destroyed the owner's work here once already.
+
 ## What "done" means
 
 The command was run, the output was read, and it is quoted. The full gate passes:

@@ -38,6 +38,14 @@ answerable without reading fifty commit messages.
 | [012 page lifecycle](012-page-lifecycle/) | 2026-08-31 | **before** | no | no | no | no |
 | [013 narrow escaping](013-narrow-escaping/) | 2026-08-31 | **before** | no | no | no | no |
 | [014 undo instead of confirm](014-undo-instead-of-confirm/) | 2026-09-01 | **before** | no | no | no | no |
+| [016 unit and details](016-unit-and-details/) | 2026-09-01 | **before** | no | no | no | no |
+| [017 quantity pricing](017-quantity-pricing/) | 2026-09-01 | **before** | no | no | no | no |
+| [018 more hosts](018-more-hosts/) | 2026-09-01 | alongside | no | no | no | no |
+| [019 reviewed as a seller](019-reviewed-as-a-seller/) | 2026-09-01 | after the fact | no | no | no | no |
+| [020 several pictures](020-several-pictures/) | 2026-09-01 | after the fact | no | no | no | no |
+
+There is no 015. The number was skipped and nothing was lost: it is recorded
+here so nobody goes looking for a missing document.
 
 Features 011 and 012 are the first since 003 whose specs were written before the
 code. Neither has a plan or a task list, because each is one screen's worth of
@@ -56,6 +64,30 @@ that feature 010 added after a real mis-tap, and it has to argue with that
 earlier reasoning rather than pretend it was never made. The mis-tap was real;
 the confirmation was the wrong fix for it, and the right one was four pixels of
 spacing.
+
+**017 is the strongest example of the same habit.** Feature 016 was offered
+quantity break pricing and recorded that it was declined, with reasons. 017 is
+that feature, built after the substitute 016 relied on was tried and found
+wanting. It quotes the passage it overturns rather than editing it, and argues
+that the original reasoning was sound and still lost.
+
+018 is labelled "alongside" rather than before or after, because the research
+came first and changed the plan twice, and the specification records both
+reversals: that text.is and rentry are not the same host despite the same
+engine, and that the planned fix for the Markdown file download would have been
+worse than the bug it fixed.
+
+**019 and 020 came from using the thing rather than reading it.** Two complete
+shops were built with the tool, as an illustrator and as a 3D print seller, and
+that hour found eight defects in a codebase with 822 passing tests. 019 is the
+seven that needed no schema change; 020 is the eighth, which needed one. Both
+are after the fact and say so: the investigation produced the list, and the
+list is what a spec written first would have contained.
+
+019 carries the finding worth reading even if nothing else here is: **four of
+its changes broke no existing test**, which is a coverage report rather than
+reassurance, and three of the tests written during it are vacuous and kept with
+that stated at the top of the file.
 
 Plan, tasks and review columns are left honestly empty. Writing a retrospective
 "plan" for work already finished would be fiction, and a retrospective task list

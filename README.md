@@ -26,7 +26,7 @@ Twelve sections in, 6,673 characters of Markdown out, pasted into the real host.
 ```powershell
 npm install     # from PowerShell, not Git Bash. See CLAUDE.md for why
 npm run dev     # the app
-npm run verify  # typecheck, lint, 734 tests, secret scan, dash scan, accessibility
+npm run verify  # typecheck, lint, 896 tests, secret scan, dash scan, accessibility
 ```
 
 ## What is where
@@ -39,6 +39,7 @@ npm run verify  # typecheck, lint, 734 tests, secret scan, dash scan, accessibil
 | `app/` | The editor. Mobile first, local only, no account, no framework. |
 | `android/` | The native shell. A Capacitor wrapper, a back handler, and a file handoff, because a `download` attribute does nothing in a WebView. |
 | `specs/` | Every specification, committed beside the code. `specs/README.md` says which ones were written before the code and which after, because most were after. |
+| `docs/research/` | What was observed on a live host, with the date. Every capability value in a target record cites one of these. |
 
 ## The parts worth reading
 

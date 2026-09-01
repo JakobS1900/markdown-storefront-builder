@@ -193,13 +193,51 @@ was found on the device, which is where everything is found now.
       `docs/RELEASE.md` rather than glossed over: no store search, no automatic
       updates, and a one time "allow from this source" prompt for anyone
       installing the APK.
-- [ ] **5.9 A second device.** Everything above was verified on one Moto G7 on
-      Android 10. The keyboard inset bug was specific to that era of Android, so
-      the fix for it is the least portable thing in the project.
+- [x] **5.9 A second device.** Done 2026-09-01, on a Google Pixel, and it paid
+      for itself immediately. The APK installed and ran, and the owner found a
+      defect the Moto G7 had never shown: single characters going missing while
+      typing, and whole words wrong when swiping. Both were the same repaint
+      racing the keyboard, and the swipe case was the same bug made certain
+      rather than a second one.
+
+      The device harness could not reproduce it, because `adb shell input text`
+      injects committed text and skips the composing buffer the bug lived in: it
+      typed ten characters out of ten on the broken build. That is recorded
+      because it is the limit of the harness, not a detail about one bug.
+
+- [x] **5.10 A third host.** text.is, added 2026-09-01 under Principle II, which
+      is why it cost a data record and no emitter change. Every capability was
+      observed on the host's own renderer and written up in
+      `docs/research/2026-09-01-textis-verification.md`.
+
+      It also corrected a value nobody had checked. The portable baseline had
+      used the CommonMark backslash hard break since the beginning, and
+      verifying a third host proved it works on none of the three: rentry
+      swallows it and text.is destroys it, consuming the newline and the joining
+      space. The target named "works anywhere" now emits the form that does.
+
+      ghostbin and pastebin were investigated and refused, and the reasons are
+      in `specs/018-more-hosts/spec.md`. Neither is a scope decision: ghostbin
+      returns 502 on every publish so its behaviour cannot be observed, and
+      pastebin puts Markdown behind a paid tier.
 
 ## Explicitly deferred
 
 Accounts, cloud sync, direct publish via host APIs, custom output CSS,
-collaboration, a templates marketplace, internationalization, plain-text bin
-targets, and any third host. Introducing any of these requires a constitution
-amendment.
+collaboration, a templates marketplace, and internationalization. Introducing
+any of these requires a constitution amendment.
+
+**This list used to end "plain-text bin targets, and any third host", and that
+was wrong on 2026-09-01 when text.is shipped.** It was wrong when it was
+written, too, and the correction is worth more than the edit.
+
+The constitution's out of scope list names seven things and none of them is a
+host. Principle II says the opposite: a host is a target record plus golden
+fixtures, adding one MUST NOT require an engine change, and a change that adds
+a host while editing an emitter is a design failure. So hosts were always meant
+to be cheap, and this document had quietly promoted a roadmap preference into a
+constitutional limit that did not exist.
+
+Checked rather than assumed when text.is landed: that commit touched
+`targets.ts`, an export line, tests and golden files, and no emitter. Principle
+II holds. What needed correcting was this paragraph.
