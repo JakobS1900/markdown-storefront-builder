@@ -36,21 +36,31 @@ function rowTools(args: {
   readonly reorder: (from: number, to: number) => Block;
   readonly without: (index: number) => Block;
   readonly onChange: OnChange;
+  /**
+   * What this row belongs to, when the same words appear more than once.
+   *
+   * Every product has a "picture 1", so without this there are as many
+   * controls called "Remove picture 1" as there are products, and a screen
+   * reader listing the buttons on the page reads the same name repeatedly with
+   * no way to tell which item each one acts on.
+   */
+  readonly within?: string;
 }): Node[] {
-  const { blockId, noun, index, count, reorder, without, onChange } = args;
+  const { blockId, noun, index, count, reorder, without, onChange, within } = args;
   if (index >= count) return [];
+  const name = `${noun} ${index + 1}${within === undefined || within === "" ? "" : ` in ${within}`}`;
 
   const tools: Node[] = [];
   if (count > 1) {
     tools.push(
       button({
-        label: `Move ${noun} ${index + 1} up`,
+        label: `Move ${name} up`,
         glyph: "\u2191",
         disabled: index === 0,
         onClick: () => onChange(reorder(index, index - 1)),
       }),
       button({
-        label: `Move ${noun} ${index + 1} down`,
+        label: `Move ${name} down`,
         glyph: "\u2193",
         disabled: index === count - 1,
         onClick: () => onChange(reorder(index, index + 1)),
@@ -60,10 +70,10 @@ function rowTools(args: {
 
   tools.push(
     button({
-      label: `Remove ${noun} ${index + 1}`,
+      label: `Remove ${name}`,
       glyph: "\u00d7",
       variant: "danger",
-      onClick: () => removeRow(blockId, without(index), `${noun} ${index + 1}`),
+      onClick: () => removeRow(blockId, without(index), name),
     }),
   );
 
@@ -91,6 +101,69 @@ function rowUndo(blockId: string): Node[] {
       }),
     ]),
   ];
+}
+
+/**
+ * The picture fields for one item, plus the button that adds another.
+ *
+ * A blank field is always offered at the end, the same placeholder idea the
+ * item rows themselves use: there is something to type into without pressing
+ * anything first, and nothing is written until it is typed into.
+ */
+function pictureFields(
+  block: Extract<Block, { kind: "menu" }>,
+  tier: Extract<Block, { kind: "menu" }>["tiers"][number],
+  at: number,
+  editTier: (i: number, change: (t: Extract<Block, { kind: "menu" }>["tiers"][number]) => Extract<Block, { kind: "menu" }>["tiers"][number]) => void,
+  onChange: OnChange,
+): Node[] {
+  const urls = tier.imageUrls ?? [];
+  const shown = urls.length > 0 ? [...urls, ""] : [""];
+  const named = tier.name.trim() === "" ? `item ${at + 1}` : tier.name.trim();
+
+  const setUrls = (
+    t: Extract<Block, { kind: "menu" }>["tiers"][number],
+    next: readonly string[],
+  ): Extract<Block, { kind: "menu" }>["tiers"][number] => {
+    const kept = next.filter((u) => u !== "");
+    const out = { ...t } as Record<string, unknown>;
+    if (kept.length === 0) delete out["imageUrls"];
+    else out["imageUrls"] = kept;
+    return out as typeof t;
+  };
+
+  const tiersWith = (next: readonly string[]): Block => {
+    const now = nowBlock(block);
+    return { ...now, tiers: now.tiers.map((t, j) => (j === at ? setUrls(t, next) : t)) };
+  };
+
+  return shown.flatMap((url, k) => [
+    imageField({
+      label: shown.length > 2 ? `Picture ${k + 1} (optional)` : "Picture (optional)",
+      value: url,
+      hint:
+        k === 0
+          ? "A photograph of this item, if you have one online. Add more below for other angles."
+          : "Another angle, or a detail.",
+      onInput: (v) =>
+        editTier(at, (t) => {
+          const now = [...(t.imageUrls ?? [])];
+          if (k < now.length) now[k] = v;
+          else if (v !== "") now.push(v);
+          return setUrls(t, now);
+        }),
+    }),
+    ...rowTools({
+      blockId: block.id,
+      noun: "picture",
+      index: k,
+      count: urls.length,
+      within: named,
+      reorder: (from, to) => tiersWith(moved(urls, from, to)),
+      without: (i) => tiersWith(urls.filter((_, j) => j !== i)),
+      onChange,
+    }),
+  ]);
 }
 
 /** Moves one element of a list, returning a new list. */
@@ -370,18 +443,17 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
               });
             },
           }),
-          imageField({
-            label: "Sample image (optional)",
-            value: (tier.imageUrls ?? [])[0] ?? "",
-            hint: "An example of this option, if you have one online.",
-            onInput: (v) =>
-              editTier(i, (t) => {
-                const next = { ...t } as Record<string, unknown>;
-                if (v === "") delete next["imageUrls"];
-                else next["imageUrls"] = [v];
-                return next as typeof t;
-              }),
-          }),
+          // As many pictures as the item has. A print or a knife wants a
+          // front, a back and a detail, and one field made the gallery the
+          // only place to put the other two, where nothing says which product
+          // they belong to.
+          //
+          // Repeated address fields rather than one box of addresses, because
+          // this field carries a live thumbnail and tells you when a link does
+          // not load an image. Typing addresses into a textarea would lose
+          // both, and a wrong image address is invisible until somebody else
+          // opens the page.
+          ...pictureFields(block, tier, i, editTier, onChange),
         ],
       }),
       // Move, reorder and remove. Nothing on the placeholder row, which is not

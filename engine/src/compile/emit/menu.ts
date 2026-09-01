@@ -73,7 +73,11 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
     // The condition is on the section and not the item, because two layouts
     // inside one price list would read as a rendering fault rather than a
     // feature.
-    const perItem = tiers.some((t) => realQuantities(t).length > 0);
+    // Quantities need a table under the item, and several pictures need a row
+    // of them: both are more than a table cell can hold. One picture still
+    // fits in a column, so one picture does not trigger this and a page that
+    // has always had one compiles to exactly what it always did.
+    const perItem = tiers.some((t) => realQuantities(t).length > 0 || tierImages(t).length > 1);
     if (perItem) {
       if (!target.capabilities.tables) warnNoTables(block.id, target, sink);
       parts.push(tiers.map((t) => tierBlock(t, block.currency, target)).join("\n\n"));
@@ -136,18 +140,32 @@ function withCurrency(price: string, currency: string | undefined): string {
 }
 
 /**
- * An example image for a tier, or nothing.
+ * The pictures of an item that can actually be shown.
  *
  * An unsafe address is dropped here rather than emitted, matching the gallery.
  * The caller raises the warning, because it holds the block id.
  */
+function tierImages(t: Tier): string[] {
+  const usable = (t.imageUrls ?? []).filter((u) => u !== "" && isSafeUrl(u));
+  return usable.map((url, i) => {
+    // One picture is described by the item's name. Several need telling apart,
+    // or a screen reader reads the same words three times and the listener
+    // learns nothing about what the second and third pictures are for.
+    const alt = usable.length === 1 ? cell(t.name) : `${cell(t.name)}, picture ${i + 1} of ${usable.length}`;
+    return `![${alt}](${encodeAddress(url)})`;
+  });
+}
+
+/**
+ * The one picture a table cell has room for.
+ *
+ * A cell cannot hold a row of images without becoming unreadable on a phone,
+ * so the table layout shows the first and the per item layout shows them all.
+ * A tier with more than one picture is why the section chooses the per item
+ * layout in the first place, so this only ever runs where there is one.
+ */
 function tierImage(t: Tier): string {
-  // Still only the first, deliberately. This change is the contract and its
-  // migration; showing more than one is the next one, so the golden files stay
-  // byte identical here and any movement in them would be a defect.
-  const first = (t.imageUrls ?? []).find((u) => u !== "" && isSafeUrl(u));
-  if (first === undefined) return "";
-  return `![${cell(t.name)}](${encodeAddress(first)})`;
+  return tierImages(t)[0] ?? "";
 }
 
 /**
@@ -224,8 +242,11 @@ function warnNoTables(blockId: string, target: Target, sink: DiagnosticSink): vo
 function itemBody(tier: Tier): string[] {
   const lines: string[] = [];
   if (tier.blurb !== undefined && tier.blurb !== "") lines.push(escapeText(tier.blurb));
-  const image = tierImage(tier);
-  if (image !== "") lines.push(image);
+  // On one line, separated by spaces, so they render as a row that wraps
+  // rather than as a column of full width pictures somebody has to scroll
+  // past to reach the next item.
+  const images = tierImages(tier);
+  if (images.length > 0) lines.push(images.join(" "));
   const includes = tier.includes === undefined ? undefined : bulletList(tier.includes.map(escapeText));
   if (includes !== undefined) lines.push(includes);
   const details = bulletList(
