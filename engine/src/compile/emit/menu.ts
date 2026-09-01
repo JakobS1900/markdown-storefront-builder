@@ -49,7 +49,7 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
   // Holistic review HB-6 established that a refused address must never be
   // dropped in silence, wherever it appears. This is the third such place.
   for (const t of tiers) {
-    if (t.imageUrl !== undefined && t.imageUrl !== "" && !isSafeUrl(t.imageUrl)) {
+    if ((t.imageUrls ?? []).some((u) => u !== "" && !isSafeUrl(u))) {
       sink.add({
         code: "link_scheme_refused",
         severity: "warning",
@@ -142,8 +142,12 @@ function withCurrency(price: string, currency: string | undefined): string {
  * The caller raises the warning, because it holds the block id.
  */
 function tierImage(t: Tier): string {
-  if (t.imageUrl === undefined || t.imageUrl === "" || !isSafeUrl(t.imageUrl)) return "";
-  return `![${cell(t.name)}](${encodeAddress(t.imageUrl)})`;
+  // Still only the first, deliberately. This change is the contract and its
+  // migration; showing more than one is the next one, so the golden files stay
+  // byte identical here and any movement in them would be a defect.
+  const first = (t.imageUrls ?? []).find((u) => u !== "" && isSafeUrl(u));
+  if (first === undefined) return "";
+  return `![${cell(t.name)}](${encodeAddress(first)})`;
 }
 
 /**

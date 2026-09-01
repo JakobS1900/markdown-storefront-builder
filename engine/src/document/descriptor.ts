@@ -15,7 +15,7 @@
  * change, not a tidy-up.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const BLOCK_KINDS = [
   "heading",
@@ -86,7 +86,15 @@ export const MENU_TIER_FIELDS = [
   // reading "Bananas, 5 lb" states that this is a different product, because
   // that is what a sibling row means. A bulk price is a property of one item.
   { name: "quantities", type: "objectArray", required: false, of: MENU_QUANTITY_FIELDS },
-  { name: "imageUrl", type: "string", required: false },
+  // Photographs of the item. A list since version 2, because one was not
+  // enough for anybody selling a physical object: a print, a knife or a bag
+  // wants a front, a back and a detail, and the gallery is a separate section
+  // with no way to say which product a picture belongs to.
+  //
+  // This replaced `imageUrl` rather than sitting beside it. Two fields meaning
+  // the same thing is two things to keep in step and two things for a reader
+  // to choose between, and the migration below means nothing is lost.
+  { name: "imageUrls", type: "stringArray", required: false },
 ] as const satisfies readonly FieldSpec[];
 
 export const MENU_ADDON_FIELDS = [

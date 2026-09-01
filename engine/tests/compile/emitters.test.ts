@@ -654,7 +654,7 @@ describe("SC-002: nothing an artist writes escapes its section", () => {
 
 describe("menu tier sample images (roadmap 3.1)", () => {
   const withImage = [
-    { name: "Bust", price: "45", imageUrl: "https://e.test/bust.png" },
+    { name: "Bust", price: "45", imageUrls: ["https://e.test/bust.png"] },
     { name: "Full body", price: "80" },
   ];
 
@@ -699,7 +699,7 @@ describe("menu tier sample images (roadmap 3.1)", () => {
 
   it("refuses an unsafe example address and warns rather than dropping it silently", () => {
     const out = compile(
-      page({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1", imageUrl: "javascript:alert(1)" }] }),
+      page({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1", imageUrls: ["javascript:alert(1)"] }] }),
       "portable",
     );
     expect(out.markdown).not.toContain("javascript");

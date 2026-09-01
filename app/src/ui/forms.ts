@@ -372,9 +372,15 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
           }),
           imageField({
             label: "Sample image (optional)",
-            value: tier.imageUrl ?? "",
+            value: (tier.imageUrls ?? [])[0] ?? "",
             hint: "An example of this option, if you have one online.",
-            onInput: (v) => editTier(i, (t) => withOptional(t, "imageUrl", v)),
+            onInput: (v) =>
+              editTier(i, (t) => {
+                const next = { ...t } as Record<string, unknown>;
+                if (v === "") delete next["imageUrls"];
+                else next["imageUrls"] = [v];
+                return next as typeof t;
+              }),
           }),
         ],
       }),

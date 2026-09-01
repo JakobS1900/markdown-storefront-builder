@@ -30,15 +30,56 @@ export interface Migration {
 }
 
 /**
+ * One image on a price list item became a list of them.
+ *
+ * The first migration this project has ever run, three versions of the schema
+ * after the mechanism was built for it. Everything below is the shape the
+ * comment above predicted, which is the whole reason it was built early.
+ *
+ * A page saved by version 1 has at most one `imageUrl` on each item. It
+ * becomes the first entry of `imageUrls`, and an item that had none gains
+ * nothing, because absent and empty must not both be able to mean the same
+ * thing: the contract distinguishes them and round tripping depends on it.
+ */
+function tierImagesToList(doc: Record<string, unknown>): Record<string, unknown> {
+  const blocks = Array.isArray(doc["blocks"]) ? doc["blocks"] : [];
+  return {
+    ...doc,
+    schemaVersion: 2,
+    blocks: blocks.map((block: unknown) => {
+      if (typeof block !== "object" || block === null) return block;
+      const b = block as Record<string, unknown>;
+      if (b["kind"] !== "menu" || !Array.isArray(b["tiers"])) return b;
+      return {
+        ...b,
+        tiers: b["tiers"].map((tier: unknown) => {
+          if (typeof tier !== "object" || tier === null) return tier;
+          const t = { ...(tier as Record<string, unknown>) };
+          const url = t["imageUrl"];
+          delete t["imageUrl"];
+          // An empty string is what an emptied field used to leave behind in
+          // some saved pages. It is not an image, and carrying it forward
+          // would turn "no picture" into "a list with a broken one in it".
+          if (typeof url === "string" && url !== "") t["imageUrls"] = [url];
+          return t;
+        }),
+      };
+    }),
+  };
+}
+
+/**
  * Ordered by `from`, ascending, with no gaps.
  *
- * When adding the first entry:
- *   1. Add `{ from: 1, to: 2, apply }` here.
- *   2. Bump `SCHEMA_VERSION` in `descriptor.ts` to 2.
- *   3. Add a fixture saved at version 1 and assert it loads and migrates.
+ * When adding another entry:
+ *   1. Add `{ from: N, to: N + 1, apply }` here.
+ *   2. Bump `SCHEMA_VERSION` in `descriptor.ts`.
+ *   3. Add a fixture saved at version N and assert it loads and migrates.
  *   4. Regenerate the parity snapshot and read the diff.
  */
-export const MIGRATIONS: readonly Migration[] = [];
+export const MIGRATIONS: readonly Migration[] = [
+  { from: 1, to: 2, apply: tierImagesToList },
+];
 
 /**
  * Brings a page forward from its stored version to the current one.

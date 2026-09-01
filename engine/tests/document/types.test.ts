@@ -33,7 +33,7 @@ const full: Document = {
       heading: "Menu",
       currency: "USD",
       tiers: [
-        { name: "Bust", price: "from 45", blurb: "Head and shoulders", includes: ["1 revision"], imageUrl: "https://example.test/a.png" },
+        { name: "Bust", price: "from 45", blurb: "Head and shoulders", includes: ["1 revision"], imageUrls: ["https://example.test/a.png"] },
       ],
       addOns: [{ name: "Extra character", price: "20" }],
     },

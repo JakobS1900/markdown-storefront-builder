@@ -128,9 +128,9 @@
             "type": "objectArray"
           },
           {
-            "name": "imageUrl",
+            "name": "imageUrls",
             "required": false,
-            "type": "string"
+            "type": "stringArray"
           }
         ],
         "required": true,
@@ -269,5 +269,5 @@
       "type": "blockArray"
     }
   ],
-  "schemaVersion": 1
+  "schemaVersion": 2
 }
