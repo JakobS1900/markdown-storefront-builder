@@ -56,6 +56,17 @@ export function previewSurface(container: HTMLElement): void {
 
   const parts: Node[] = [];
 
+  // Named, not offered. The choice belongs on the Export tab, but what is on
+  // screen here depends on it, and an unexplained dependency reads as the
+  // preview being wrong rather than as it being for a particular host.
+  if (result.markdown !== "") {
+    parts.push(
+      el("p", { class: "hint" }, [
+        `This is how it will look on ${target?.name ?? result.targetId}. You can change that on the Copy tab.`,
+      ]),
+    );
+  }
+
   if (result.diagnostics.length > 0) {
     parts.push(
       el("section", { class: "warnings", "aria-labelledby": "warnings-heading" }, [

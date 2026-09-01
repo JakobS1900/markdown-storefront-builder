@@ -9,12 +9,12 @@
  * permissions are refused often enough on mobile browsers that a copy button
  * alone would strand people, and "select all and copy by hand" has to work.
  */
-import { PORTABLE, compile, findTarget, serializeDocument } from "@mdsb/engine";
+import { PORTABLE, TARGETS, compile, findTarget, serializeDocument } from "@mdsb/engine";
 
-import { getState } from "../store.js";
+import { getState, setTarget } from "../store.js";
 import { handOff } from "../files.js";
 import { openBackup } from "../import.js";
-import { announce, button, el, render } from "./dom.js";
+import { announce, button, el, render, select } from "./dom.js";
 
 /** Where to paste, per host. Kept beside the target ids it describes. */
 const WALKTHROUGH: Record<string, string[]> = {
@@ -140,6 +140,19 @@ export function exportSurface(container: HTMLElement): void {
   render(
     container,
     el("div", { class: "stack" }, [
+      // Asked here rather than in the header, because here is where it can be
+      // answered. The output below changes as it changes, and the steps at the
+      // bottom become the steps for whatever is chosen, so the consequence of
+      // the choice is on screen at the moment it is made.
+      select({
+        label: "Where you will paste this",
+        value: state.doc.target,
+        options: TARGETS.map((t) => ({ value: t.id, label: t.name })),
+        onChange: (value) => {
+          setTarget(value);
+          announce(`Now preparing for ${TARGETS.find((t) => t.id === value)?.name ?? value}`);
+        },
+      }),
       el("div", { class: "field" }, [
         el("label", { for: "output" }, [`Your page, ready for ${target?.name ?? result.targetId}`]),
         el("p", { class: "hint", id: "output-hint" }, [

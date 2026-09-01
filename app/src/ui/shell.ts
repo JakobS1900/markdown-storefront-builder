@@ -17,12 +17,10 @@
  * that is precisely the work that made typing expensive on a Moto G7. So a
  * narrow screen does not build it at all, and a change of width repaints.
  */
-import { TARGETS } from "@mdsb/engine";
-
-import { getState, setSurface, setTarget, type Surface } from "../store.js";
+import { getState, setSurface, type Surface } from "../store.js";
 import { handOff } from "../files.js";
 import { rememberSurface } from "../surface-history.js";
-import { announce, button, el, render, resetFieldIds, select } from "./dom.js";
+import { announce, button, el, render, resetFieldIds } from "./dom.js";
 import { buildSurface } from "./build.js";
 import { exportSurface } from "./export.js";
 import { previewSurface } from "./preview.js";
@@ -224,18 +222,13 @@ export function renderShell(root: HTMLElement): void {
 
   render(
     root,
-    el("header", { class: "bar" }, [
-      el("h1", {}, ["Storefront builder"]),
-      select({
-        label: "Where you will paste this",
-        value: state.doc.target,
-        options: TARGETS.map((t) => ({ value: t.id, label: t.name })),
-        onChange: (value) => {
-          setTarget(value);
-          announce(`Now preparing for ${TARGETS.find((t) => t.id === value)?.name ?? value}`);
-        },
-      }),
-    ]),
+    // The host picker used to live here, which made it the first control on
+    // the page and the first decision asked of somebody who had just arrived.
+    // It is unanswerable at that moment: they have not made anything to paste,
+    // and they have no reason to know what rentry is. It has moved to the
+    // Export tab, where the choice is actually being made and where its effect
+    // is visible in the same glance.
+    el("header", { class: "bar" }, [el("h1", {}, ["Storefront builder"])]),
     statusLine(),
     el("main", { class: alongside ? "split" : undefined }, panes),
     tabs,
