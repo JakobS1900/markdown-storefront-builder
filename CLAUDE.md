@@ -91,6 +91,24 @@ carrying, not as a step that was unnecessary.
   appear to have failed. Check a gate's real status by running it alone, not
   through a truncating pipe. Diagnosed 2026-08-15 after `npm run verify` seemed
   to fail while every one of its steps passed.
+- **A screenshot of a sleeping phone is a white PNG, not a broken app.** On
+  2026-09-01 three identical 9,652 byte white screenshots were read as the app
+  failing to render, and a rebuild, a reinstall and a service worker
+  investigation followed. The app had been fine the whole time: `dumpsys power`
+  said `mWakefulness=Dozing`, because the screen had timed out during the ten
+  minutes of building. Check wakefulness IMMEDIATELY BEFORE each `screencap`,
+  not once at the start of the run, and treat a screenshot under about 20 kB as
+  a sleeping screen until proven otherwise. `adb shell svc power stayon usb`
+  holds it awake while plugged in; set it back to `false` afterwards, because it
+  is the owner's device setting and not ours.
+- **Gradle needs JDK 21 here, and `JAVA_HOME` points at JDK 8.** The Android
+  build fails with "Dependency requires at least JVM runtime version 11" and,
+  with JDK 17, "invalid source release: 21". Set
+  `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"` for the build only, rather
+  than changing the machine's global setting.
+- **`MSYS_NO_PATHCONV=1` applies to `adb shell` too, not just `adb pull`.**
+  Without it `screencap -p /sdcard/x.png` is rewritten to a Windows path and
+  prints its usage text instead of capturing anything.
 - **`npm install` MUST be run from PowerShell, not the Bash tool.** Under msys2
   Git Bash it fails with `ERR_INVALID_ARG_TYPE` plus `EPERM` cleanup errors,
   because it picks up the msys2 npm cache. The same command succeeds in
