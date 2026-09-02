@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "A page from version 2",
+  "blocks": [
+    {
+      "id": "prices",
+      "kind": "menu",
+      "heading": "Prices",
+      "tiers": [
+        { "name": "Small", "price": "10" },
+        { "name": "Large", "price": "20" }
+      ]
+    },
+    {
+      "id": "extras",
+      "kind": "menu",
+      "heading": "Extras",
+      "tiers": [{ "name": "Rush", "price": "15" }]
+    }
+  ]
+}

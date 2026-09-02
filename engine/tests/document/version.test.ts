@@ -76,13 +76,17 @@ describe("a page from the future is refused, not guessed at (FR-004, G6)", () =>
 });
 
 describe("forward migration (FR-005, research D7)", () => {
-  it("carries exactly one step, from the version that had none", () => {
+  it("carries the chain built so far, from the version that had none", () => {
     // This read "ships empty at version 1, because there is nothing to migrate
     // from yet", which was true for three versions of the schema. The
     // mechanism was built early on the argument that it could not be added
     // later: by the time a second version exists there are already pages
-    // written by a build with no migration path. That argument is now cashed.
-    expect(MIGRATIONS.map((m) => [m.from, m.to])).toEqual([[1, 2]]);
+    // written by a build with no migration path. That argument is now cashed,
+    // twice over: version 3 added a second step onto the same chain.
+    expect(MIGRATIONS.map((m) => [m.from, m.to])).toEqual([
+      [1, 2],
+      [2, 3],
+    ]);
   });
 
   it("moves a version 1 item image into the list, and says so", () => {
@@ -101,7 +105,10 @@ describe("forward migration (FR-005, research D7)", () => {
       ],
     };
     const out = migrate(v1, 1) as Record<string, unknown>;
-    expect(out["schemaVersion"]).toBe(2);
+    // `migrate` always brings a page to the current version, not just one step,
+    // so this also picks up the version 2 to 3 step. That step is covered on
+    // its own in migrate-tier-ids.test.ts; this test stays about imageUrl alone.
+    expect(out["schemaVersion"]).toBe(SCHEMA_VERSION);
     const blocks = out["blocks"] as Record<string, unknown>[];
     const tiers = blocks[0]?.["tiers"] as Record<string, unknown>[];
     expect(tiers[0]?.["imageUrls"]).toEqual(["https://e.test/a.png"]);

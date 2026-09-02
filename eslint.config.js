@@ -39,6 +39,7 @@ export default tseslint.config(
         { name: "document", message: "Principle I: the engine must not touch the DOM." },
         { name: "window", message: "Principle I: the engine must not touch the DOM." },
         { name: "fetch", message: "Principle I: the engine must not perform network I/O." },
+        { name: "crypto", message: "Principle I: the engine must not consume randomness." },
       ],
       "no-restricted-properties": [
         "error",

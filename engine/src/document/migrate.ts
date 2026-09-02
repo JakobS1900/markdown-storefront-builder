@@ -69,6 +69,44 @@ function tierImagesToList(doc: Record<string, unknown>): Record<string, unknown>
 }
 
 /**
+ * Every price list row gains an identifier.
+ *
+ * Positional, `t0` upward within each menu block, and never random. This runs
+ * inside the engine, where Principle I forbids consuming randomness, and the
+ * determinism property test requires the same page in to give the same page
+ * out on every machine. New rows added in the app get a UUID from `newId()`
+ * instead, so a migrated page holds a mix of the two. That is correct rather
+ * than untidy: the two ids come from two places with different powers, and only
+ * one of them had to be deterministic.
+ *
+ * Scoped per block rather than per document, because a selection never spans
+ * two price lists and block scoping keeps these short.
+ */
+function tierIdsByPosition(doc: Record<string, unknown>): Record<string, unknown> {
+  const blocks = Array.isArray(doc["blocks"]) ? doc["blocks"] : [];
+  return {
+    ...doc,
+    schemaVersion: 3,
+    blocks: blocks.map((block: unknown) => {
+      if (typeof block !== "object" || block === null) return block;
+      const b = block as Record<string, unknown>;
+      if (b["kind"] !== "menu" || !Array.isArray(b["tiers"])) return b;
+      return {
+        ...b,
+        tiers: b["tiers"].map((tier: unknown, i: number) => {
+          if (typeof tier !== "object" || tier === null) return tier;
+          const t = tier as Record<string, unknown>;
+          // `id` first in the object as well as in the descriptor. The
+          // canonical writer reorders on the way out, so this is only for
+          // anyone reading the intermediate value in a debugger.
+          return { id: `t${String(i)}`, ...t };
+        }),
+      };
+    }),
+  };
+}
+
+/**
  * Ordered by `from`, ascending, with no gaps.
  *
  * When adding another entry:
@@ -79,6 +117,7 @@ function tierImagesToList(doc: Record<string, unknown>): Record<string, unknown>
  */
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, apply: tierImagesToList },
+  { from: 2, to: 3, apply: tierIdsByPosition },
 ];
 
 /**

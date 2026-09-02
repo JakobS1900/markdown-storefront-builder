@@ -15,7 +15,7 @@
  * change, not a tidy-up.
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const BLOCK_KINDS = [
   "heading",
@@ -62,6 +62,13 @@ export const MENU_QUANTITY_FIELDS = [
 ] as const satisfies readonly FieldSpec[];
 
 export const MENU_TIER_FIELDS = [
+  // First, for the same reason `id` is first on every block: a validation issue
+  // must always be able to name the row it came from. Added at version 3 so a
+  // selection can name "these forty of sixty" and survive the seller reordering
+  // a row. Held by position instead, a selection points at the wrong products
+  // the moment anything moves, and repricing the wrong products is the worst
+  // thing this feature could do.
+  { name: "id", type: "string", required: true, nonEmpty: true },
   { name: "name", type: "string", required: true },
   // A string, not a number. Artists write "45", "from 45", "45+", and "DM me".
   // A numeric type would either reject real prices or discard what they wrote.
@@ -95,6 +102,11 @@ export const MENU_TIER_FIELDS = [
   // the same thing is two things to keep in step and two things for a reader
   // to choose between, and the migration below means nothing is lost.
   { name: "imageUrls", type: "stringArray", required: false },
+  // What the seller paid. Text for the same reason `price` is text, and never
+  // compiled: see `engine/tests/compile/cost-never-published.test.ts`. The app
+  // publishes this page, so a supplier cost reaching a customer would be a
+  // disclosure the seller never agreed to.
+  { name: "cost", type: "string", required: false },
 ] as const satisfies readonly FieldSpec[];
 
 export const MENU_ADDON_FIELDS = [

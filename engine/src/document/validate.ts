@@ -217,6 +217,37 @@ function checkFields(
   }
 }
 
+/**
+ * Two rows in one price list cannot share an identifier.
+ *
+ * Scoped to the block, not the page, because that is what selection needs and
+ * because the version 3 migration numbers each block's rows from zero, so `t0`
+ * legitimately appears once per price list.
+ */
+function checkTierIds(block: Record<string, unknown>, path: string, c: Collector, blockId?: string): void {
+  const tiers = block["tiers"];
+  if (!Array.isArray(tiers)) return;
+
+  const seen = new Map<string, number>();
+  tiers.forEach((tier: unknown, i: number) => {
+    if (typeof tier !== "object" || tier === null) return;
+    const id = (tier as Record<string, unknown>)["id"];
+    if (typeof id !== "string" || id === "") return;
+
+    const first = seen.get(id);
+    if (first === undefined) {
+      seen.set(id, i);
+      return;
+    }
+    c.add(
+      "duplicate_id",
+      `${path}.tiers[${String(i)}].id`,
+      `Items ${String(first + 1)} and ${String(i + 1)} in this price list share the same identifier "${id}". Each item needs its own.`,
+      blockId,
+    );
+  });
+}
+
 function checkBlocks(blocks: readonly unknown[], basePath: string, c: Collector): void {
   const seen = new Map<string, number>();
 
@@ -255,6 +286,10 @@ function checkBlocks(blocks: readonly unknown[], basePath: string, c: Collector)
 
     const kind = rawKind as BlockKind;
     checkFields([...COMMON_BLOCK_FIELDS, ...BLOCK_FIELDS[kind]], block, path, c, blockId);
+
+    if (kind === "menu") {
+      checkTierIds(block, path, c, blockId);
+    }
 
     if (blockId !== undefined) {
       const first = seen.get(blockId);

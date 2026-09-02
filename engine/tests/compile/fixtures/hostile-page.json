@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "target": "portable",
   "blocks": [
     {
@@ -29,6 +29,7 @@
       "heading": "# not a heading",
       "tiers": [
         {
+          "id": "pipe-row",
           "name": "A|B",
           "price": "1|2",
           "blurb": "line\nbreak",
@@ -38,6 +39,7 @@
           ]
         },
         {
+          "id": "range-row",
           "name": "Range ~ and caret ^",
           "price": "$45 to $60",
           "blurb": "~~not struck~~ and a^b"

@@ -69,6 +69,12 @@
         "name": "tiers",
         "of": [
           {
+            "name": "id",
+            "nonEmpty": true,
+            "required": true,
+            "type": "string"
+          },
+          {
             "name": "name",
             "required": true,
             "type": "string"
@@ -131,6 +137,11 @@
             "name": "imageUrls",
             "required": false,
             "type": "stringArray"
+          },
+          {
+            "name": "cost",
+            "required": false,
+            "type": "string"
           }
         ],
         "required": true,
@@ -269,5 +280,5 @@
       "type": "blockArray"
     }
   ],
-  "schemaVersion": 2
+  "schemaVersion": 3
 }
