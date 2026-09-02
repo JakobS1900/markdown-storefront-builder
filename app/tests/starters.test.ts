@@ -9,12 +9,12 @@
  * capability fallback is teaching somebody a shape their host cannot render,
  * which is worse than offering them nothing.
  */
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { TARGETS, compile, validateDocument } from "@mdsb/engine";
+import { TARGETS, compile, parseDocument, validateDocument } from "@mdsb/engine";
 
 import { STARTERS } from "../src/starters/index.js";
 
@@ -76,6 +76,33 @@ describe("every starting point", () => {
     for (const starter of STARTERS) {
       const doc = await starter.load();
       expect(doc.blocks.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe("the example page that ships", () => {
+  // `example.test.ts` mocks fetch with a fixture of its own, so until now
+  // nothing read the file that is actually served. It is the first page a
+  // visitor sees and it was the one page nothing checked.
+  const text = readFileSync(
+    fileURLToPath(new URL("../public/example.json", import.meta.url)),
+    "utf8",
+  );
+
+  it("is a valid page", () => {
+    const result = parseDocument(text);
+    expect(result.ok ? [] : result.issues.map((i) => `${i.path}: ${i.message}`))
+      .toEqual([]);
+  });
+
+  it("compiles with no diagnostics on any host", () => {
+    const result = parseDocument(text);
+    if (!result.ok) throw new Error("the example did not parse, see the test above");
+
+    for (const target of TARGETS) {
+      expect(
+        compile(result.document, target).diagnostics.map((d) => `${target.id}: ${d.message}`),
+      ).toEqual([]);
     }
   });
 });
