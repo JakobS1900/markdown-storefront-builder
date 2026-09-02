@@ -3,10 +3,13 @@
  *
  * Choosing a starting point.
  *
- * Two of these are about placement rather than behaviour, and they are the
- * reason the picker is rendered twice. `pageList` returns nothing when there
- * are no saved pages (`build.ts:130`), which is correct and which would have
- * hidden this feature from the only person it was built for.
+ * Several of these are about placement rather than behaviour, and they are the
+ * reason the picker is rendered twice, and never rendered twice at once.
+ * `pageList` returns nothing when there are no saved pages, which is correct
+ * and which would have hidden this feature from the only person it was built
+ * for. `showsEmptyState` in `build.ts` is the one predicate both placements
+ * read, so a document with no blocks and at least one other saved page cannot
+ * show the picker in both places, which it briefly did.
  */
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
@@ -77,9 +80,45 @@ describe("the starting point picker", () => {
     // sometimes lose.
     await settle();
     renderShell(root);
+    const before = getState().pageId;
+
     const blank = [...document.querySelectorAll<HTMLButtonElement>("#app button")]
       .find((b) => (b.textContent ?? "").includes("Start a new page"));
     expect(blank).toBeDefined();
+
+    // The one press FR-053e promises: no confirmation, no picker of its own,
+    // straight to a new blank page.
+    blank?.click();
+    await settle();
+    renderShell(root);
+
+    expect(getState().pageId).not.toBe(before);
+    expect(getState().doc.blocks).toHaveLength(0);
+  });
+
+  it("renders the picker exactly once when a blank page already has saved pages beside it", async () => {
+    const root = live();
+    addBlock(blankBlock("profile"));
+    renderShell(root);
+    await settle();
+    renderShell(root);
+
+    const blank = [...document.querySelectorAll<HTMLButtonElement>("#app button")]
+      .find((b) => (b.textContent ?? "").includes("Start a new page"));
+    blank?.click();
+    await settle();
+    renderShell(root);
+
+    // The compound state the fix exists for: at least one saved page (the one
+    // just left behind) sitting beside a document on screen with no blocks at
+    // all. `pageList`'s gate (`state.pages.length > 0`) and the empty state's
+    // gate (`blocks.length === 0`) are independent, so both were true here
+    // before `showsEmptyState` became the one thing both read, and both
+    // starters groups rendered at once, sharing the name "Start from a
+    // template".
+    expect(getState().pages.length).toBeGreaterThan(0);
+    expect(getState().doc.blocks).toHaveLength(0);
+    expect(document.querySelectorAll(".starters").length).toBe(1);
   });
 
   it("opens a starting point as its own page, leaving the open one alone", async () => {

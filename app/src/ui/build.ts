@@ -84,6 +84,26 @@ function revealSection(blockId: string): void {
   }
 }
 
+/**
+ * Whether the surface has nothing of its own to show: no sections, and no
+ * offer to undo removing the last one hanging over an otherwise empty page.
+ *
+ * `buildSurface` reads this to choose the empty state over the section list.
+ * `pageList` reads the very same predicate to decide whether to include its
+ * own copy of the starting-point picker, rather than repeating the
+ * condition. The two placements answer two different situations, "just
+ * arrived with nothing saved" and "already have pages, want another", and
+ * must never both be on screen at once: pressing "Start a new page" while a
+ * page is already saved lands on an empty document with `state.pages`
+ * non-empty, which is true of both conditions independently the moment they
+ * are written separately. A second copy of this check drifting from the
+ * first is exactly how that duplicate picker, with the identical name "Start
+ * from a template", would come back.
+ */
+function showsEmptyState(state: State): boolean {
+  return state.doc.blocks.length === 0 && state.undo?.kind !== "block";
+}
+
 /** When a page was last written, short enough to sit beside its title. */
 function lastEdited(at: number): string {
   const when = new Date(at);
@@ -300,7 +320,11 @@ function pageList(state: State): HTMLElement[] {
             },
           }),
         ]),
-        starterPicker("starters-group"),
+        // Skipped while the empty state is the thing on screen: it carries its
+        // own copy of this same picker, and having both up at once is two
+        // disclosures sharing the summary "Start from a template", which is an
+        // accessible-name collision as well as a redundant control.
+        ...(showsEmptyState(state) ? [] : [starterPicker("starters-group")]),
       ],
     }),
   ];
@@ -505,7 +529,7 @@ export function buildSurface(container: HTMLElement): void {
           update(next as typeof state.doc);
         },
       }),
-      ...(blocks.length === 0 && state.undo?.kind !== "block" ? emptyState() : [list]),
+      ...(showsEmptyState(state) ? emptyState() : [list]),
       el("h2", { class: "sr-only" }, ["Add a section"]),
       adders,
     ]),
