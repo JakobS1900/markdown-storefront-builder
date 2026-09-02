@@ -221,6 +221,24 @@ was found on the device, which is where everything is found now.
       returns 502 on every publish so its behaviour cannot be observed, and
       pastebin puts Markdown behind a paid tier.
 
+## Phase 6: Starting points
+
+Added on 2026-09-02, the same day it shipped, and not on this document before
+that: like phase 5, the roadmap was silent about work until after it existed.
+Three ideas raised that day, import, a template wizard, and bulk pricing maths,
+turned out to decompose into four features once written down. This phase is the
+first of the four and the only one that depends on nothing else built yet. F2,
+F3, and F4 are not started. F2 needs its own spec before any of it is built,
+for the reasons recorded in `specs/021-starting-points/spec.md` under "What
+this is part of".
+
+- [x] **6.1 Eight starting points.** A picker offering eight seller shapes in
+      place of the single hardcoded example, each a page that parses, validates,
+      and compiles with zero diagnostics on every target. Reached from both
+      places a new page is started: `Your pages`, and the empty state a first
+      visitor sees. The example page that ships is now checked by the same gate
+      (`specs/021-starting-points/spec.md`, `app/tests/starters.test.ts`).
+
 ## Explicitly deferred
 
 Accounts, cloud sync, direct publish via host APIs, custom output CSS,

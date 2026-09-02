@@ -201,19 +201,52 @@ demonstrates anything.
 
 As a starting point somebody keeps and publishes, a plausible business name is a
 trap. So placeholder text is split by what kind of lie it would be if it
-survived to publication:
+survived to publication.
 
-- **Identity fields** get instructional text. The document title,
-  `profile.displayName`, link labels and URLs, the avatar. "Your shop name", not
-  "Ridgeline Carry". Publishing a page that claims to be a business which is not
-  yours is a lie about you, and this app would have been the one that wrote it.
-- **Structure fields** get realistic content. Tier names, prices, units, section
-  headings. "Small print", "12", "each". Publishing that is harmless, obviously
-  the seller's to change, and it is the part that actually teaches what a
-  section is for.
+**This section originally split that by field type: identity fields get
+instructional text, structure fields get realistic content, with prose body
+text filed under structure alongside tier names and prices.** That framing was
+amended twice during implementation because it produced bad results on the same
+block, and what follows is the version that survived, not the one first written.
+
+The test is not what kind of field the text sits in. It is what kind of lie the
+text would be if a seller published it unchanged: does it make a false claim
+about who they are, what they will and will not do, their terms, or their
+timings? If it does, it is identity-bearing regardless of which field holds it,
+and it gets instructional text. If a seller publishing it unchanged is harmless
+and obviously theirs to edit, it is structural, and it gets realistic content,
+because realistic content is what actually teaches.
+
+**The case that forced the correction: "What I will and will not draw"
+(`art-commissions.json`).** Realistic content there means naming specific
+categories of work a seller refuses. Naming them is not harmless structure the
+way a tier name is: it is a claim about that specific seller's boundaries, and a
+wrong one has a real person on the other end of it, somebody who does not
+commission work the seller would actually have taken, or who commissions work
+the seller will not do. It took two rounds to settle. `8e6064f` tried realistic
+named categories, "NSFW content, extreme gore, and mecha or vehicle designs are
+commonly declined", which is exactly this failure. `f7cc583` replaced it with
+instructional text that names no category at all: "Write two short lists here:
+what you are happy to take on, and what you are not."
+
+**A third form was tried and rejected: realistic specifics followed by a
+trailing "replace this" sentence.** `dropshipping-store.json`'s "Shipping" and
+`art-commissions.json`'s "Terms" both originally read this way: "Orders go out
+within two working days. Delivery is usually one to two weeks. Replace this
+with your own times." The hybrid is not a legitimate third form, because the
+trailing sentence is a signal, not a neutralizer. Delete only the meta-sentence
+and the specific claim about turnaround survives untouched, published as fact.
+`beef24f` rewrote both blocks to be instructional throughout, with no specific
+claim left for the meta-sentence to be doing the work of disclaiming.
 
 This is the same distinction `engine/src/document/empty.ts` already draws when
 it refuses to write `""` as a title. An absent title is not an invented one.
+
+**This rule is reviewer-judged, not gate-enforced.** `app/tests/starters.test.ts`
+checks that every starting point parses, validates, and compiles with zero
+diagnostics. Nothing in it, or anywhere else, checks whether a sentence is a lie
+a seller could publish by accident. That reading happens once per starting
+point, by a person, and nothing runs it again on the next change to the file.
 
 ## The gate
 
