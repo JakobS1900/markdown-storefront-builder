@@ -19,7 +19,7 @@ import {
   removeBlock,
   removePage,
   selectBlock,
-  undoRemove,
+  undoLast,
   updateBlock,
   update,
   type State,
@@ -494,7 +494,7 @@ export function buildSurface(container: HTMLElement): void {
           label: `Undo removing ${kind}`,
           variant: "primary",
           onClick: () => {
-            undoRemove();
+            undoLast();
             announce(`${kind} is back.`);
           },
         }),

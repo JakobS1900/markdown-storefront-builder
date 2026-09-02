@@ -7,11 +7,11 @@
  */
 import type { Block } from "@mdsb/engine";
 
-import { bulkPricingToolbar } from "./bulk-pricing.js";
+import { bulkPricingPanel, bulkPricingToolbar, bulkUndoOffer } from "./bulk-pricing.js";
 import { button, checkbox, disclosure, el, field, select } from "./dom.js";
 import { imageField } from "./image-field.js";
 import { formatMoney, parseMoney } from "../money.js";
-import { getState, newId, removeRow, toggleTier, undoRemove } from "../store.js";
+import { getState, newId, removeRow, selectedIdsIn, toggleTier, undoLast } from "../store.js";
 
 type OnChange = (next: Block) => void;
 
@@ -99,7 +99,7 @@ function rowUndo(blockId: string): Node[] {
       button({
         label: `Undo removing ${undo.label}`,
         variant: "primary",
-        onClick: () => undoRemove(),
+        onClick: () => undoLast(),
       }),
     ]),
   ];
@@ -378,12 +378,11 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
   // `block.tiers.length` rather than `shown.length`.
   const shown = block.tiers.length > 0 ? block.tiers : [{ id: "", name: "", price: "" }];
 
-  // Scoped to this block: tier ids repeat across menu blocks (`t0` in one
-  // price list means nothing about `t0` in another), so a selection that
-  // belongs to a different block must read as nothing selected here. See
-  // `State.selectedTiers`.
-  const selection = getState().selectedTiers;
-  const selectedIds = selection !== undefined && selection.blockId === block.id ? selection.tierIds : [];
+  // `selectedIdsIn` does the scoping: tier ids repeat across menu blocks
+  // (`t0` in one price list means nothing about `t0` in another), so a
+  // selection that belongs to a different block must read as nothing
+  // selected here. See `State.selectedTiers` and the accessor's own comment.
+  const selectedIds = selectedIdsIn(block);
 
   const tiers = shown.map((tier, i) =>
     el("fieldset", { class: "sub item" }, [
@@ -547,8 +546,10 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
 
   return el("div", {}, [
     bulkPricingToolbar(block),
+    ...bulkPricingPanel(block),
     ...tiers,
     ...rowUndo(block.id),
+    ...bulkUndoOffer(block.id),
     button({
       label: "Add another item",
       variant: "primary",

@@ -16,6 +16,7 @@ import {
 } from "@mdsb/engine";
 
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
+import type { Rounding } from "./money.js";
 
 export type Surface = "build" | "preview" | "export";
 
@@ -58,10 +59,17 @@ export interface State {
    * Removing a section was undoable and removing a row was not, which is
    * backwards: a shop has three sections and thirty products, and a product
    * holds far more typing than a section does.
+   *
+   * A bulk price application shares the ROW mechanism rather than adding a
+   * fourth: pricing forty rows at once is, from undo's point of view, exactly
+   * "the section changed and here is what it looked like before", the same
+   * fact a single row edit represents. Only the wording at the call site
+   * needs to know it was forty rows and not one.
    */
   readonly undo?:
     | { readonly kind: "block"; readonly block: Block; readonly index: number }
-    | { readonly kind: "row"; readonly block: Block; readonly label: string };
+    | { readonly kind: "row"; readonly block: Block; readonly label: string }
+    | { readonly kind: "bulk"; readonly block: Block; readonly label: string };
   /**
    * The saved page whose removal is waiting on an answer.
    *
@@ -97,6 +105,17 @@ export interface State {
    * shrink a section, is what makes that correct.
    */
   readonly selectedTiers?: { readonly blockId: string; readonly tierIds: readonly string[] };
+  /**
+   * What the three "Apply pricing" inputs currently hold, as typed text plus
+   * the chosen rounding.
+   *
+   * Held here rather than only in the DOM for the same reason `selectedBlockId`
+   * and `pendingPageDeleteId` are: the shell rebuilds the whole tree on most
+   * state changes (see `repaint`), which would otherwise reset these three
+   * controls to their defaults the moment anything else on screen changed,
+   * such as ticking another row's checkbox.
+   */
+  readonly bulkPricingInputs?: { readonly multiplier: string; readonly extra: string; readonly rounding: Rounding };
   readonly status: Status;
   readonly storageOk: boolean;
   /**
@@ -302,7 +321,13 @@ export function setSurface(surface: Surface): void {
   // The selection joins the same list, and for the same reason: it is a
   // question left standing over one screen, and leaving the screen is the
   // artist's answer to it too.
-  set({ surface, pendingPageDeleteId: undefined, undo: undefined, selectedTiers: undefined });
+  set({
+    surface,
+    pendingPageDeleteId: undefined,
+    undo: undefined,
+    selectedTiers: undefined,
+    bulkPricingInputs: undefined,
+  });
 }
 
 /**
@@ -336,6 +361,32 @@ export function selectTiers(blockId: string, ids: readonly string[]): void {
 /** Clears the selection entirely, regardless of which block it belonged to. */
 export function clearTierSelection(): void {
   set({ selectedTiers: undefined });
+}
+
+/**
+ * The tier ids actually selected within one menu block, live.
+ *
+ * Every reader of `selectedTiers` has to make two checks, not one: that the
+ * selection names this block at all (tier ids repeat across menu blocks, see
+ * the field comment above), and that each id still names a row that exists
+ * (a selected row that is removed just stops matching, on purpose, see
+ * `update()`'s comment). A review round was already spent fixing a version of
+ * this that skipped the first check: on the app's own `public/example.json`,
+ * three menu blocks all migrate to a tier `t0`, so an unscoped read of
+ * `tierIds` ticked one row and lit up three. One accessor doing both checks,
+ * used everywhere the selection is read, is what keeps a third reader from
+ * bringing that back.
+ */
+export function selectedIdsIn(block: Extract<Block, { kind: "menu" }>): readonly string[] {
+  const selection = state.selectedTiers;
+  if (selection === undefined || selection.blockId !== block.id) return [];
+  const live = new Set(block.tiers.map((tier) => tier.id));
+  return selection.tierIds.filter((id) => live.has(id));
+}
+
+/** Replaces what the three "Apply pricing" inputs hold. */
+export function setBulkPricingInputs(next: { multiplier: string; extra: string; rounding: Rounding }): void {
+  set({ bulkPricingInputs: next });
 }
 
 export function selectBlock(selectedBlockId: string | undefined): void {
@@ -498,16 +549,42 @@ export function removeRow(id: string, next: Block, label: string): void {
   set({ undo: { kind: "row", block: previous, label } });
 }
 
-/** Puts back whatever was last removed, a section or a row inside one. */
-export function undoRemove(): void {
+/**
+ * Writes every row of one price list at once, and remembers the whole section
+ * as it was so the entire application can be put back in one action.
+ *
+ * One `replaceBlocks` call, not one per row. `update()` fires a full document
+ * write on every call, so pricing forty rows one at a time would be forty
+ * writes and forty "Saved" flickers for what a seller experiences as a single
+ * button press.
+ *
+ * The undo entry is set after the write, the same order `removeRow` uses and
+ * for the same reason: `replaceBlocks` funnels through `update()`, which
+ * clears whatever offer was already standing, so setting this one first would
+ * only have it cleared a moment later by the write it is describing.
+ *
+ * The selection is left untouched, so a seller can look at the result, adjust
+ * the multiplier, and apply again.
+ */
+export function applyBulkPricing(blockId: string, next: Block, label: string): void {
+  const previous = state.doc.blocks.find((b) => b.id === blockId);
+  if (previous === undefined) return;
+
+  replaceBlocks(state.doc.blocks.map((b) => (b.id === blockId ? next : b)));
+  set({ undo: { kind: "bulk", block: previous, label } });
+}
+
+/** Puts back whatever was last removed or applied: a section, a row, or a bulk price change. */
+export function undoLast(): void {
   const undo = state.undo;
   if (undo === undefined) return;
 
-  if (undo.kind === "row") {
-    // The section is put back wholesale rather than the row spliced in, so a
-    // row cannot land in the wrong place if anything else about the section
-    // moved. Nothing else can have moved, because that would have cleared the
-    // offer, and restoring the whole thing means that stays true for free.
+  if (undo.kind === "row" || undo.kind === "bulk") {
+    // The section is put back wholesale rather than the row (or rows) spliced
+    // in, so nothing can land in the wrong place if anything else about the
+    // section moved. Nothing else can have moved, because that would have
+    // cleared the offer, and restoring the whole thing means that stays true
+    // for free.
     replaceBlocks(state.doc.blocks.map((b) => (b.id === undo.block.id ? undo.block : b)));
     return;
   }
