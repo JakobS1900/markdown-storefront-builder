@@ -70,6 +70,17 @@ export interface State {
    * meaning "something, somewhere, is about to be destroyed".
    */
   readonly pendingPageDeleteId?: string;
+  /**
+   * Which price list rows are chosen for bulk pricing, held by tier `id`.
+   *
+   * FR-055a: never by position, so it survives a reorder. It is also never
+   * chased through removal: a row that is deleted just stops matching an id
+   * still sitting in this list, which is why `update()` does not touch this
+   * field on any ordinary edit. Reading the selection against a live set of
+   * tier ids, rather than trying to catch every path that can shrink a
+   * section, is what makes that correct.
+   */
+  readonly selectedTierIds: readonly string[];
   readonly status: Status;
   readonly storageOk: boolean;
   /**
@@ -116,6 +127,7 @@ export function init(storageOk: boolean, doc?: Document, pageId?: string): State
     pageId: pageId ?? newId(),
     doc: doc ?? emptyDocument("rentry"),
     surface: "build",
+    selectedTierIds: [],
     status: storageOk
       ? { kind: "idle" }
       : {
@@ -271,7 +283,31 @@ export function setSurface(surface: Surface): void {
   // screen is the artist doing something else, and an offer that outlives the
   // work that replaced it is how an undo puts a section back into a page that
   // has changed underneath it.
-  set({ surface, pendingPageDeleteId: undefined, undo: undefined });
+  //
+  // The selection joins the same list, and for the same reason: it is a
+  // question left standing over one screen, and leaving the screen is the
+  // artist's answer to it too.
+  set({ surface, pendingPageDeleteId: undefined, undo: undefined, selectedTierIds: [] });
+}
+
+/**
+ * Ticks or unticks one row for bulk pricing, by id.
+ *
+ * FR-055a. Held by `id` rather than position so a reorder cannot silently
+ * point this at the wrong row.
+ */
+export function toggleTier(id: string): void {
+  const now = state.selectedTierIds;
+  set({ selectedTierIds: now.includes(id) ? now.filter((existing) => existing !== id) : [...now, id] });
+}
+
+/** Replaces the whole selection, for "select all" and "select none" alike. */
+export function selectTiers(ids: readonly string[]): void {
+  set({ selectedTierIds: [...ids] });
+}
+
+export function clearTierSelection(): void {
+  set({ selectedTierIds: [] });
 }
 
 export function selectBlock(selectedBlockId: string | undefined): void {

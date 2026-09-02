@@ -154,6 +154,23 @@ export function field(opts: {
   ]);
 }
 
+/**
+ * A labelled checkbox.
+ *
+ * Its own primitive rather than a variant of `field`: `field` sets its
+ * control to `width: 100%` and a 44 pixel min-height meant for a text box, and
+ * applying that to a checkbox would stretch it across the row. `.checkbox` in
+ * the stylesheet overrides both by specificity rather than duplicating them.
+ */
+export function checkbox(opts: { label: string; checked: boolean; onChange: (checked: boolean) => void }): HTMLElement {
+  const id = nextFieldId();
+  const control = el("input", { id, type: "checkbox" }) as HTMLInputElement;
+  control.checked = opts.checked;
+  control.addEventListener("change", () => opts.onChange(control.checked));
+
+  return el("div", { class: "field checkbox" }, [control, el("label", { for: id }, [opts.label])]);
+}
+
 /** A labelled select, for the small closed sets the contract defines. */
 export function select(opts: {
   label: string;

@@ -7,10 +7,11 @@
  */
 import type { Block } from "@mdsb/engine";
 
-import { button, disclosure, el, field, select } from "./dom.js";
+import { bulkPricingToolbar } from "./bulk-pricing.js";
+import { button, checkbox, disclosure, el, field, select } from "./dom.js";
 import { imageField } from "./image-field.js";
 import { formatMoney, parseMoney } from "../money.js";
-import { getState, newId, removeRow, undoRemove } from "../store.js";
+import { getState, newId, removeRow, toggleTier, undoRemove } from "../store.js";
 
 type OnChange = (next: Block) => void;
 
@@ -380,6 +381,22 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
   const tiers = shown.map((tier, i) =>
     el("fieldset", { class: "sub item" }, [
       el("legend", {}, [`Item ${i + 1}`]),
+      // FR-055. No checkbox on the placeholder row: `i < block.tiers.length`
+      // is the same test `rowTools` already uses, since a row that is not in
+      // the document has nothing to select. The name falls back to its
+      // position rather than a bare "Select", because a fieldset legend does
+      // not fold into a control's accessible name: a price list of sixty
+      // rows named only "Item" in their legend would otherwise present sixty
+      // controls all called "Select".
+      ...(i < block.tiers.length
+        ? [
+            checkbox({
+              label: `Select ${tier.name.trim() === "" ? `item ${i + 1}` : tier.name.trim()}`,
+              checked: getState().selectedTierIds.includes(tier.id),
+              onChange: () => toggleTier(tier.id),
+            }),
+          ]
+        : []),
       field({
         label: "Item",
         value: tier.name,
@@ -522,6 +539,7 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
   );
 
   return el("div", {}, [
+    bulkPricingToolbar(block),
     ...tiers,
     ...rowUndo(block.id),
     button({

@@ -137,6 +137,25 @@ main {
   resize: vertical;
 }
 
+/* A checkbox row, not a stretched text box. Overrides `.field input` above by
+   specificity, so the touch target rule it inherits from there still holds. */
+.field.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field.checkbox input[type="checkbox"] {
+  width: var(--tap);
+  min-width: var(--tap);
+  margin: 0;
+}
+
+.field.checkbox label {
+  margin: 0;
+  font-weight: 400;
+}
+
 /* Buttons. Every one of these meets the touch target minimum. */
 
 .btn {
