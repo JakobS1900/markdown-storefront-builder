@@ -27,7 +27,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import {
-  readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, cpSync, renameSync, readdirSync,
+  readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, cpSync, renameSync,
 } from "node:fs";
 import { join, extname } from "node:path";
 import { tmpdir } from "node:os";
@@ -49,13 +49,26 @@ const B = join(work, "b");
 cpSync(DIST, A, { recursive: true });
 cpSync(DIST, B, { recursive: true });
 
-/** Stamps a build so the running page can say which one it is. */
+/**
+ * Stamps a build so the running page can say which one it is.
+ *
+ * Finds the entry script from `index.html` rather than the first `.js` file in
+ * `assets/`. Feature 021 gave the app a second, lazily loaded chunk (a starting
+ * point's document), and `readdirSync` sorts it before `index-*.js`
+ * alphabetically, so the marker was landing in a chunk nothing ever loads.
+ * Every check in this file read `globalThis.__BUILD__` as null as a result,
+ * which is a gate reporting a build that was never really running rather than
+ * one that failed to update, and would have stayed silently broken the moment
+ * a second entry-adjacent asset existed.
+ */
 function brand(root, name) {
-  const assets = join(root, "assets");
-  const js = readdirSync(assets).find((f) => f.endsWith(".js"));
-  if (js === undefined) throw new Error(`no js asset in ${root}`);
+  const html = readFileSync(join(root, "index.html"), "utf8");
+  const match = /<script[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/.exec(html);
+  if (match === null) throw new Error(`no module entry script found in ${root}/index.html`);
+  const js = match[1].replace(/^\.\/assets\//, "");
   const marker = `;globalThis.__BUILD__=${JSON.stringify(name)};`;
-  writeFileSync(join(assets, js), marker + readFileSync(join(assets, js), "utf8"), "utf8");
+  const path = join(root, "assets", js);
+  writeFileSync(path, marker + readFileSync(path, "utf8"), "utf8");
   return js;
 }
 
