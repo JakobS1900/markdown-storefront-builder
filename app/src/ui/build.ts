@@ -115,9 +115,10 @@ function lastEdited(at: number): string {
 /**
  * The starting points, offered wherever somebody might begin a page.
  *
- * Rendered in two places rather than one. `pageList` returns nothing when there
- * are no saved pages, which is right, and which would otherwise hide this from
- * the person who has just arrived and needs it most.
+ * Declared in two places and rendered in exactly one, see `showsEmptyState`.
+ * `pageList` returns nothing when there are no saved pages, which is right, and
+ * which would otherwise hide this from the person who has just arrived and
+ * needs it most.
  *
  * A folded `details` with a fixed id, so `shell.ts` reopens it after a repaint
  * along with every other group, and so the picker does not need a scrap of

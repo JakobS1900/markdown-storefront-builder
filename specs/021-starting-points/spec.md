@@ -103,8 +103,9 @@ starting point as a button showing its label and one line saying who it is for.
 Choosing one creates a new page from it and opens it, announced the way opening
 the example is announced.
 
-It appears in **two** places, because the two entrances serve different people
-and neither covers the other:
+It is declared in **two** places, because the two entrances serve different
+people and neither covers the other, but only ever **one** is on screen at a
+time:
 
 - **In `Your pages`, beside "Start a new page".** The existing button is
   untouched: same label, same handler, same instant blank page. Somebody who
@@ -120,6 +121,20 @@ and neither covers the other:
 Being a folded `details` with a stable id costs no new state. `shell.ts:167`
 already captures every open group before a repaint and reopens it afterwards,
 so the picker stays open while the app repaints underneath it, for free.
+
+**Amendment, added during implementation.** The two entrances were built as two
+independent conditions: `pageList` on `state.pages.length > 0`, the empty state
+on `state.doc.blocks.length === 0`. Written separately, they are not mutually
+exclusive, and the compound state, at least one saved page sitting beside a
+document on screen with no blocks at all, is trivially reachable: it is exactly
+what pressing "Start a new page" produces once the page it left behind has
+saved. That state briefly showed both pickers at once, two disclosures sharing
+the accessible name "Start from a template". Both entrances still have to
+exist, for the reasons given above, so the fix is not removing one of them: it
+is a single predicate, `showsEmptyState` in `app/src/ui/build.ts`, that both
+placements read, so the two conditions cannot drift apart from each other again.
+Fixed in `248ee05`, with a regression test in `app/tests/starters-picker.test.ts`
+covering the compound state directly.
 
 ### The launch set
 

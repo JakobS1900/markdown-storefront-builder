@@ -232,12 +232,13 @@ F3, and F4 are not started. F2 needs its own spec before any of it is built,
 for the reasons recorded in `specs/021-starting-points/spec.md` under "What
 this is part of".
 
-- [x] **6.1 Eight starting points.** A picker offering eight seller shapes in
-      place of the single hardcoded example, each a page that parses, validates,
-      and compiles with zero diagnostics on every target. Reached from both
-      places a new page is started: `Your pages`, and the empty state a first
-      visitor sees. The example page that ships is now checked by the same gate
-      (`specs/021-starting-points/spec.md`, `app/tests/starters.test.ts`).
+- [x] **6.1 Eight starting points.** A picker offering eight seller shapes,
+      sitting beside the single hardcoded example rather than replacing it, each
+      a page that parses, validates, and compiles with zero diagnostics on every
+      target. Reached from both places a new page is started: `Your pages`, and
+      the empty state a first visitor sees. The example page that ships is now
+      checked by the same gate (`specs/021-starting-points/spec.md`,
+      `app/tests/starters.test.ts`).
 
 ## Explicitly deferred
 

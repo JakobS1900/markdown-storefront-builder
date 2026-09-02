@@ -96,9 +96,7 @@ would be a commit log with the dates filed off. The architecture and holistic
 reviews for 001 to 003 are real documents produced before and after that code
 was written, which is why they are marked yes and nothing later is.
 
-**021 was the first spec here written before the work started, and it has since
-shipped**, on 2026-09-02, the same day it was specified. Every other row
-describes code that already existed when its spec was written. 021 is also the
+**021 shipped the same day it was specified**, on 2026-09-02. 021 is also the
 first that specifies one feature and records three more it decomposed into: the
 ideas raised on 2026-09-02 were import, a template wizard, and bulk pricing
 maths, and they are four features, of which this is the cheapest and the only
