@@ -176,6 +176,44 @@ if the section is put back entire. That is exactly what reversing forty price
 changes needs, so bulk undo is a new `kind: "bulk"` variant sharing that restore
 path and differing only in what it announces. No new mechanism.
 
+**Implemented as a rename, not left as found here.** A function called
+`undoRemove` that also reverses a price change is a comment that lies, and this
+project has three recorded defects caused by exactly that kind of claim. It is
+`undoLast()` at `app/src/store.ts:578` now, with every caller updated in the
+same commit.
+
+## Amendments made during implementation
+
+Two things this feature got wrong before it shipped, both caught by review
+rather than by any gate. Recorded here rather than edited quietly into the
+sections above, matching the pattern `specs/021-starting-points/spec.md` sets.
+
+**The selection was first built document-wide.** It was held as a flat list of
+tier ids on the store, on the belief that an id was enough on its own to name a
+row. It was not: "Uniqueness is within the menu block, not the document" above
+is true of the schema, and the version 3 migration numbers every menu block's
+rows from zero, so two different price lists can each legitimately hold a tier
+called `t0`. Tried against the app's own shipped `app/public/example.json`,
+which has three menu blocks that each migrate to a tier `t0`, ticking one row
+ticked three. What changed is the shape the selection is held in, `{ blockId,
+tierIds }` rather than a bare list of ids, so the invalid state cannot be
+represented at all. A filter applied where the selection is read was
+considered and rejected: a filter still leaves a structure that permits the bad
+state, and would only have hidden the next version of the same bug.
+
+**The apply panel first defaulted to a multiplier of 1 and an addition of 0.**
+Those were believed to be safe, inert defaults, numbers a seller could leave
+alone until ready to decide something else. They were not: FR-056 computes
+`price = cost x multiplier + extra`, and a multiplier of 1 with an addition of
+0 computes `price = cost`, which wipes the margin on every marked-up row the
+moment Apply is pressed, whether or not the seller meant to change anything.
+The first test fixture did not catch it because its row happened to have a
+price already equal to its cost, so the wrong computation and the right one
+produced the same number. What changed is that both defaults are blank, and
+Apply is disabled until the seller has entered a real multiplier and a real
+addition, so pressing it with nothing decided is not a state the panel can be
+in.
+
 ## What this does not do
 
 No cost range filter ("select everything between one and two dollars"). It is

@@ -226,11 +226,12 @@ was found on the device, which is where everything is found now.
 Added on 2026-09-02, the same day it shipped, and not on this document before
 that: like phase 5, the roadmap was silent about work until after it existed.
 Three ideas raised that day, import, a template wizard, and bulk pricing maths,
-turned out to decompose into four features once written down. This phase is the
-first of the four and the only one that depends on nothing else built yet. F2,
-F3, and F4 are not started. F2 needs its own spec before any of it is built,
-for the reasons recorded in `specs/021-starting-points/spec.md` under "What
-this is part of".
+turned out to decompose into four features once written down. F1 and F2 have
+both shipped, on that same day. F3 (import) and F4 (the interview wizard)
+remain unbuilt: F3 is specified as a consumer of F2's selection rather than its
+own parser, so it could not have come first, and F4 is deferred on purpose
+pending whether F1 is used, both for the reasons recorded in
+`specs/021-starting-points/spec.md` under "What this is part of".
 
 - [x] **6.1 Eight starting points.** A picker offering eight seller shapes,
       sitting beside the single hardcoded example rather than replacing it, each
@@ -239,6 +240,20 @@ this is part of".
       the empty state a first visitor sees. The example page that ships is now
       checked by the same gate (`specs/021-starting-points/spec.md`,
       `app/tests/starters.test.ts`).
+- [x] **6.2 Bulk pricing.** Select any subset of one price list's rows and turn
+      cost into price for all of them in one action, showing the profit on each
+      row, reversible in one press. Took the document schema to version 3: every
+      price list row now carries an identifier, required so a selection survives
+      a reorder rather than pointing at whatever now sits at the same position,
+      and an optional `cost`, which the compiler is forbidden from ever emitting.
+      A pure money parser reads what a seller actually typed and refuses to guess
+      at what it cannot. Two mistakes surfaced only by review are recorded in
+      `specs/022-bulk-pricing/spec.md`: the selection was first held
+      document-wide, and tier identifiers repeat across price lists rather than
+      being unique to the page, so it had to be scoped to one price list; and the
+      apply panel first defaulted to numbers that silently computed `price =
+      cost`, erasing every marked-up row's margin, so it now starts blank and
+      stays disabled until the seller has decided.
 
 ## Explicitly deferred
 
