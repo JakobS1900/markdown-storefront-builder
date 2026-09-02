@@ -50,6 +50,27 @@ describe("writing a price back", () => {
     if (parsed === undefined) throw new Error("expected a parse");
     expect(formatMoney(parsed, 1299)).toBe("$12.99");
   });
+
+  it("keeps the minus sign for a loss under a dollar", () => {
+    // Math.trunc(-5 / 100) is -0, which a template literal stringifies as
+    // "0": exactly the silent wrong-number failure this module exists to
+    // avoid, and exactly the shape of a small per-item loss.
+    const parsed = parseMoney("0");
+    if (parsed === undefined) throw new Error("expected a parse");
+    expect(formatMoney(parsed, -5)).toBe("-0.05");
+  });
+
+  it("keeps the minus sign for a loss over a dollar", () => {
+    const parsed = parseMoney("0");
+    if (parsed === undefined) throw new Error("expected a parse");
+    expect(formatMoney(parsed, -150)).toBe("-1.50");
+  });
+
+  it("formats exactly zero without a sign", () => {
+    const parsed = parseMoney("0");
+    if (parsed === undefined) throw new Error("expected a parse");
+    expect(formatMoney(parsed, 0)).toBe("0.00");
+  });
 });
 
 describe("computing a price from a cost", () => {

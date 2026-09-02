@@ -24,6 +24,11 @@ export interface Money {
 // "DM me" fail rather than matching some fragment of itself.
 const PRICE = /^(\D*?)(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{1,2}))?(\D*)$/;
 
+// A leading "-" is non-numeric, so the lazy prefix group swallows it the
+// same way it swallows "$" or "from ". "-5" parses as positive 500 cents
+// with prefix "-", not as negative five: this parser reads decorations
+// around a number, it does not read a sign.
+
 export function parseMoney(text: string): Money | undefined {
   // A seller who typed a trailing space did not mean it as part of the
   // price, and leaving it in would let it be captured into the prefix or
@@ -58,11 +63,17 @@ export function parseMoney(text: string): Money | undefined {
 }
 
 export function formatMoney(money: Money, cents: number): string {
-  const whole = Math.trunc(cents / 100);
-  const remainder = Math.abs(cents % 100)
-    .toString()
-    .padStart(2, "0");
-  return `${money.prefix}${whole}.${remainder}${money.suffix}`;
+  // Sign and magnitude are computed separately rather than left to
+  // Math.trunc(cents / 100): for any cents between -99 and -1 that division
+  // produces -0, and interpolating -0 into a template literal stringifies it
+  // as "0", silently dropping the sign. A price a cent short of even is
+  // exactly where a seller is underwater by less than a dollar, so this is
+  // the one place this module cannot afford to be quietly wrong.
+  const sign = cents < 0 ? "-" : "";
+  const magnitude = Math.abs(cents);
+  const whole = Math.trunc(magnitude / 100);
+  const remainder = (magnitude % 100).toString().padStart(2, "0");
+  return `${money.prefix}${sign}${whole}.${remainder}${money.suffix}`;
 }
 
 export type Rounding = "99" | "95" | "whole" | "none";
