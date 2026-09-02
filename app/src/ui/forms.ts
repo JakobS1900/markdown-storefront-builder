@@ -378,6 +378,13 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
   // `block.tiers.length` rather than `shown.length`.
   const shown = block.tiers.length > 0 ? block.tiers : [{ id: "", name: "", price: "" }];
 
+  // Scoped to this block: tier ids repeat across menu blocks (`t0` in one
+  // price list means nothing about `t0` in another), so a selection that
+  // belongs to a different block must read as nothing selected here. See
+  // `State.selectedTiers`.
+  const selection = getState().selectedTiers;
+  const selectedIds = selection !== undefined && selection.blockId === block.id ? selection.tierIds : [];
+
   const tiers = shown.map((tier, i) =>
     el("fieldset", { class: "sub item" }, [
       el("legend", {}, [`Item ${i + 1}`]),
@@ -392,8 +399,8 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         ? [
             checkbox({
               label: `Select ${tier.name.trim() === "" ? `item ${i + 1}` : tier.name.trim()}`,
-              checked: getState().selectedTierIds.includes(tier.id),
-              onChange: () => toggleTier(tier.id),
+              checked: selectedIds.includes(tier.id),
+              onChange: () => toggleTier(block.id, tier.id),
             }),
           ]
         : []),

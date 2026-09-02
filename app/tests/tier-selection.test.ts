@@ -15,6 +15,16 @@
  * counting. That is checked through what the toolbar and the remaining
  * checkboxes actually show, which is what a seller sees, rather than through
  * the raw array, which by design still lists whatever it was last told.
+ *
+ * A first pass held the selection as a flat, document-wide array of ids.
+ * Review caught that tier ids are unique only within their own menu block,
+ * not across the document: `engine/src/document/migrate.ts` restarts
+ * numbering at `t0` for every menu section it migrates, so two different
+ * price lists on the same page can each hold a tier called `t0`. On the
+ * app's own example page, three menu blocks migrate to `t0`, `t1`, `t2` (or a
+ * subset of them) independently. "the selection is scoped to one price list"
+ * below is that finding proved: it builds two blocks sharing an id and checks
+ * that ticking one never lights up the other.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -54,6 +64,11 @@ function menuBlock(): Extract<ReturnType<typeof getState>["doc"]["blocks"][numbe
   const block = getState().doc.blocks[0];
   if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
   return block;
+}
+
+/** The tier ids currently selected, empty when nothing is. */
+function selectedIds(): readonly string[] {
+  return getState().selectedTiers?.tierIds ?? [];
 }
 
 /** A price list with three real, named rows. */
@@ -114,10 +129,10 @@ function typeInto(control: HTMLInputElement | HTMLTextAreaElement, value: string
 }
 
 describe("ticking a row", () => {
-  it("puts that row's id in the selection", () => {
+  it("puts that row's id in the selection, scoped to its own block", () => {
     shop();
     checkboxFor("Bust").click();
-    expect(getState().selectedTierIds).toEqual(["bust"]);
+    expect(getState().selectedTiers).toEqual({ blockId: menuBlock().id, tierIds: ["bust"] });
   });
 
   it("the count line reads how many are selected", () => {
@@ -136,7 +151,7 @@ describe("select all and none", () => {
     // placeholder to have a checkbox at all while real rows exist.
     expect(document.querySelectorAll("#surface fieldset.item input[type=checkbox]").length).toBe(3);
     press("Select all");
-    expect([...getState().selectedTierIds].sort()).toEqual(["bust", "full-body", "half-body"]);
+    expect([...selectedIds()].sort()).toEqual(["bust", "full-body", "half-body"]);
   });
 
   it("never offers a checkbox on the blank placeholder row, and select all reaches for nothing when only it remains", () => {
@@ -153,39 +168,111 @@ describe("select all and none", () => {
     expect(document.querySelectorAll("#surface fieldset.item input[type=checkbox]").length).toBe(0);
 
     press("Select all");
-    expect(getState().selectedTierIds).toEqual([]);
+    expect(selectedIds()).toEqual([]);
   });
 
   it("none clears it", () => {
     shop();
     press("Select all");
-    expect(getState().selectedTierIds.length).toBe(3);
+    expect(selectedIds().length).toBe(3);
     press("Select none");
-    expect(getState().selectedTierIds).toEqual([]);
+    expect(selectedIds()).toEqual([]);
+  });
+});
+
+describe("the selection is scoped to one price list, never the whole document", () => {
+  /**
+   * Two menu blocks sharing a tier id, exactly as the migration produces:
+   * `engine/src/document/migrate.ts` restarts numbering at `t0` for every
+   * menu section, so two price lists on one page legitimately share ids. The
+   * app's own `public/example.json`, still at schema version 1, migrates to
+   * three menu blocks that do exactly this.
+   */
+  function twoShops(): void {
+    live();
+    addBlock(blankBlock("menu"));
+    addBlock(blankBlock("menu"));
+    const [first, second] = getState().doc.blocks;
+    if (first === undefined || first.kind !== "menu" || second === undefined || second.kind !== "menu") {
+      throw new Error("expected two menu blocks");
+    }
+    updateBlock(first.id, { ...first, tiers: [{ id: "t0", name: "Knife", price: "40" }] });
+    updateBlock(second.id, { ...second, tiers: [{ id: "t0", name: "Lamp", price: "25" }] });
+  }
+
+  function blocks(): [ReturnType<typeof menuBlock>, ReturnType<typeof menuBlock>] {
+    const [first, second] = getState().doc.blocks;
+    if (first === undefined || first.kind !== "menu" || second === undefined || second.kind !== "menu") {
+      throw new Error("expected two menu blocks");
+    }
+    return [first, second];
+  }
+
+  it("ticking the row in one block leaves the same id unticked in the other", () => {
+    twoShops();
+    const [first, second] = blocks();
+
+    selectBlock(first.id);
+    checkboxFor("Knife").click();
+
+    // The first list's own checkbox is ticked and its count reads one.
+    expect(checkboxFor("Knife").checked).toBe(true);
+    expect(countLine()).toContain("1");
+
+    // The second list shares the same tier id, "t0", but must read as
+    // nothing selected: the selection names a block, not a bare id.
+    selectBlock(second.id);
+    expect(checkboxFor("Lamp").checked).toBe(false);
+    expect(countLine()).toContain("0");
+  });
+
+  it("selecting all in the second block replaces the first block's selection rather than merging with it", () => {
+    // The shape holds exactly one block's selection at a time, which is what
+    // the store's comment on `selectedTiers` promises: selecting elsewhere
+    // replaces rather than merges, because a selection naming two price
+    // lists at once could not be told apart from one sharing an id by
+    // accident. This is the deliberate replacement the brief allows for,
+    // not the silent data loss the review warned against: it is visible on
+    // screen as the first list's checkbox and count going back to unticked
+    // and zero, never as a crash or a wrong row staying lit.
+    twoShops();
+    const [first, second] = blocks();
+
+    selectTiers(first.id, ["t0"]);
+    expect(getState().selectedTiers).toEqual({ blockId: first.id, tierIds: ["t0"] });
+
+    selectTiers(second.id, ["t0"]);
+    expect(getState().selectedTiers).toEqual({ blockId: second.id, tierIds: ["t0"] });
+
+    // Provable through the document too: the first block's own tier id is no
+    // longer read as selected anywhere.
+    selectBlock(first.id);
+    expect(checkboxFor("Knife").checked).toBe(false);
+    expect(countLine()).toContain("0");
   });
 });
 
 describe("the selection survives everything but a row's own removal", () => {
   it("reordering a row leaves the selection unchanged", () => {
     shop();
-    selectTiers(["bust"]);
+    selectTiers(menuBlock().id, ["bust"]);
 
     // The real reorder path, not a simulated one: the same "Move item 1 down"
     // button row-tools.test.ts and cost-and-profit.test.ts drive, which runs
     // rowTools' `reorder` callback into `moved()` and back through
     // `onChange` -> `updateBlock` -> `store.update()`. Nothing here touches
-    // `selectedTierIds` directly.
+    // `selectedTiers` directly.
     press("Move item 1 down");
 
     expect(menuBlock().tiers.map((t) => t.name)).toEqual(["Half body", "Bust", "Full body"]);
     // Bust is now the second row, not the first, and its id is still selected.
     expect(menuBlock().tiers[1]).toMatchObject({ id: "bust", name: "Bust" });
-    expect(getState().selectedTierIds).toEqual(["bust"]);
+    expect(selectedIds()).toEqual(["bust"]);
   });
 
   it("removing a selected row drops only that row from the selection", () => {
     shop();
-    selectTiers(["bust", "half-body"]);
+    selectTiers(menuBlock().id, ["bust", "half-body"]);
 
     press("Remove item 1");
 
@@ -200,7 +287,7 @@ describe("the selection survives everything but a row's own removal", () => {
 
   it("removing an unselected row leaves the selection unchanged", () => {
     shop();
-    selectTiers(["half-body"]);
+    selectTiers(menuBlock().id, ["half-body"]);
 
     press("Remove item 1");
 
@@ -211,7 +298,7 @@ describe("the selection survives everything but a row's own removal", () => {
 
   it("editing a row's name leaves the selection unchanged", () => {
     shop();
-    selectTiers(["bust"]);
+    selectTiers(menuBlock().id, ["bust"]);
 
     const [bustName] = fieldsByLabel("Item");
     if (bustName === undefined) throw new Error("no Item field");
@@ -219,15 +306,15 @@ describe("the selection survives everything but a row's own removal", () => {
 
     expect(menuBlock().tiers[0]).toMatchObject({ id: "bust", name: "Bust (large)" });
     // update() clears undo on every edit; selection must not follow it.
-    expect(getState().selectedTierIds).toEqual(["bust"]);
+    expect(selectedIds()).toEqual(["bust"]);
   });
 
   it("switching surface clears the selection", () => {
     shop();
-    selectTiers(["bust"]);
+    selectTiers(menuBlock().id, ["bust"]);
 
     setSurface("preview");
 
-    expect(getState().selectedTierIds).toEqual([]);
+    expect(selectedIds()).toEqual([]);
   });
 });

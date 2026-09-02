@@ -71,16 +71,32 @@ export interface State {
    */
   readonly pendingPageDeleteId?: string;
   /**
-   * Which price list rows are chosen for bulk pricing, held by tier `id`.
+   * Which price list rows are chosen for bulk pricing, held by tier `id`
+   * within exactly one menu block.
    *
-   * FR-055a: never by position, so it survives a reorder. It is also never
-   * chased through removal: a row that is deleted just stops matching an id
-   * still sitting in this list, which is why `update()` does not touch this
-   * field on any ordinary edit. Reading the selection against a live set of
-   * tier ids, rather than trying to catch every path that can shrink a
-   * section, is what makes that correct.
+   * FR-055a: never by position, so it survives a reorder. Scoped to one block
+   * because tier ids are unique only within their own block, not across the
+   * document. `engine/src/document/migrate.ts` restarts numbering at `t0` for
+   * every menu section it migrates, so two different price lists can each
+   * legitimately hold a tier called `t0`. A flat, document-wide list of ids
+   * could not tell those apart: ticking the first row of one price list also
+   * ticked the first row of every other price list sharing that id. Recording
+   * which block the selection belongs to makes that state impossible to
+   * represent, rather than filtering it out after the fact at every place
+   * that reads it.
+   *
+   * Selecting a row in a different block replaces the selection rather than
+   * merging into it, which matches what a seller looking at one price list
+   * expects the count on screen to mean: the list in front of them, not a
+   * total across every list on the page.
+   *
+   * It is also never chased through removal: a row that is deleted just stops
+   * matching an id still sitting in `tierIds`, which is why `update()` does
+   * not touch this field on any ordinary edit. Reading the selection against
+   * a live set of tier ids, rather than trying to catch every path that can
+   * shrink a section, is what makes that correct.
    */
-  readonly selectedTierIds: readonly string[];
+  readonly selectedTiers?: { readonly blockId: string; readonly tierIds: readonly string[] };
   readonly status: Status;
   readonly storageOk: boolean;
   /**
@@ -127,7 +143,6 @@ export function init(storageOk: boolean, doc?: Document, pageId?: string): State
     pageId: pageId ?? newId(),
     doc: doc ?? emptyDocument("rentry"),
     surface: "build",
-    selectedTierIds: [],
     status: storageOk
       ? { kind: "idle" }
       : {
@@ -287,27 +302,40 @@ export function setSurface(surface: Surface): void {
   // The selection joins the same list, and for the same reason: it is a
   // question left standing over one screen, and leaving the screen is the
   // artist's answer to it too.
-  set({ surface, pendingPageDeleteId: undefined, undo: undefined, selectedTierIds: [] });
+  set({ surface, pendingPageDeleteId: undefined, undo: undefined, selectedTiers: undefined });
 }
 
 /**
- * Ticks or unticks one row for bulk pricing, by id.
+ * Ticks or unticks one row for bulk pricing, by id, within one price list.
  *
  * FR-055a. Held by `id` rather than position so a reorder cannot silently
- * point this at the wrong row.
+ * point this at the wrong row. Scoped to `blockId` because tier ids repeat
+ * across menu blocks, see `State.selectedTiers`. Ticking a row in a block
+ * other than the one currently selected starts a fresh selection for the new
+ * block rather than adding to the old one, since a stray id shared with
+ * another price list must never be read as "also chosen here".
  */
-export function toggleTier(id: string): void {
-  const now = state.selectedTierIds;
-  set({ selectedTierIds: now.includes(id) ? now.filter((existing) => existing !== id) : [...now, id] });
+export function toggleTier(blockId: string, id: string): void {
+  const current = state.selectedTiers;
+  const tierIds = current !== undefined && current.blockId === blockId ? current.tierIds : [];
+  const next = tierIds.includes(id) ? tierIds.filter((existing) => existing !== id) : [...tierIds, id];
+  set({ selectedTiers: { blockId, tierIds: next } });
 }
 
-/** Replaces the whole selection, for "select all" and "select none" alike. */
-export function selectTiers(ids: readonly string[]): void {
-  set({ selectedTierIds: [...ids] });
+/**
+ * Replaces the whole selection with one price list's, for "select all" and
+ * "select none" alike. Whatever was selected in a different block is
+ * replaced, not merged with, for the same reason `toggleTier` starts fresh:
+ * one selection, naming one price list, is the shape that cannot mean two
+ * things at once.
+ */
+export function selectTiers(blockId: string, ids: readonly string[]): void {
+  set({ selectedTiers: { blockId, tierIds: [...ids] } });
 }
 
+/** Clears the selection entirely, regardless of which block it belonged to. */
 export function clearTierSelection(): void {
-  set({ selectedTierIds: [] });
+  set({ selectedTiers: undefined });
 }
 
 export function selectBlock(selectedBlockId: string | undefined): void {
