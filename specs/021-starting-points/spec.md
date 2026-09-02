@@ -98,13 +98,28 @@ it before knowing whether a starting point is enough would be guessing.
 
 ## Behaviour
 
-`Your pages` on the Build surface gains a second button beside "Start a new
-page", reading "Start from a template". The existing button is untouched:
-same label, same handler, same instant blank page.
+The picker is one folded group, headed "Start from a template", listing every
+starting point as a button showing its label and one line saying who it is for.
+Choosing one creates a new page from it and opens it, announced the way opening
+the example is announced.
 
-Pressing it opens a list of starting points, each showing a label and one line
-saying who it is for. Choosing one creates a new page from that starting point
-and opens it, announced the way opening the example is announced.
+It appears in **two** places, because the two entrances serve different people
+and neither covers the other:
+
+- **In `Your pages`, beside "Start a new page".** The existing button is
+  untouched: same label, same handler, same instant blank page. Somebody who
+  wants an empty page still presses one button, which is FR-053e.
+- **In the empty state, beside "See an example page".** This one is not
+  optional, and the reason is in the code. `pageList` returns nothing at all
+  when `state.pages.length === 0` (`app/src/ui/build.ts:130`), and that is
+  correct: a new install used to open on "Your pages (0)", a list of nothing
+  offering to start a second empty page. But it means a picker placed only in
+  the pages group is invisible to somebody who has just arrived, who is the
+  single person this feature exists for.
+
+Being a folded `details` with a stable id costs no new state. `shell.ts:167`
+already captures every open group before a repaint and reopens it afterwards,
+so the picker stays open while the app repaints underneath it, for free.
 
 ### The launch set
 
@@ -229,9 +244,12 @@ rentry. The shipped example is brought under the same gate.
   lie, but the coupling is real and is recorded here rather than left to be
   rediscovered. The example, its file location in `public/`, and its button
   label are all unchanged by this feature.
-- **The empty state keeps offering the example, not the picker.** They are
-  different things. An example is shown to prove the app works. A starting point
-  is kept and published. Feature 019's reasoning for the empty state stands.
+- **The empty state keeps offering the example, and gains the picker beside
+  it.** They are different things and both belong there. An example is shown to
+  prove the app works, and is thrown away. A starting point is kept and
+  published. Feature 019's reasoning for the example stands untouched; the
+  picker is added next to it rather than in place of it, for the reason given
+  under Behaviour.
 
 ## What this does not do
 
