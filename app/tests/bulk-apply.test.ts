@@ -141,12 +141,16 @@ function skippedText(): string {
  * Types a multiplier, an addition and a rounding choice into the panel.
  *
  * Each control is looked up fresh, immediately before it is used, rather than
- * all three up front. Typing into any one of them updates `bulkPricingInputs`
- * and (nobody has focus in this test, unlike a real browser) repaints at
- * once, which rebuilds the whole tree and makes every previously grabbed
- * element stale. Reading the next control only after that repaint is what a
- * real seller gets for free from focus deferring it; here it has to be done
- * by hand.
+ * all three up front, and `renderShell` runs after each one. That repaint is
+ * NOT what a real seller gets: `store.ts`'s `typing()` defers a repaint for as
+ * long as a field holds focus, so between two keystrokes typed one after the
+ * other, as a real seller types them, no repaint happens at all and every
+ * handler still closes over the same stale snapshot. Calling `renderShell` by
+ * hand here, with nothing focused, gives each handler a fresh closure instead,
+ * which is the opposite of a real browser and is why this file could not have
+ * caught the bug where the second field wiped the first. See "typing two
+ * fields before a repaint happens" below for the test that exercises the real
+ * sequence.
  */
 function fillPanel(root: HTMLElement, multiplier: string, extra: string, rounding: string): void {
   const multiplierField = fieldByLabel("Multiply cost by");
@@ -164,6 +168,35 @@ function fillPanel(root: HTMLElement, multiplier: string, extra: string, roundin
   chooseOption(roundingField, rounding);
   renderShell(root);
 }
+
+describe("typing two fields before a repaint happens", () => {
+  it("keeps the multiplier when the addition is typed straight after, with no repaint between them", () => {
+    // No renderShell between the two fields, unlike fillPanel: this is what a
+    // real seller's typing actually looks like, since store.ts defers a
+    // repaint for as long as a field holds focus. A handler that closes over
+    // a snapshot read once per render, rather than read live when it runs,
+    // would spread that stale snapshot here and write the multiplier back to
+    // blank the moment the addition is typed.
+    const root = shop();
+
+    const multiplierField = fieldByLabel("Multiply cost by");
+    if (!(multiplierField instanceof HTMLInputElement)) throw new Error("expected a text input");
+    multiplierField.focus();
+    typeInto(multiplierField, "3");
+
+    const extraField = fieldByLabel("Add");
+    if (!(extraField instanceof HTMLInputElement)) throw new Error("expected a text input");
+    extraField.focus();
+    typeInto(extraField, "2");
+
+    expect(getState().bulkPricingInputs).toEqual({ multiplier: "3", extra: "2", rounding: "none" });
+
+    extraField.blur();
+    renderShell(root);
+    expect(fieldByLabel("Multiply cost by")).toHaveProperty("value", "3");
+    expect(fieldByLabel("Add")).toHaveProperty("value", "2");
+  });
+});
 
 describe("before anything is typed", () => {
   it("opens with Apply disabled and changes nothing if pressed, on a fixture where price and cost differ", () => {

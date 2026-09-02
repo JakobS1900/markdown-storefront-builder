@@ -26,14 +26,21 @@
  * below is that finding proved: it builds two blocks sharing an id and checks
  * that ticking one never lights up the other.
  */
+import "fake-indexeddb/auto";
+import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { writePage } from "../src/db.js";
 import {
   addBlock,
+  adopt,
   getState,
   init,
+  newPage,
+  openPage,
   selectBlock,
   selectTiers,
+  setBulkPricingInputs,
   setSurface,
   subscribe,
   updateBlock,
@@ -142,6 +149,27 @@ describe("ticking a row", () => {
     checkboxFor("Half body").click();
     expect(countLine()).toContain("2");
   });
+
+  it("shows the tick and the count at once, even though a real browser focuses the checkbox it was clicked on", () => {
+    // jsdom's own .click() does not run the focusing steps a real click does,
+    // so every other test in this file leaves document.activeElement at BODY
+    // and cannot exercise store.ts's typing() guard at all. Focusing by hand
+    // first reproduces what a real tap on a checkbox does, and is what
+    // catches typing() once having treated any focused HTMLInputElement,
+    // checkbox included, as "still typing" and deferring the repaint for as
+    // long as it held focus.
+    //
+    // The repaint this triggers rebuilds the tree, the same as any other
+    // change, so the checkbox node itself is not the same object afterwards;
+    // what is checked is the state and what is on screen, not node identity.
+    shop();
+    const box = checkboxFor("Bust");
+    box.focus();
+    box.click();
+
+    expect(getState().selectedTiers).toEqual({ blockId: menuBlock().id, tierIds: ["bust"] });
+    expect(countLine()).toContain("1");
+  });
 });
 
 describe("select all and none", () => {
@@ -154,12 +182,20 @@ describe("select all and none", () => {
     expect([...selectedIds()].sort()).toEqual(["bust", "full-body", "half-body"]);
   });
 
-  it("never offers a checkbox on the blank placeholder row, and select all reaches for nothing when only it remains", () => {
+  it("never offers a checkbox on the blank placeholder row, and offers no toolbar at all when only it remains", () => {
     // BLANK_ROW in forms.ts: once every real row is gone the section still
     // draws one empty row to type into, and rowTools already refuses it a
     // move or remove control. The checkbox this task adds must refuse it the
     // same way, or "select all" on an empty list would select a row that is
     // not in the document.
+    //
+    // The toolbar itself is now gone too, not merely inert (a whole-branch
+    // review finding, `forms.ts`'s menuForm): "0 selected", "Select all" and
+    // "Select none" ahead of an empty price list's one placeholder row read as
+    // settings for something that does not exist yet. This test used to press
+    // "Select all" here and assert it selected nothing; there is no longer a
+    // "Select all" button to press once `block.tiers` is empty, which is a
+    // stronger form of the same guarantee.
     shop();
     press("Remove item 1");
     press("Remove item 1");
@@ -167,7 +203,7 @@ describe("select all and none", () => {
     expect(menuBlock().tiers).toHaveLength(0);
     expect(document.querySelectorAll("#surface fieldset.item input[type=checkbox]").length).toBe(0);
 
-    press("Select all");
+    expect(document.querySelector("#surface .bulk-toolbar")).toBeNull();
     expect(selectedIds()).toEqual([]);
   });
 
@@ -316,5 +352,70 @@ describe("the selection survives everything but a row's own removal", () => {
     setSurface("preview");
 
     expect(selectedIds()).toEqual([]);
+  });
+});
+
+/**
+ * A page change must clear the selection and the pricing panel's inputs, not
+ * only `undo` and `selectedBlockId`. Starters and reopened backups keep the
+ * block and tier ids from their file, so two pages made from the same
+ * template can share a `blockId` such as "prices" and tier ids such as
+ * "bust", and a selection left standing from the page just closed would go on
+ * matching rows in a document nobody has ticked anything in on this page. The
+ * spec calls repricing the wrong products the worst defect this feature could
+ * ship.
+ */
+describe("a page change clears the selection and the pricing inputs", () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+  });
+
+  it("newPage clears both", async () => {
+    shop();
+    selectTiers(menuBlock().id, ["bust"]);
+    setBulkPricingInputs({ multiplier: "3", extra: "2", rounding: "none" });
+
+    await newPage("rentry");
+
+    expect(getState().selectedTiers).toBeUndefined();
+    expect(getState().bulkPricingInputs).toBeUndefined();
+  });
+
+  it("adopt clears both", () => {
+    shop();
+    selectTiers(menuBlock().id, ["bust"]);
+    setBulkPricingInputs({ multiplier: "3", extra: "2", rounding: "none" });
+
+    adopt("second", { schemaVersion: 3, target: "rentry", blocks: [] });
+
+    expect(getState().selectedTiers).toBeUndefined();
+    expect(getState().bulkPricingInputs).toBeUndefined();
+  });
+
+  it("openPage clears both, even when the reopened page shares this exact block and tier id", async () => {
+    shop();
+    const blockId = menuBlock().id;
+    selectTiers(blockId, ["bust"]);
+    setBulkPricingInputs({ multiplier: "3", extra: "2", rounding: "none" });
+
+    // A second, distinct page that happens to reuse this page's own block id
+    // and tier id, exactly as two pages made from the same starter template
+    // do. Without the fix, a selection surviving the switch would go on
+    // matching this page's "bust" row too.
+    await writePage({
+      id: "second",
+      json: JSON.stringify({
+        schemaVersion: 3,
+        target: "rentry",
+        blocks: [{ id: blockId, kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "45" }] }],
+      }),
+      title: "Second page",
+      updatedAt: 1000,
+    });
+
+    await openPage("second");
+
+    expect(getState().selectedTiers).toBeUndefined();
+    expect(getState().bulkPricingInputs).toBeUndefined();
   });
 });

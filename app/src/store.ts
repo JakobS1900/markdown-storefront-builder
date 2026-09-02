@@ -449,26 +449,38 @@ export function setTarget(target: string): void {
  * to storage. That is what stops the saved copy and the edited copy diverging.
  */
 /**
- * Whether a field currently has the caret in it.
+ * Whether the focused control is one a repaint could take a character or a
+ * gesture away from.
  *
- * A repaint rebuilds the DOM, so the focused input becomes a different element.
- * Android binds its keyboard to the focused editable through an
- * InputConnection; replacing that element tears the connection down and builds
- * a new one, and a character committed during the gap has nowhere to land.
+ * A repaint rebuilds the DOM, so the focused element becomes a different
+ * node. Android binds its keyboard to the focused editable through an
+ * InputConnection; replacing that element tears the connection down and
+ * builds a new one, and a character committed during the gap has nowhere to
+ * land.
  *
  * Measured on a Moto G7, typing "Full colour bust" into a Prices section: with
  * the element replaced mid-word, three runs in eight lost a character, always
  * the one straight after the swap. With it left alone, none of eight did. A
  * bare page that never replaces its input lost nothing in six runs, which is
  * what rules out the injection and leaves the app.
+ *
+ * That reasoning is about text entry, so it covers a text-like input and a
+ * textarea, and nothing else. A checkbox, a radio, a plain button, or a file
+ * input has no InputConnection and nothing mid-commit to lose: browsers focus
+ * a checkbox on click, so treating it as "typing" deferred every repaint for
+ * as long as it held focus and made ticking a row look like it had done
+ * nothing until something else took focus away.
  */
+const NON_TEXT_INPUT_TYPES = new Set(["checkbox", "radio", "button", "file"]);
+
 function typing(): boolean {
   // No DOM at all means nobody is typing. This used to be consulted only from
   // `update`, which cannot run without a document, and moving it into `repaint`
   // put it on a path the store takes with no browser present, where it threw.
   if (typeof document === "undefined") return false;
   const active = document.activeElement;
-  return active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+  if (active instanceof HTMLTextAreaElement) return true;
+  return active instanceof HTMLInputElement && !NON_TEXT_INPUT_TYPES.has(active.type);
 }
 
 export function update(doc: Document): void {

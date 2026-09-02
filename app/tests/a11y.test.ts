@@ -36,7 +36,7 @@ vi.mock("../src/upload.js", () => ({
 }));
 
 import { writePage } from "../src/db.js";
-import { addBlock, getState, init, refreshPages, selectBlock, setSurface } from "../src/store.js";
+import { addBlock, getState, init, refreshPages, selectBlock, selectTiers, setSurface } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -96,6 +96,28 @@ describe("the shell is accessible", () => {
     addBlock(blankBlock("menu"));
     selectBlock(getState().doc.blocks[0]?.id);
     renderShell(root);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations with the bulk pricing Apply panel open", async () => {
+    // bulkPricingPanel returns nothing until a tier is selected, so a gate
+    // that never selects one never renders the panel's three controls, its
+    // role="group" wrapper, or its preview and skipped lists. This file's own
+    // docstring already names this exact failure: "an unlabelled file input
+    // sat in the shipped build for weeks because the gate was green on a
+    // control it had never rendered."
+    const root = mount();
+    addBlock(blankBlock("menu"));
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+    selectBlock(block.id);
+    selectTiers(
+      block.id,
+      block.tiers.map((tier) => tier.id),
+    );
+    renderShell(root);
+
+    expect(document.querySelector('[aria-label="Apply pricing"]')).not.toBeNull();
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 
