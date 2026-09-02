@@ -43,6 +43,7 @@ answerable without reading fifty commit messages.
 | [018 more hosts](018-more-hosts/) | 2026-09-01 | alongside | no | no | no | no |
 | [019 reviewed as a seller](019-reviewed-as-a-seller/) | 2026-09-01 | after the fact | no | no | no | no |
 | [020 several pictures](020-several-pictures/) | 2026-09-01 | after the fact | no | no | no | no |
+| [021 starting points](021-starting-points/) | not yet | **before** | no | no | no | no |
 
 There is no 015. The number was skipped and nothing was lost: it is recorded
 here so nobody goes looking for a missing document.
@@ -94,6 +95,14 @@ Plan, tasks and review columns are left honestly empty. Writing a retrospective
 would be a commit log with the dates filed off. The architecture and holistic
 reviews for 001 to 003 are real documents produced before and after that code
 was written, which is why they are marked yes and nothing later is.
+
+**021 is the first spec here for work that has not started.** Every other row
+describes code that exists. It is also the first that specifies one feature and
+records three more it decomposed into: the ideas raised on 2026-09-02 were
+import, a template wizard, and bulk pricing maths, and they are four features,
+of which this is the cheapest and the only one that depends on nothing. The
+reasoning for the split, and the code review evidence that F2 has to precede
+F3, are in the spec rather than in anyone's memory.
 
 ## Where the phases landed
 
