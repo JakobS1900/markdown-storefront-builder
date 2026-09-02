@@ -94,6 +94,30 @@ describe("every starting point", () => {
   });
 });
 
+describe("a planted cost", () => {
+  const COST = "SUPPLIER-COST-9179";
+
+  it("reaches no target's output from any page that ships", async () => {
+    // Every starting point and the example, with a cost on every row, compiled
+    // against every host. This lives in app/tests rather than engine/tests
+    // because the pages are app content: the dependency direction is app
+    // depends on engine, never the reverse.
+    for (const starter of STARTERS) {
+      const doc = await starter.load();
+      const planted = {
+        ...doc,
+        blocks: doc.blocks.map((b) =>
+          b.kind === "menu" ? { ...b, tiers: b.tiers.map((t) => ({ ...t, cost: COST })) } : b,
+        ),
+      };
+      for (const target of TARGETS) {
+        expect([starter.id, target.id, compile(planted, target).markdown.includes(COST)])
+          .toEqual([starter.id, target.id, false]);
+      }
+    }
+  });
+});
+
 describe("the example page that ships", () => {
   // `example.test.ts` mocks fetch with a fixture of its own, so until now
   // nothing read the file that is actually served. It is the first page a

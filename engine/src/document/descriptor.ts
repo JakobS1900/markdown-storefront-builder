@@ -103,10 +103,10 @@ export const MENU_TIER_FIELDS = [
   // to choose between, and the migration below means nothing is lost.
   { name: "imageUrls", type: "stringArray", required: false },
   // What the seller paid. Text for the same reason `price` is text, and never
-  // compiled: stored here, but a later feature that emits it into published
-  // output has a test enforcing that it never does. The app publishes this
-  // page, so a supplier cost reaching a customer would be a disclosure the
-  // seller never agreed to.
+  // compiled: stored here, but `engine/tests/compile/cost-never-published.test.ts`
+  // enforces that it never reaches compiled output, for any target. The app
+  // publishes this page, so a supplier cost reaching a customer would be a
+  // disclosure the seller never agreed to.
   { name: "cost", type: "string", required: false },
 ] as const satisfies readonly FieldSpec[];
 

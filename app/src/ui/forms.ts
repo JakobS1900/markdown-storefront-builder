@@ -9,6 +9,7 @@ import type { Block } from "@mdsb/engine";
 
 import { button, disclosure, el, field, select } from "./dom.js";
 import { imageField } from "./image-field.js";
+import { formatMoney, parseMoney } from "../money.js";
 import { getState, newId, removeRow, undoRemove } from "../store.js";
 
 type OnChange = (next: Block) => void;
@@ -298,6 +299,34 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
 }
 
 /**
+ * What this item earns, shown beside what it costs to make.
+ *
+ * Nothing is guessed. `price` is free text and `cost` is free text, so either
+ * can fail to parse, and FR-056a's rule applies here too: a row that cannot be
+ * read is skipped and shown as skipped, never defaulted to zero. A zero would
+ * be a claim ("this item breaks even") that nothing here actually knows, and a
+ * dash reads as a value rather than as "not shown". Absence is the only answer
+ * that does not lie.
+ *
+ * The displayed figure is built with its own empty-prefix, empty-suffix
+ * `Money`, never the price's. `formatMoney` writes the sign after the prefix,
+ * so reusing a price of "$12.99" would render a loss as "$-2.50". Currency
+ * wording, if any, belongs to the surrounding text, not to this number.
+ *
+ * Profit is shown exactly as computed, including negative. A seller who is
+ * underwater on an item is precisely who needs to see that, not have it
+ * clamped to zero or hidden.
+ */
+function profitLine(tier: { readonly price: string; readonly cost?: string }): Node[] {
+  const cost = parseMoney(tier.cost ?? "");
+  const price = parseMoney(tier.price);
+  if (cost === undefined || price === undefined) return [];
+
+  const profit = formatMoney({ prefix: "", cents: 0, suffix: "" }, price.cents - cost.cents);
+  return [el("p", { class: "profit" }, [`Profit: ${profit}`])];
+}
+
+/**
  * The price list.
  *
  * Reordered after an artist tried it and said it did not feel like adding an
@@ -362,6 +391,18 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         hint: 'Anything you like: "45", "from 45", or "DM me".',
         onInput: (price) => editTier(i, (t) => ({ ...t, price })),
       }),
+      // Beside the price, because that is what it is measured against. Never
+      // compiled: engine/src/document/descriptor.ts says why, and
+      // engine/tests/compile/cost-never-published.test.ts is the test that
+      // makes the promise true. A customer never sees this field; only the
+      // seller who typed it does.
+      field({
+        label: "What you paid",
+        value: tier.cost ?? "",
+        hint: "Only you see this. It is never part of your published page.",
+        onInput: (v) => editTier(i, (t) => withOptional(t, "cost", v)),
+      }),
+      ...profitLine(tier),
       // Beside the price, because it qualifies the price. Twenty dollars of
       // bananas is not a price until you know it buys a pound, and this is
       // where somebody is already looking when they type the twenty.
