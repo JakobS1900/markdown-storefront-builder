@@ -131,6 +131,53 @@ describe("validateDocument: identifiers (rule 10, FR-009)", () => {
   });
 });
 
+describe("validateDocument: tier identifiers (FR-054)", () => {
+  /**
+   * Regression coverage for `checkTierIds`. Nothing else in this file exercises
+   * it: a later refactor that stopped calling it, or inverted its
+   * `first === undefined` branch, would pass every other test in this suite.
+   */
+  it("refuses two tiers in one menu block sharing an id, and names both rows", () => {
+    const doc = {
+      schemaVersion: 3,
+      target: "rentry",
+      blocks: [
+        {
+          id: "m1",
+          kind: "menu",
+          tiers: [
+            { id: "t0", name: "Small", price: "10" },
+            { id: "t0", name: "Large", price: "20" },
+          ],
+        },
+      ],
+    };
+    const result = validateDocument(doc);
+    expect(codesOf(result)).toContain("duplicate_id");
+    if (result.ok) throw new Error("expected the duplicate to be refused");
+    const issue = result.issues.find((i) => i.code === "duplicate_id");
+    expect(issue?.path).toBe("blocks[0].tiers[1].id");
+    expect(issue?.message).toContain("Items 1 and 2");
+  });
+
+  it("accepts the same id reused across two different menu blocks", () => {
+    // The rule is scoped to the block, matching the version 3 migration, which
+    // numbers every block's rows from zero. A page with two price lists
+    // legitimately has "t0" in each, and a check scoped to the document
+    // instead of the block would refuse every migrated page with two menus.
+    const doc = {
+      schemaVersion: 3,
+      target: "rentry",
+      blocks: [
+        { id: "m1", kind: "menu", tiers: [{ id: "t0", name: "Small", price: "10" }] },
+        { id: "m2", kind: "menu", tiers: [{ id: "t0", name: "Rush", price: "15" }] },
+      ],
+    };
+    const result = validateDocument(doc);
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe("validateDocument: ranges and enums (rules 11 to 13)", () => {
   it.each([0, 7, -1])("refuses heading level %i", (level) => {
     const result = validateDocument(

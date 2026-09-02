@@ -13,6 +13,14 @@ import { describe, expect, it } from "vitest";
 
 import { parseDocument, SCHEMA_VERSION } from "@mdsb/engine";
 
+// Not part of the public surface (see `document/index.ts`), imported directly
+// so this step's own non-mutation can be checked in isolation. Going through
+// `parseDocument` alone would only ever hand this step the intermediate object
+// the version 1 to 2 step just built, which nothing holds a reference to, so a
+// mutation here could not be told apart from one committed earlier in the
+// chain.
+import { migrate } from "../../src/document/migrate.js";
+
 function fixture(name: string): string {
   return readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), "utf8");
 }
@@ -52,5 +60,22 @@ describe("a page saved at version 2", () => {
     const first = result.document.blocks[0];
     if (first === undefined || first.kind !== "menu") throw new Error("expected a menu first");
     expect(first.tiers.every((t) => !("cost" in t))).toBe(true);
+  });
+
+  it("does not mutate the page it was given", () => {
+    // Mirrors version.test.ts's mutation check for the version 1 to 2 step, but
+    // isolated to this one: calling `migrate` with `from: 2` runs only the step
+    // whose `from` is at least 2, so this proves `tierIdsByPosition` itself does
+    // not write into its input, not just that the pipeline as a whole does not.
+    const v2 = {
+      schemaVersion: 2,
+      target: "portable",
+      blocks: [
+        { id: "m", kind: "menu", tiers: [{ name: "Small", price: "10" }, { name: "Large", price: "20" }] },
+      ],
+    };
+    const before = JSON.stringify(v2);
+    migrate(v2, 2);
+    expect(JSON.stringify(v2)).toBe(before);
   });
 });
