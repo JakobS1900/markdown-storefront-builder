@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "Portfolio",
+  "blocks": [
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Your name or handle",
+      "tagline": "What you make or do, in one line",
+      "links": [
+        { "label": "Your other page", "url": "https://example.com/your-page" }
+      ]
+    },
+    {
+      "id": "about",
+      "kind": "prose",
+      "heading": "About",
+      "text": "Write a few sentences about who you are and what you make or do. What you focus on, how long you have been doing it, and where people can see more if you have another page for it."
+    },
+    {
+      "id": "work",
+      "kind": "gallery",
+      "heading": "Work",
+      "layout": "grid",
+      "items": [
+        { "imageUrl": "https://example.com/work/piece-1.jpg", "caption": "Recent piece" },
+        { "imageUrl": "https://example.com/work/piece-2.jpg", "caption": "Recent piece" },
+        { "imageUrl": "https://example.com/work/piece-3.jpg", "caption": "Older piece" },
+        { "imageUrl": "https://example.com/work/piece-4.jpg", "caption": "Older piece" }
+      ]
+    }
+  ]
+}

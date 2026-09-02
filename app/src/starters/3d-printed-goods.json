@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "Prints",
+  "blocks": [
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Your shop name",
+      "tagline": "What you print, in one line",
+      "status": "open",
+      "links": [
+        { "label": "Your shop", "url": "https://example.com/your-shop" }
+      ],
+      "paymentMethods": ["PayPal", "Card"]
+    },
+    {
+      "id": "prints",
+      "kind": "menu",
+      "heading": "Prints",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Small figure, up to 5cm",
+          "price": "10",
+          "unit": "each",
+          "details": [
+            { "label": "Material", "value": "PLA" },
+            { "label": "Layer height", "value": "0.2mm" }
+          ]
+        },
+        {
+          "name": "Medium figure, 5 to 10cm",
+          "price": "18",
+          "unit": "each",
+          "details": [
+            { "label": "Material", "value": "PLA" },
+            { "label": "Layer height", "value": "0.16mm" }
+          ]
+        },
+        {
+          "name": "Large figure, 10 to 20cm",
+          "price": "32",
+          "unit": "each",
+          "details": [
+            { "label": "Material", "value": "PETG" },
+            { "label": "Layer height", "value": "0.12mm" }
+          ]
+        },
+        {
+          "name": "Custom part or design",
+          "price": "DM me",
+          "blurb": "Send your file or idea and I will quote it"
+        }
+      ]
+    },
+    {
+      "id": "gallery",
+      "kind": "gallery",
+      "heading": "Gallery",
+      "layout": "grid",
+      "items": [
+        { "imageUrl": "https://example.com/gallery/print-1.jpg", "caption": "Painted figure, layer lines sanded smooth" },
+        { "imageUrl": "https://example.com/gallery/print-2.jpg", "caption": "Two colour vase" },
+        { "imageUrl": "https://example.com/gallery/print-3.jpg", "caption": "Articulated fidget toy" },
+        { "imageUrl": "https://example.com/gallery/print-4.jpg", "caption": "Phone stand prototype" }
+      ]
+    },
+    {
+      "id": "turnaround",
+      "kind": "prose",
+      "heading": "Turnaround",
+      "text": "Say how long a print typically takes to finish and post, and mention separately if a bigger or multi part print takes longer. State it plainly: a time nobody was told about is the complaint you will get."
+    },
+    { "id": "rule", "kind": "divider" },
+    {
+      "id": "how-to-order",
+      "kind": "prose",
+      "heading": "How to order",
+      "text": "Message me with what you want printed, the size, and the colour. I will confirm the price before you pay."
+    }
+  ]
+}

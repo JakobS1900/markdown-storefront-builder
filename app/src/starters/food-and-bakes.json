@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "Bakery",
+  "blocks": [
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Your bakery name",
+      "tagline": "What you bake, in one line",
+      "status": "open",
+      "links": [
+        { "label": "Your page", "url": "https://example.com/your-bakery" }
+      ],
+      "paymentMethods": ["Cash", "Card"]
+    },
+    {
+      "id": "menu",
+      "kind": "menu",
+      "heading": "Menu",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Chocolate chip cookies",
+          "price": "3",
+          "unit": "each",
+          "quantities": [
+            { "amount": "1 dozen", "price": "30" },
+            { "amount": "2 dozen", "price": "55" }
+          ]
+        },
+        {
+          "name": "Cupcakes",
+          "price": "3.5",
+          "unit": "each",
+          "quantities": [{ "amount": "1 dozen", "price": "36" }]
+        },
+        { "name": "Banana bread loaf", "price": "8", "unit": "each" },
+        {
+          "name": "Custom cake",
+          "price": "DM me",
+          "blurb": "Tell me the size, flavour, and date you need it by"
+        }
+      ]
+    },
+    {
+      "id": "allergens",
+      "kind": "prose",
+      "heading": "Allergens",
+      "text": "List what this comes into contact with: nuts, gluten, dairy, eggs, whatever applies in your kitchen. Say plainly if you cannot guarantee something is free of a particular allergen. This is the one thing on the page that cannot be vague."
+    },
+    { "id": "rule", "kind": "divider" },
+    {
+      "id": "how-to-order",
+      "kind": "prose",
+      "heading": "How to order",
+      "text": "Message me what you would like and when you need it by, and I will tell you if that is possible."
+    }
+  ]
+}

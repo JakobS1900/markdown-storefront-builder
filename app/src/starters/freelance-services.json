@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "Freelance",
+  "blocks": [
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Your name or studio",
+      "tagline": "What you do, in one line",
+      "status": "open",
+      "links": [
+        { "label": "Your portfolio", "url": "https://example.com/your-portfolio" }
+      ],
+      "paymentMethods": ["PayPal", "Bank transfer"]
+    },
+    {
+      "id": "rates",
+      "kind": "menu",
+      "heading": "Rates",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Hourly work",
+          "price": "45",
+          "unit": "per hour",
+          "blurb": "Small fixes, edits, and anything that does not fit a fixed price"
+        },
+        { "name": "Logo design", "price": "250", "unit": "per project" },
+        { "name": "Website page", "price": "400", "unit": "per project" },
+        {
+          "name": "Something else",
+          "price": "DM me",
+          "blurb": "Tell me what you need and I will quote a price"
+        }
+      ]
+    },
+    {
+      "id": "what-a-project-includes",
+      "kind": "prose",
+      "heading": "What a project includes",
+      "text": "List what is included in a typical project: how many drafts you provide, how many rounds of changes, and what format the final files come in. Being specific here is what stops a small job turning into an open ended one."
+    },
+    { "id": "rule", "kind": "divider" },
+    {
+      "id": "how-to-order",
+      "kind": "prose",
+      "heading": "How to order",
+      "text": "Message me with what you need done and your timeline. I will confirm the price and scope before we start."
+    }
+  ]
+}

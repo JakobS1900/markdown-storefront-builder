@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "Store",
+  "blocks": [
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Your store name",
+      "tagline": "What you sell, in one line",
+      "status": "open",
+      "links": [
+        { "label": "Your storefront", "url": "https://example.com/your-store" }
+      ],
+      "paymentMethods": ["PayPal", "Card"]
+    },
+    {
+      "id": "stock",
+      "kind": "menu",
+      "heading": "In stock",
+      "currency": "USD",
+      "tiers": [
+        { "name": "Phone stand", "price": "12.99", "unit": "each" },
+        { "name": "Cable organiser, 5 pack", "price": "9.99", "unit": "each" },
+        { "name": "LED strip, 2m", "price": "16.99", "unit": "each" },
+        { "name": "Keyring light", "price": "6.99", "unit": "each" },
+        { "name": "Desk mat", "price": "24.99", "unit": "each" },
+        { "name": "Laptop stand", "price": "29.99", "unit": "each" },
+        { "name": "Screen cleaner kit", "price": "8.99", "unit": "each" },
+        { "name": "Cable, 1m", "price": "7.99", "unit": "each" },
+        { "name": "Wall hook, 4 pack", "price": "10.99", "unit": "each" },
+        { "name": "Travel pouch", "price": "14.99", "unit": "each" }
+      ]
+    },
+    {
+      "id": "shipping",
+      "kind": "prose",
+      "heading": "Shipping",
+      "text": "Orders go out within two working days. Delivery is usually one to two weeks. Replace this with your own times, and be honest about them: a late parcel nobody warned you about is the complaint you will get."
+    },
+    {
+      "id": "returns",
+      "kind": "prose",
+      "heading": "Returns",
+      "text": "Say here what you accept back and how long somebody has to ask."
+    },
+    { "id": "rule", "kind": "divider" },
+    {
+      "id": "how-to-order",
+      "kind": "prose",
+      "heading": "How to order",
+      "text": "Message me with what you want and where it is going, and I will confirm the total before you pay."
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "Handmade",
+  "blocks": [
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Your shop name",
+      "tagline": "What you make, in one line",
+      "status": "open",
+      "links": [
+        { "label": "Your shop", "url": "https://example.com/your-shop" }
+      ],
+      "paymentMethods": ["PayPal", "Card"]
+    },
+    {
+      "id": "pieces",
+      "kind": "menu",
+      "heading": "Pieces",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Resin coaster set",
+          "price": "18",
+          "unit": "each",
+          "imageUrls": ["https://example.com/pieces/coasters.jpg"]
+        },
+        {
+          "name": "Beaded bracelet",
+          "price": "12",
+          "unit": "each",
+          "imageUrls": ["https://example.com/pieces/bracelet.jpg"]
+        },
+        {
+          "name": "Custom candle",
+          "price": "DM me",
+          "blurb": "Tell me your scent and colour preferences",
+          "imageUrls": ["https://example.com/pieces/candle.jpg"]
+        }
+      ]
+    },
+    {
+      "id": "gallery",
+      "kind": "gallery",
+      "heading": "Past pieces",
+      "layout": "list",
+      "items": [
+        { "imageUrl": "https://example.com/gallery/piece-1.jpg", "caption": "Ring dish, one of a kind" },
+        { "imageUrl": "https://example.com/gallery/piece-2.jpg", "caption": "Wrapped stone pendant" },
+        { "imageUrl": "https://example.com/gallery/piece-3.jpg", "caption": "Set of three coasters" }
+      ]
+    },
+    {
+      "id": "made-to-order",
+      "kind": "prose",
+      "heading": "Made to order",
+      "text": "Write two short lists here: what you take custom requests for, and what you only make as shown. A few examples on each side is enough for people to tell quickly whether their idea fits."
+    },
+    { "id": "rule", "kind": "divider" },
+    {
+      "id": "how-to-order",
+      "kind": "prose",
+      "heading": "How to order",
+      "text": "Message me with what you would like, and I will confirm the price and how long it will take before you pay."
+    }
+  ]
+}
