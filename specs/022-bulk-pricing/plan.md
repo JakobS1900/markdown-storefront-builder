@@ -487,8 +487,14 @@ an `"id"` on every tier. Use readable ids drawn from the item, such as
 `"bust"`, `"half-body"`, `"phone-stand"`, so a reader can tell hand-written
 content from a migrated page. They must be unique within their own menu block.
 
-They must be edited rather than left to migrate, because the starter loader hands
-`import.meta.glob` output straight to `validateDocument`, which does not migrate.
+They are edited rather than left to migrate for readability, not necessity. An
+earlier draft of this step claimed `validateDocument` does not migrate and that
+the starters would therefore fail validation. **That was false**, found during
+Task 2 on 2026-09-02: `engine/src/document/validate.ts:364` brings an older page
+forward before checking its fields, so the starters would have loaded and
+validated untouched. The real reason to edit them is the one the spec gives,
+that a reader should be able to tell hand-written content from a migrated page,
+which positional `t0` ids would have hidden.
 `app/public/example.json` is different and must be left alone: it is at version 1,
 loads through `parseDocument`, and migrating on every load is coverage worth
 having.
