@@ -98,12 +98,21 @@ violate Principle I and still pass lint. This feature closes that by adding
   in `TARGETS` and fails if any cost value appears in the result.
 - **FR-055**: The seller MUST be able to select any subset of the rows in one
   price list, and to select all or none in one action.
-- **FR-055a**: A selection MUST survive editing a row's content, and MUST NOT
-  survive a change that moves rows: adding, removing, or reordering clears it.
-  Clearing is the safe direction and is what the seller is told.
+- **FR-055a**: A selection MUST be held by tier `id`, never by position, so it
+  survives editing a row, reordering rows, and removing a row that is not in it.
+  A selected row that is removed drops out of the selection and nothing else
+  changes. This is the requirement the schema change was taken for: an earlier
+  draft cleared the whole selection on any structural change, and that is the
+  behaviour this replaces.
 - **FR-056**: Applying pricing MUST compute `price = cost x multiplier + extra`,
   rounded up to a chosen ending, for every selected row that has a parseable
   cost.
+- **FR-056d**: "Round up to" means the smallest value with the chosen ending
+  that is greater than or equal to the computed price, so 8.01 becomes 8.99,
+  8.99 stays 8.99, and 9.00 becomes 9.99. Rounding never reduces a price, since
+  a rounding rule that could quietly cut a margin is not one a seller can trust.
+  Money is computed in whole cents throughout, so no result depends on binary
+  floating point rounding.
 - **FR-056a**: A row whose cost is absent or unparseable MUST be skipped, named
   as skipped, and left exactly as it was. It MUST NOT be guessed at.
 - **FR-056b**: The seller MUST see what will happen before it happens: old price,
