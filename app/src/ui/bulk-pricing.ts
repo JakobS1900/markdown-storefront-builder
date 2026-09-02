@@ -24,6 +24,41 @@ import {
 } from "../store.js";
 
 type MenuBlock = Extract<Block, { kind: "menu" }>;
+type Tier = MenuBlock["tiers"][number];
+
+/** What the three "Apply pricing" inputs hold, as typed text plus the chosen rounding. */
+export interface BulkPricingInputs {
+  readonly multiplier: string;
+  readonly extra: string;
+  readonly rounding: Rounding;
+}
+
+/** One selected row that will be written, and what it will become. */
+export interface BulkPricedRow {
+  readonly id: string;
+  readonly name: string;
+  readonly oldPrice: string;
+  readonly newPrice: string;
+  readonly profit: string;
+}
+
+/** One selected row that will be left alone, and why. */
+export interface BulkSkippedRow {
+  readonly name: string;
+  readonly reason: string;
+}
+
+export interface BulkPreview {
+  readonly changed: readonly BulkPricedRow[];
+  readonly skipped: readonly BulkSkippedRow[];
+}
+
+/**
+ * No default input is ever pre-filled with a working multiplier or addition:
+ * see `computeBulkPreview`'s comment on why blank has to mean "compute
+ * nothing" rather than "change nothing".
+ */
+export const BLANK_BULK_PRICING_INPUTS: BulkPricingInputs = { multiplier: "", extra: "", rounding: "none" };
 
 const EMPTY_MONEY: Money = { prefix: "", cents: 0, suffix: "" };
 
@@ -67,6 +102,70 @@ function liveBlock(id: string, fallback: MenuBlock): MenuBlock {
 }
 
 /**
+ * The pure arithmetic FR-056, FR-056a and FR-056b govern: what each selected
+ * row becomes, and what gets skipped and why. Takes plain data rather than a
+ * block or the store, so the boundary cases that are awkward to reach by
+ * typing into a rendered panel (a multiplier of zero, a negative "add" used
+ * as a discount, rounding "whole" on an exact multiple, a cost that parses
+ * next to a price that does not) can be exercised directly.
+ *
+ * A multiplier or an addition that does not parse is not guessed at: both
+ * must be readable numbers before anything is computed at all, and this is
+ * also why the panel's defaults must never be pre-filled with numbers that
+ * parse. `"1"` and `"0"` look inert but are not: `price = cost * 1 + 0` is
+ * `price = cost`, which zeroes every seller's margin the moment they press
+ * Apply without changing anything, on every row where price and cost differ.
+ * Blank text is the only default that means "not decided yet" rather than
+ * "decided, and the decision happens to erase your markup".
+ */
+export function computeBulkPreview(tiers: readonly Tier[], selectedIds: readonly string[], inputs: BulkPricingInputs): BulkPreview {
+  const multiplier = parseNumber(inputs.multiplier);
+  const extra = parseNumber(inputs.extra);
+  const changed: BulkPricedRow[] = [];
+  const skipped: BulkSkippedRow[] = [];
+
+  if (multiplier === undefined || extra === undefined) return { changed, skipped };
+
+  const extraCents = Math.round(extra * 100);
+  for (const id of selectedIds) {
+    const index = tiers.findIndex((tier) => tier.id === id);
+    const tier = tiers[index];
+    if (tier === undefined) continue;
+    const name = tier.name.trim() === "" ? `item ${String(index + 1)}` : tier.name.trim();
+
+    // FR-056a. A row whose cost is absent or unparseable is named as
+    // skipped and left completely alone: never guessed at, never defaulted.
+    const cost = parseMoney(tier.cost ?? "");
+    if (cost === undefined) {
+      skipped.push({
+        name,
+        reason: (tier.cost ?? "").trim() === "" ? "no cost recorded" : "cost could not be read",
+      });
+      continue;
+    }
+
+    // FR-056c: the new price keeps whatever the seller wrote around the old
+    // one, "from 12" becomes "from 38.99". A price that does not parse at
+    // all (never typed, or "DM me") has no surround to keep, so the write
+    // falls back to a bare number rather than guessing at one.
+    const priceMoney = parseMoney(tier.price) ?? EMPTY_MONEY;
+    const newCents = applyPricing(cost, multiplier, extraCents, inputs.rounding);
+    changed.push({
+      id,
+      name,
+      oldPrice: tier.price,
+      newPrice: formatMoney(priceMoney, newCents),
+      // Its own empty-prefix, empty-suffix Money, never the price's:
+      // formatMoney places the sign after the prefix, so reusing a price of
+      // "$12.99" would render a loss as "$-2.50".
+      profit: formatMoney(EMPTY_MONEY, newCents - cost.cents),
+    });
+  }
+
+  return { changed, skipped };
+}
+
+/**
  * The toolbar for one menu block's selection.
  *
  * `selectedIdsIn` does the scoping: tier ids repeat across menu blocks (see
@@ -107,50 +206,8 @@ export function bulkPricingPanel(block: MenuBlock): HTMLElement[] {
   const selected = selectedIdsIn(block);
   if (selected.length === 0) return [];
 
-  const inputs = getState().bulkPricingInputs ?? { multiplier: "1", extra: "0", rounding: "none" as Rounding };
-  const multiplier = parseNumber(inputs.multiplier);
-  const extra = parseNumber(inputs.extra);
-
-  const changed: { id: string; name: string; oldPrice: string; newPrice: string; profit: string }[] = [];
-  const skipped: { name: string; reason: string }[] = [];
-
-  if (multiplier !== undefined && extra !== undefined) {
-    const extraCents = Math.round(extra * 100);
-    for (const id of selected) {
-      const index = block.tiers.findIndex((tier) => tier.id === id);
-      const tier = block.tiers[index];
-      if (tier === undefined) continue;
-      const name = tier.name.trim() === "" ? `item ${String(index + 1)}` : tier.name.trim();
-
-      // FR-056a. A row whose cost is absent or unparseable is named as
-      // skipped and left completely alone: never guessed at, never defaulted.
-      const cost = parseMoney(tier.cost ?? "");
-      if (cost === undefined) {
-        skipped.push({
-          name,
-          reason: (tier.cost ?? "").trim() === "" ? "no cost recorded" : "cost could not be read",
-        });
-        continue;
-      }
-
-      // FR-056c: the new price keeps whatever the seller wrote around the old
-      // one, "from 12" becomes "from 38.99". A price that does not parse at
-      // all (never typed, or "DM me") has no surround to keep, so the write
-      // falls back to a bare number rather than guessing at one.
-      const priceMoney = parseMoney(tier.price) ?? EMPTY_MONEY;
-      const newCents = applyPricing(cost, multiplier, extraCents, inputs.rounding);
-      changed.push({
-        id,
-        name,
-        oldPrice: tier.price,
-        newPrice: formatMoney(priceMoney, newCents),
-        // Its own empty-prefix, empty-suffix Money, never the price's:
-        // formatMoney places the sign after the prefix, so reusing a price of
-        // "$12.99" would render a loss as "$-2.50".
-        profit: formatMoney(EMPTY_MONEY, newCents - cost.cents),
-      });
-    }
-  }
+  const inputs = getState().bulkPricingInputs ?? BLANK_BULK_PRICING_INPUTS;
+  const { changed, skipped } = computeBulkPreview(block.tiers, selected, inputs);
 
   return [
     el("div", { class: "bulk-apply", role: "group", "aria-label": "Apply pricing" }, [

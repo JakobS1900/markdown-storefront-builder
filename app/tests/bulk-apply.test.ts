@@ -21,6 +21,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { addBlock, getState, init, selectBlock, selectTiers, subscribe, updateBlock } from "../src/store.js";
+import { BLANK_BULK_PRICING_INPUTS, computeBulkPreview } from "../src/ui/bulk-pricing.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -164,6 +165,29 @@ function fillPanel(root: HTMLElement, multiplier: string, extra: string, roundin
   renderShell(root);
 }
 
+describe("before anything is typed", () => {
+  it("opens with Apply disabled and changes nothing if pressed, on a fixture where price and cost differ", () => {
+    // Review finding: multiplier "1" and add "0" look inert but are not,
+    // since price = cost * 1 + 0 is price = cost. Gadget here is price 20,
+    // cost 10, so a fixture that used equal price and cost (as an earlier
+    // version of this test did) could pass by accident even with that bug
+    // back. Blank is the only default that cannot silently zero a margin.
+    const root = shop();
+    const before = JSON.stringify(getState().doc);
+
+    const applyButton = [...document.querySelectorAll("#surface button")].find(
+      (b) => (b.textContent ?? "").trim() === "Apply pricing",
+    );
+    if (!(applyButton instanceof HTMLButtonElement)) throw new Error("no Apply pricing button");
+    expect(applyButton.disabled).toBe(true);
+
+    applyButton.click();
+    renderShell(root);
+
+    expect(JSON.stringify(getState().doc)).toBe(before);
+  });
+});
+
 describe("the preview", () => {
   it("shows old price, new price and profit for each selected row before anything is applied", () => {
     const root = shop();
@@ -268,5 +292,60 @@ describe("undo", () => {
     renderShell(root);
 
     expect(tierRecords()).toEqual(original);
+  });
+});
+
+/**
+ * Direct tests of the pure arithmetic, with no DOM, no jsdom repaint
+ * ordering, and no fillPanel. These cover boundary cases that a rendered
+ * panel makes awkward to reach: a discount typed as a negative "add", a
+ * multiplier of zero, an exact multiple under "whole" rounding, and a row
+ * whose cost parses next to a price that does not.
+ */
+describe("computeBulkPreview directly", () => {
+  it("computes nothing at all when the multiplier or add is blank, the panel's own default", () => {
+    const tiers = [{ id: "a", name: "Widget", price: "20", cost: "10" }];
+
+    expect(computeBulkPreview(tiers, ["a"], BLANK_BULK_PRICING_INPUTS)).toEqual({ changed: [], skipped: [] });
+  });
+
+  it("treats a negative add as a discount, not as a decoration on the number", () => {
+    // parseMoney would read "-2" as prefix "-", cents 200: a decoration, not
+    // a sign. This is typed into a setting the seller controls right now, not
+    // a price someone else wrote freehand, so it has to read as minus two.
+    const tiers = [{ id: "a", name: "Widget", price: "20", cost: "10" }];
+
+    const result = computeBulkPreview(tiers, ["a"], { multiplier: "1", extra: "-2", rounding: "none" });
+
+    expect(result.changed).toEqual([{ id: "a", name: "Widget", oldPrice: "20", newPrice: "8.00", profit: "-2.00" }]);
+  });
+
+  it("allows a multiplier of zero, computing a full loss rather than refusing", () => {
+    const tiers = [{ id: "a", name: "Widget", price: "20", cost: "10" }];
+
+    const result = computeBulkPreview(tiers, ["a"], { multiplier: "0", extra: "0", rounding: "none" });
+
+    expect(result.changed).toEqual([{ id: "a", name: "Widget", oldPrice: "20", newPrice: "0.00", profit: "-10.00" }]);
+  });
+
+  it('rounding "whole" leaves an exact multiple alone rather than bumping it up a dollar', () => {
+    // FR-056d: rounding never reduces a price, but it must not inflate one
+    // that already lands exactly on the chosen ending either. 10 * 3 is
+    // exactly 30.00, already a whole number.
+    const tiers = [{ id: "a", name: "Widget", price: "20", cost: "10" }];
+
+    const result = computeBulkPreview(tiers, ["a"], { multiplier: "3", extra: "0", rounding: "whole" });
+
+    expect(result.changed).toEqual([{ id: "a", name: "Widget", oldPrice: "20", newPrice: "30.00", profit: "20.00" }]);
+  });
+
+  it("falls back to a bare number when the cost parses but the price does not", () => {
+    const tiers = [{ id: "a", name: "Widget", price: "DM me", cost: "10" }];
+
+    const result = computeBulkPreview(tiers, ["a"], { multiplier: "2", extra: "0", rounding: "none" });
+
+    expect(result.changed).toEqual([
+      { id: "a", name: "Widget", oldPrice: "DM me", newPrice: "20.00", profit: "10.00" },
+    ]);
   });
 });
