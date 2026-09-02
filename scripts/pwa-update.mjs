@@ -27,7 +27,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import {
-  readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, cpSync, renameSync,
+  readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, cpSync, renameSync, readdirSync,
 } from "node:fs";
 import { join, extname } from "node:path";
 import { tmpdir } from "node:os";
@@ -42,6 +42,61 @@ if (!existsSync(DIST)) {
   console.error(`No build at ${DIST}. Run "npm run build:app" first.`);
   process.exit(2);
 }
+
+/**
+ * Guards the property `app/src/starters/index.ts` exists for.
+ *
+ * The two file split, `.meta.ts` eager and `.json` lazy, exists solely to keep
+ * starting point documents out of the entry chunk. Measured on 2026-09-02
+ * (`specs/021-starting-points/spec.md`, "Why two files, measured"): the one
+ * file version put every payload in the main bundle, roughly 26 kB gzipped
+ * added to a bundle then measuring 20.0 kB gzipped, and that measurement was
+ * never checked again by anything that runs.
+ *
+ * This is the build-based script this repo already runs (`npm run build:app`
+ * ahead of it), rather than a ninth script added to `verify`, so it goes here:
+ * a marker unique to one starting point document must be absent from the entry
+ * chunk and present in some other chunk. If Rollup's behaviour changes, or the
+ * loader is ever simplified back to one file, this fails; every other gate in
+ * this project would stay green regardless, because none of them look at
+ * which chunk anything landed in.
+ */
+function assertStartersStayOutOfTheEntryChunk() {
+  const html = readFileSync(join(DIST, "index.html"), "utf8");
+  const match = /<script[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/.exec(html);
+  if (match === null) throw new Error("no module entry script found in dist/index.html");
+  const entryFile = match[1].replace(/^\.\/assets\//, "");
+
+  const assetsDir = join(DIST, "assets");
+  const scripts = readdirSync(assetsDir).filter((f) => f.endsWith(".js"));
+
+  // A phrase from one starting point's document (art-commissions.json), chosen
+  // because nothing else in the app has reason to say it.
+  const marker = "Backgrounds, group pieces, anything not listed";
+
+  const entrySource = readFileSync(join(assetsDir, entryFile), "utf8");
+  if (entrySource.includes(marker)) {
+    console.error(
+      `\nBundle split check FAILED: a starting point's content is in the entry chunk (${entryFile}). ` +
+        "The two file split in app/src/starters/index.ts is not keeping starter documents lazy.",
+    );
+    process.exit(1);
+  }
+
+  const elsewhere = scripts.some(
+    (f) => f !== entryFile && readFileSync(join(assetsDir, f), "utf8").includes(marker),
+  );
+  if (!elsewhere) {
+    console.error(
+      "\nBundle split check FAILED: no chunk under dist/assets carries a starting point's content. " +
+        "The lazy chunk may not be building at all.",
+    );
+    process.exit(1);
+  }
+
+  console.log("bundle split check: starting point documents stay out of the entry chunk");
+}
+assertStartersStayOutOfTheEntryChunk();
 
 const work = mkdtempSync(join(tmpdir(), "mdsb-pwa-"));
 const A = join(work, "a");

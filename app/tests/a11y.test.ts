@@ -202,6 +202,53 @@ describe("the page switcher is accessible", () => {
   });
 });
 
+describe("the starting point picker is accessible", () => {
+  /**
+   * The blind spot this file's own docstring warns about, landed again. An
+   * unlabelled file input shipped for weeks because "the gate was green on a
+   * control it had never rendered", and this file rendered the shell without
+   * ever opening the starters disclosure, folded shut with eight buttons, a
+   * `ul[aria-label]`, and a `summary`, in either of its two placements.
+   */
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+  });
+
+  it("has no axe violations open in the empty state", async () => {
+    init(true);
+    const root = mount();
+    renderShell(root);
+    const group = document.querySelector<HTMLDetailsElement>(".starters");
+    if (group === null) throw new Error("the picker did not render in the empty state");
+    group.open = true;
+
+    expect(document.querySelectorAll(".starters button").length).toBeGreaterThan(0);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations open beside Your pages", async () => {
+    init(true);
+    const root = mount();
+    addBlock(blankBlock("profile"));
+    renderShell(root);
+    // The save this triggers lands asynchronously (store.ts save -> refreshPages),
+    // which is what populates state.pages and, with it, the pages group this
+    // placement of the picker lives inside.
+    for (let i = 0; i < 12; i += 1) await new Promise((r) => setTimeout(r, 0));
+    renderShell(root);
+
+    const pages = document.querySelector<HTMLDetailsElement>(".pages-group");
+    if (pages === null) throw new Error("Your pages did not render");
+    pages.open = true;
+    const group = document.querySelector<HTMLDetailsElement>(".pages-group .starters");
+    if (group === null) throw new Error("the picker did not render beside Your pages");
+    group.open = true;
+
+    expect(document.querySelectorAll(".starters button").length).toBeGreaterThan(0);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+});
+
 describe("the preview and export surfaces are accessible", () => {
   beforeEach(() => {
     init(true);

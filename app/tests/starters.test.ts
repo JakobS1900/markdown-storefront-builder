@@ -40,10 +40,24 @@ describe("the starting points on disk", () => {
   });
 
   it("each say who they are for", () => {
+    // `not.toBe("")` passes for `undefined` too, and `import.meta.glob<Meta>`
+    // is a type assertion rather than a check: a `.meta.ts` with a mistyped
+    // key would ship a button reading "Label. undefined" straight through a
+    // weaker version of this assertion. `typeof` plus a trimmed length catches
+    // both a missing value and one that is present but blank.
     for (const starter of STARTERS) {
-      expect(starter.label).not.toBe("");
-      expect(starter.description).not.toBe("");
+      expect(typeof starter.label).toBe("string");
+      expect(starter.label.trim().length).toBeGreaterThan(0);
+      expect(typeof starter.description).toBe("string");
+      expect(starter.description.trim().length).toBeGreaterThan(0);
     }
+  });
+
+  it("names every starting point differently from every other", () => {
+    // The plan asserted distinct accessible names as a fact. Nothing checked
+    // it, which is how a fact like that stops being true at starter nine.
+    const labels = STARTERS.map((s) => s.label);
+    expect(new Set(labels).size).toBe(labels.length);
   });
 });
 

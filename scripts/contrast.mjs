@@ -160,7 +160,15 @@ async function auditScheme(scheme) {
       checked: document.querySelectorAll('*').length,
       // Structural counts rather than a text sample. These are what prove the
       // run measured a real storefront and not the empty shell.
-      sections: document.querySelectorAll('#surface li').length,
+      //
+      // '#surface .blocks > li' rather than '#surface li': the starting point
+      // picker (feature 021) is a folded 'ul' of its own, eight 'li' deep,
+      // present in the empty state whether or not it is open. Counting every
+      // 'li' under the surface made this number true regardless of whether the
+      // example page loaded, which is exactly the vacuity this guard exists to
+      // catch. Only the real page sections, the list the example actually
+      // fills in, count here.
+      sections: document.querySelectorAll('#surface .blocks > li').length,
       fields: document.querySelectorAll('#surface input, #surface textarea, #surface select').length,
       hints: document.querySelectorAll('#surface .hint').length,
     });
