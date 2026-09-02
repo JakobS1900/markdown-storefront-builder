@@ -227,17 +227,23 @@ the seller will not do. It took two rounds to settle. `8e6064f` tried realistic
 named categories, "NSFW content, extreme gore, and mecha or vehicle designs are
 commonly declined", which is exactly this failure. `f7cc583` replaced it with
 instructional text that names no category at all: "Write two short lists here:
-what you are happy to take on, and what you are not."
+what you are happy to take on, and what you are not. A few examples on each
+side is enough for people to tell quickly whether their idea fits."
 
 **A third form was tried and rejected: realistic specifics followed by a
-trailing "replace this" sentence.** `dropshipping-store.json`'s "Shipping" and
-`art-commissions.json`'s "Terms" both originally read this way: "Orders go out
-within two working days. Delivery is usually one to two weeks. Replace this
-with your own times." The hybrid is not a legitimate third form, because the
-trailing sentence is a signal, not a neutralizer. Delete only the meta-sentence
-and the specific claim about turnaround survives untouched, published as fact.
-`beef24f` rewrote both blocks to be instructional throughout, with no specific
-claim left for the meta-sentence to be doing the work of disclaiming.
+trailing "replace this" sentence.** The two files did not read identically,
+but shared the pattern: a specific binding claim, then a sentence telling the
+seller to swap it out. `dropshipping-store.json`'s "Shipping" originally opened
+"Orders go out within two working days. Delivery is usually one to two weeks."
+before the trailing replace-this sentence. `art-commissions.json`'s "Terms"
+carried the same shape with different specifics: "Payment up front. Turnaround
+is usually one to two weeks and I will tell you if it will be longer." also
+followed by a trailing replace-this sentence. The hybrid is not a legitimate
+third form, because the trailing sentence is a signal, not a neutralizer.
+Delete only the meta-sentence and the specific claim about turnaround survives
+untouched, published as fact. `beef24f` rewrote both blocks to be instructional
+throughout, with no specific claim left for the meta-sentence to be doing the
+work of disclaiming.
 
 This is the same distinction `engine/src/document/empty.ts` already draws when
 it refuses to write `""` as a title. An absent title is not an invented one.
