@@ -337,10 +337,18 @@ function profitLine(tier: { readonly price: string; readonly cost?: string }): N
  * optional. The two things the section is actually for, what it is and what it
  * costs, were the fourth and fifth things it offered.
  *
- * Now the item comes first and the settings come last. A new price list
- * arrives with one empty item already open, so there is nothing to press
- * before typing, and the shape of the thing is legible at a glance: item,
- * price, another item.
+ * The item comes first and the settings come last. A new price list arrives
+ * with one empty item already open, so there is nothing to press before
+ * typing, and the shape of the thing is legible at a glance: item, price,
+ * another item.
+ *
+ * The one thing ahead of the items is the bulk pricing toolbar, and only once
+ * there is a real row for it to act on: "0 selected", "Select all" and
+ * "Select none" ahead of the first Item field would read as settings for a
+ * price list that does not exist yet, the same complaint that moved the
+ * settings disclosure to the end in the first place. So the toolbar is left
+ * out entirely while `block.tiers` is empty, which is also when it would have
+ * nothing to select.
  *
  * BLANK_ROW. Seeding a new section was not enough. A section saved before that
  * change, or one whose last row has just been removed, holds no rows at all,
@@ -545,7 +553,7 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
   );
 
   return el("div", {}, [
-    bulkPricingToolbar(block),
+    ...(block.tiers.length === 0 ? [] : [bulkPricingToolbar(block)]),
     ...bulkPricingPanel(block),
     ...tiers,
     ...rowUndo(block.id),

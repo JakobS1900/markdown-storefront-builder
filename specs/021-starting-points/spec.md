@@ -55,7 +55,7 @@ honestly without it, and named four reasons:
   what the seller paid. The app's whole purpose is to compile a page and publish
   it. `cost` is therefore a stored field with a test that fails if any target
   emits it.
-- **Prices are free text on purpose.** The descriptor says why at line 70.
+- **Prices are free text on purpose.** The descriptor says why at line 73.
   Arithmetic over them must skip what it cannot parse and say so, never guess.
   "45" and "from 45" compute. "DM me" is skipped, visibly.
 

@@ -22,7 +22,7 @@ actually care about and the one they currently never see written down.
 Two constraints shape everything below, and both come from the existing contract
 rather than from taste.
 
-**Prices are free text on purpose.** `engine/src/document/descriptor.ts:70`
+**Prices are free text on purpose.** `engine/src/document/descriptor.ts:73`
 says why: "Artists write '45', 'from 45', '45+', and 'DM me'. A numeric type
 would either reject real prices or discard what they wrote." Arithmetic over
 free text is only safe if it refuses to guess. Anything it cannot parse is
