@@ -6,7 +6,7 @@
  * unreliable and unreachable by keyboard, so the buttons are the accessible
  * path and drag is the enhancement, not the other way round.
  */
-import type { Block } from "@mdsb/engine";
+import { serializeDocument, type Block } from "@mdsb/engine";
 
 import {
   addBlock,
@@ -25,6 +25,7 @@ import {
   type State,
 } from "../store.js";
 import { openBackup } from "../import.js";
+import { STARTERS } from "../starters/index.js";
 import { announce, button, disclosure, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
 
@@ -89,6 +90,61 @@ function lastEdited(at: number): string {
   return when.toDateString() === new Date().toDateString()
     ? `today at ${when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
     : when.toLocaleDateString();
+}
+
+/**
+ * The starting points, offered wherever somebody might begin a page.
+ *
+ * Rendered in two places rather than one. `pageList` returns nothing when there
+ * are no saved pages, which is right, and which would otherwise hide this from
+ * the person who has just arrived and needs it most.
+ *
+ * A folded `details` with a fixed id, so `shell.ts` reopens it after a repaint
+ * along with every other group, and so the picker does not need a scrap of
+ * state in the store.
+ *
+ * Choosing one goes through `openBackup`, the same path the example and a file
+ * import take. That is where the page gets validated, gets an id of its own,
+ * and is guaranteed not to touch whatever was already open.
+ */
+function starterPicker(id: string): HTMLElement {
+  return disclosure({
+    id,
+    className: "starters",
+    summary: "Start from a template",
+    children: [
+      el(
+        "ul",
+        { "aria-label": "Templates to start from" },
+        STARTERS.map((starter) =>
+          el("li", {}, [
+            button({
+              // The description is part of the name, not decoration beside it.
+              // "Art commissions" and "Handmade and crafts" are a choice only
+              // once you know which one covers what you sell.
+              label: `${starter.label}. ${starter.description}`,
+              onClick: () => {
+                void starter
+                  .load()
+                  .then((doc) => openBackup(serializeDocument(doc)))
+                  .catch(() => ({
+                    ok: false,
+                    message: "That template could not be opened. Nothing has been changed.",
+                  }))
+                  .then((result) => {
+                    announce(
+                      result.ok
+                        ? `Started a new page from ${starter.label}. Change anything you like.`
+                        : result.message,
+                    );
+                  });
+              },
+            }),
+          ]),
+        ),
+      ),
+    ],
+  });
 }
 
 /**
@@ -244,6 +300,7 @@ function pageList(state: State): HTMLElement[] {
             },
           }),
         ]),
+        starterPicker("starters-group"),
       ],
     }),
   ];
@@ -290,9 +347,10 @@ function emptyState(): HTMLElement[] {
 
   return [
     el("p", { class: "empty" }, [
-      "Your page is empty. Add a section below to start. Most people begin with About you.",
+      "Your page is empty. Add a section below to start, or begin from a template.",
     ]),
     el("div", { class: "adders" }, [load]),
+    starterPicker("starters-group-empty"),
   ];
 }
 

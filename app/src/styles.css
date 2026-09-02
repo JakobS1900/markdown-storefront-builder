@@ -422,6 +422,23 @@ fieldset.item > .btn.icon.danger {
   gap: 0.5rem;
 }
 
+/* The starting points. A plain list of full-width buttons, so it reads the
+   same at eight entries as it will at twenty, and so a thumb has a target
+   rather than a line of text. */
+.starters ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.starters li button {
+  width: 100%;
+  text-align: left;
+}
+
 /* Status */
 
 .status {
