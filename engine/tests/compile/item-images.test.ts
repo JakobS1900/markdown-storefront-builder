@@ -36,8 +36,8 @@ describe("one picture behaves exactly as it always did", () => {
       id: "m",
       kind: "menu",
       tiers: [
-        { name: "Bust", price: "45", imageUrls: ["https://e.test/a.png"] },
-        { name: "Full body", price: "120" },
+        { id: "bust", name: "Bust", price: "45", imageUrls: ["https://e.test/a.png"] },
+        { id: "full-body", name: "Full body", price: "120" },
       ],
     });
     expect(out).toContain("| Item | Price | Example |");
@@ -49,7 +49,7 @@ describe("one picture behaves exactly as it always did", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Bust", price: "45", imageUrls: ["https://e.test/a.png"] }],
+      tiers: [{ id: "bust", name: "Bust", price: "45", imageUrls: ["https://e.test/a.png"] }],
     });
     expect(out).toContain("![Bust]");
     expect(out).not.toContain("picture 1 of 1");
@@ -60,8 +60,8 @@ describe("one picture behaves exactly as it always did", () => {
       id: "m",
       kind: "menu",
       tiers: [
-        { name: "Bust", price: "45", imageUrls: ["https://e.test/a.png"] },
-        { name: "Half", price: "80", imageUrls: ["https://e.test/b.png"] },
+        { id: "bust", name: "Bust", price: "45", imageUrls: ["https://e.test/a.png"] },
+        { id: "half", name: "Half", price: "80", imageUrls: ["https://e.test/b.png"] },
       ],
     });
     expect(out).toContain("| Item | Price |");
@@ -76,11 +76,12 @@ describe("several pictures earn the item its own block", () => {
     currency: "$",
     tiers: [
       {
+        id: "dragon",
         name: "Articulated dragon",
         price: "18",
         imageUrls: ["https://e.test/front.png", "https://e.test/back.png", "https://e.test/detail.png"],
       },
-      { name: "Desk tray", price: "12", imageUrls: ["https://e.test/tray.png"] },
+      { id: "tray", name: "Desk tray", price: "12", imageUrls: ["https://e.test/tray.png"] },
     ],
   });
 
@@ -125,6 +126,7 @@ describe("addresses that cannot be shown", () => {
         kind: "menu",
         tiers: [
           {
+            id: "bust",
             name: "Bust",
             price: "45",
             imageUrls: ["javascript:alert(1)", "https://e.test/ok.png"],
@@ -146,6 +148,7 @@ describe("addresses that cannot be shown", () => {
       kind: "menu",
       tiers: [
         {
+          id: "bust",
           name: "Bust",
           price: "45",
           imageUrls: ["https://e.test/a.png", "javascript:alert(1)", "https://e.test/b.png"],
@@ -163,8 +166,8 @@ describe("addresses that cannot be shown", () => {
       id: "m",
       kind: "menu",
       tiers: [
-        { name: "Bust", price: "45", imageUrls: ["https://e.test/a.png", "javascript:alert(1)"] },
-        { name: "Half", price: "80" },
+        { id: "bust", name: "Bust", price: "45", imageUrls: ["https://e.test/a.png", "javascript:alert(1)"] },
+        { id: "half", name: "Half", price: "80" },
       ],
     });
     expect(out).toContain("| Item | Price |");
@@ -182,7 +185,7 @@ describe("a host without tables", () => {
           {
             id: "m",
             kind: "menu",
-            tiers: [{ name: "Bust", price: "45", imageUrls: ["https://e.test/a.png", "https://e.test/b.png"] }],
+            tiers: [{ id: "bust", name: "Bust", price: "45", imageUrls: ["https://e.test/a.png", "https://e.test/b.png"] }],
           },
         ],
       },

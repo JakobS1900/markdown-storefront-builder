@@ -35,8 +35,8 @@ function pageOf(blockCount: number): Document {
           kind: "menu",
           currency: "USD",
           tiers: [
-            { name: "Bust", price: "45", blurb: "Head and shoulders", includes: ["1 revision", "PNG"] },
-            { name: "Half body", price: "from 80" },
+            { id: `b${i}-0`, name: "Bust", price: "45", blurb: "Head and shoulders", includes: ["1 revision", "PNG"] },
+            { id: `b${i}-1`, name: "Half body", price: "from 80" },
           ],
           addOns: [{ name: "Extra character", price: "20" }],
         });

@@ -51,7 +51,7 @@ describe("characters the host does not unescape", () => {
   }
 
   it("writes a price of $45 so it publishes as $45", () => {
-    const out = md({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "$45" }] });
+    const out = md({ id: "m", kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "$45" }] });
     expect(out).not.toContain("\\$");
     expect(out).toContain("&#36;45");
   });
@@ -149,9 +149,9 @@ describe("the whole point, end to end", () => {
       kind: "menu",
       currency: "$",
       tiers: [
-        { name: "Bust", price: "$45" },
-        { name: "Half body", price: "50~60" },
-        { name: "Rush", price: "$45 + 50%" },
+        { id: "bust", name: "Bust", price: "$45" },
+        { id: "half-body", name: "Half body", price: "50~60" },
+        { id: "rush", name: "Rush", price: "$45 + 50%" },
       ],
     });
     expect(out).not.toMatch(/\\[$~^]/);

@@ -45,7 +45,7 @@ describe("the destructive backslash never reaches this host", () => {
         id: "m",
         kind: "menu",
         currency: "$",
-        tiers: [{ name: "Bust", price: "45", blurb: "Head and shoulders.\nInk only." }],
+        tiers: [{ id: "bust", name: "Bust", price: "45", blurb: "Head and shoulders.\nInk only." }],
       },
       { id: "d", kind: "divider" },
     );
@@ -65,8 +65,8 @@ describe("what the host does support", () => {
       id: "m",
       kind: "menu",
       tiers: [
-        { name: "Bust", price: "45" },
-        { name: "Full body", price: "120" },
+        { id: "bust", name: "Bust", price: "45" },
+        { id: "full-body", name: "Full body", price: "120" },
       ],
     });
     expect(out).toContain("| Item | Price |");
@@ -76,7 +76,7 @@ describe("what the host does support", () => {
     const result = compile(
       page(
         { id: "h", kind: "heading", text: "Prices", level: 2 },
-        { id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }] },
+        { id: "m", kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "45" }] },
       ),
       TEXT_IS,
     );

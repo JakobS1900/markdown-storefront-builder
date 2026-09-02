@@ -118,7 +118,7 @@ describe("an image is not a link", () => {
       page({
         id: "m",
         kind: "menu",
-        tiers: [{ name: "Bust", price: "45", imageUrls: ["mailto:ari@example.com"] }],
+        tiers: [{ id: "bust", name: "Bust", price: "45", imageUrls: ["mailto:ari@example.com"] }],
       }),
       "portable",
     );

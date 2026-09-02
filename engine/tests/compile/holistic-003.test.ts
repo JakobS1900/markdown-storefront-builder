@@ -22,7 +22,7 @@ function page(...blocks: Block[]): Document {
 const EVERY_KIND: Block[] = [
   { id: "prof", kind: "profile", displayName: "Ari", status: "open" },
   { id: "head", kind: "heading", text: "Menu", level: 2 },
-  { id: "menu", kind: "menu", heading: "Prices", tiers: [{ name: "Bust", price: "45" }] },
+  { id: "menu", kind: "menu", heading: "Prices", tiers: [{ id: "bust", name: "Bust", price: "45" }] },
   {
     id: "gal",
     kind: "gallery",
@@ -100,7 +100,7 @@ describe("HB-4: the whole page is safe, not just each section", () => {
     const out = compile(
       page(
         { id: "p", kind: "profile", displayName: payload, tagline: payload, paymentMethods: [payload] },
-        { id: "m", kind: "menu", heading: payload, tiers: [{ name: payload, price: payload }] },
+        { id: "m", kind: "menu", heading: payload, tiers: [{ id: "row", name: payload, price: payload }] },
         {
           id: "g",
           kind: "gallery",

@@ -47,8 +47,8 @@ describe("FR-030: a section with no quantities is untouched", () => {
       kind: "menu",
       heading: "Prices",
       tiers: [
-        { name: "Bust", price: "45" },
-        { name: "Full body", price: "120" },
+        { id: "bust", name: "Bust", price: "45" },
+        { id: "full-body", name: "Full body", price: "120" },
       ],
     });
     expect(out).toContain("| Item | Price |");
@@ -60,7 +60,7 @@ describe("FR-030: a section with no quantities is untouched", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Bust", price: "45", quantities: [] }],
+      tiers: [{ id: "bust", name: "Bust", price: "45", quantities: [] }],
     });
     expect(out).toContain("| Item | Price |");
     expect(out).not.toContain("####");
@@ -73,8 +73,8 @@ describe("FR-030: a section with no quantities is untouched", () => {
       id: "m",
       kind: "menu",
       tiers: [
-        { name: "Bust", price: "45", quantities: [{ amount: "5", price: "" }] },
-        { name: "Full body", price: "120" },
+        { id: "bust", name: "Bust", price: "45", quantities: [{ amount: "5", price: "" }] },
+        { id: "full-body", name: "Full body", price: "120" },
       ],
     });
     expect(out).toContain("| Item | Price |");
@@ -90,6 +90,7 @@ describe("FR-028 and FR-031: one item with quantities lays the section out per i
     currency: "$",
     tiers: [
       {
+        id: "bananas",
         name: "Bananas",
         price: "20",
         unit: "per lb",
@@ -99,7 +100,7 @@ describe("FR-028 and FR-031: one item with quantities lays the section out per i
         ],
         details: [{ label: "Origin", value: "Ecuador" }],
       },
-      { name: "Apples", price: "3", unit: "each" },
+      { id: "apples", name: "Apples", price: "3", unit: "each" },
     ],
   };
 
@@ -145,6 +146,7 @@ describe("FR-033: the currency reaches a quantity price", () => {
       currency: "$",
       tiers: [
         {
+          id: "prints",
           name: "Prints",
           price: "10",
           quantities: [
@@ -165,7 +167,7 @@ describe("FR-033: the currency reaches a quantity price", () => {
       id: "m",
       kind: "menu",
       currency: "USD",
-      tiers: [{ name: "Bulk", price: "10", quantities: [{ amount: "100+", price: "ask" }] }],
+      tiers: [{ id: "bulk", name: "Bulk", price: "10", quantities: [{ amount: "100+", price: "ask" }] }],
     });
     expect(out).toContain("| 100+ | ask |");
     expect(out).not.toContain("USD ask");
@@ -179,6 +181,7 @@ describe("FR-029: a half filled break does not reach the page", () => {
       kind: "menu",
       tiers: [
         {
+          id: "prints",
           name: "Prints",
           price: "10",
           quantities: [
@@ -205,6 +208,7 @@ describe("FR-032: a host without tables still reads correctly", () => {
       currency: "$",
       tiers: [
         {
+          id: "bananas",
           name: "Bananas",
           price: "20",
           unit: "per lb",
@@ -238,7 +242,7 @@ describe("FR-032: a host without tables still reads correctly", () => {
           {
             id: "m",
             kind: "menu",
-            tiers: [{ name: "Bananas", price: "20", quantities: [{ amount: "1 lb", price: "20" }] }],
+            tiers: [{ id: "bananas", name: "Bananas", price: "20", quantities: [{ amount: "1 lb", price: "20" }] }],
           },
         ],
       },
@@ -255,7 +259,7 @@ describe("the item heading never collides with the section heading", () => {
       id: "m",
       kind: "menu",
       heading: "Produce",
-      tiers: [{ name: "Bananas", price: "20", quantities: [{ amount: "1 lb", price: "20" }] }],
+      tiers: [{ id: "bananas", name: "Bananas", price: "20", quantities: [{ amount: "1 lb", price: "20" }] }],
     });
     expect(out).toContain("### Produce");
     expect(out).toContain("**Bananas, 20**");
@@ -269,8 +273,8 @@ describe("an item missing half of its title", () => {
       id: "m",
       kind: "menu",
       tiers: [
-        { name: "", price: "DM me", quantities: [{ amount: "1", price: "10" }] },
-        { name: "Sketch", price: "" },
+        { id: "a", name: "", price: "DM me", quantities: [{ amount: "1", price: "10" }] },
+        { id: "b", name: "Sketch", price: "" },
       ],
     });
     expect(out).toContain("#### DM me");
@@ -286,7 +290,7 @@ describe("nothing a seller types can break the quantity table", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Odd", price: "1", quantities: [{ amount: "a | b", price: "2" }] }],
+      tiers: [{ id: "odd", name: "Odd", price: "1", quantities: [{ amount: "a | b", price: "2" }] }],
     });
     const row = out.split("\n").find((l) => l.includes("a "));
     expect(row).toBeDefined();
@@ -298,7 +302,7 @@ describe("nothing a seller types can break the quantity table", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Odd", price: "1", quantities: [{ amount: "a\nb", price: "2" }] }],
+      tiers: [{ id: "odd", name: "Odd", price: "1", quantities: [{ amount: "a\nb", price: "2" }] }],
     });
     const rows = out.split("\n").filter((l) => l.startsWith("|"));
     // Header, separator, and exactly one quantity row.

@@ -29,7 +29,7 @@ describe("FR-001: every block kind emits", () => {
       page(
         { id: "p", kind: "profile", displayName: "Ari" },
         { id: "h", kind: "heading", text: "Menu", level: 2 },
-        { id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }] },
+        { id: "m", kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "45" }] },
         { id: "g", kind: "gallery", layout: "list", items: [{ imageUrl: "https://e.test/a.png" }] },
         { id: "t", kind: "prose", text: "Half up front." },
         { id: "d", kind: "divider" },
@@ -138,8 +138,8 @@ describe("prose", () => {
 
 describe("menu", () => {
   const tiers = [
-    { name: "Bust", price: "45", blurb: "Head and shoulders", includes: ["1 revision", "PNG"] },
-    { name: "Full body", price: "DM me" },
+    { id: "bust", name: "Bust", price: "45", blurb: "Head and shoulders", includes: ["1 revision", "PNG"] },
+    { id: "full-body", name: "Full body", price: "DM me" },
   ];
 
   it("lays tiers out as a table where the host supports tables (FR-002)", () => {
@@ -158,7 +158,7 @@ describe("menu", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Mk III", price: "185", blurb: "Titanium frame lock.", includes: ["S35VN blade"] }],
+      tiers: [{ id: "mk3", name: "Mk III", price: "185", blurb: "Titanium frame lock.", includes: ["S35VN blade"] }],
     });
     // Matched with the escape optional, so this keeps asserting the thing it is
     // about if the escaper's breadth ever changes.
@@ -170,16 +170,16 @@ describe("menu", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Mk III", price: "185", blurb: "Titanium frame lock", includes: ["S35VN blade"] }],
+      tiers: [{ id: "mk3", name: "Mk III", price: "185", blurb: "Titanium frame lock", includes: ["S35VN blade"] }],
     });
     expect(out).toMatch(/Titanium frame lock\\?\. S35VN blade/);
   });
 
   it("puts a currency symbol against the digits and a currency word apart from them", () => {
-    const symbol = md({ id: "m", kind: "menu", currency: "$", tiers: [{ name: "Bananas", price: "20", unit: "per lb" }] });
+    const symbol = md({ id: "m", kind: "menu", currency: "$", tiers: [{ id: "bananas", name: "Bananas", price: "20", unit: "per lb" }] });
     expect(symbol).toContain("| Bananas | &#36;20 per lb |");
 
-    const word = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "Bananas", price: "20" }] });
+    const word = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ id: "bananas", name: "Bananas", price: "20" }] });
     expect(word).toContain("| Bananas | USD 20 |");
   });
 
@@ -189,7 +189,7 @@ describe("menu", () => {
       id: "m",
       kind: "menu",
       currency: "USD",
-      tiers: [{ name: "Bananas", price: "20", unit: "per lb" }],
+      tiers: [{ id: "bananas", name: "Bananas", price: "20", unit: "per lb" }],
     });
     expect(out).toContain("| Bananas | USD 20 per lb |");
   });
@@ -198,24 +198,24 @@ describe("menu", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Consulting", price: "ask", unit: "per hour" }],
+      tiers: [{ id: "consulting", name: "Consulting", price: "ask", unit: "per hour" }],
     });
     expect(out).toContain("| Consulting | ask per hour |");
   });
 
   it("gives details their own column, only when something has any", () => {
-    const withNone = md({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }] });
+    const withNone = md({ id: "m", kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "45" }] });
     expect(withNone).not.toContain("Details");
 
     const out = md({
       id: "m",
       kind: "menu",
       tiers: [
-        { name: "Pixel 6a", price: "180", unit: "each", details: [
+        { id: "pixel-6a", name: "Pixel 6a", price: "180", unit: "each", details: [
           { label: "Colour", value: "black" },
           { label: "Storage", value: "128GB" },
         ] },
-        { name: "Case", price: "12" },
+        { id: "case", name: "Case", price: "12" },
       ],
     });
     expect(out).toContain("| Item | Price | Details |");
@@ -232,7 +232,7 @@ describe("menu", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Bananas", price: "20", details: [
+      tiers: [{ id: "bananas", name: "Bananas", price: "20", details: [
         { label: "Origin", value: "Ecuador" },
         { label: "", value: "" },
         { label: "Colour", value: "" },
@@ -249,7 +249,7 @@ describe("menu", () => {
       page({
         id: "m",
         kind: "menu",
-        tiers: [{ name: "Bananas", price: "20", unit: "per lb", details: [{ label: "Origin", value: "Ecuador" }] }],
+        tiers: [{ id: "bananas", name: "Bananas", price: "20", unit: "per lb", details: [{ label: "Origin", value: "Ecuador" }] }],
       }),
       NO_TABLES,
     ).markdown;
@@ -271,10 +271,10 @@ describe("menu", () => {
     // showed the cost: "18 each" and "from 25 per model" on one page published
     // with the symbol on the first and not the second, and "from 25" is one of
     // the commonest ways there is to write a price.
-    const bare = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price: "45" }] });
+    const bare = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ id: "a", name: "A", price: "45" }] });
     expect(bare).toContain("| A | USD 45 |");
 
-    const from = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price: "from 45" }] });
+    const from = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ id: "a", name: "A", price: "from 45" }] });
     expect(from).toContain("| A | from USD 45 |");
   });
 
@@ -282,20 +282,20 @@ describe("menu", () => {
     // The half of the old rule that was right, and the reason it existed: a
     // currency in front of a word reads as a mistake the seller made.
     for (const price of ["DM me", "ask", "Free", "enquire"]) {
-      const out = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price }] });
+      const out = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ id: "a", name: "A", price }] });
       expect(out).toContain(`| A | ${price} |`);
     }
   });
 
   it("does not add a second currency to a price that already has one", () => {
     for (const price of ["USD 10", "45 USD"]) {
-      const out = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ name: "A", price }] });
+      const out = md({ id: "m", kind: "menu", currency: "USD", tiers: [{ id: "a", name: "A", price }] });
       expect(out).toContain(`| A | ${price} |`);
     }
   });
 
   it("puts a symbol against the digits and a word in front with a space", () => {
-    const symbol = md({ id: "m", kind: "menu", currency: "$", tiers: [{ name: "A", price: "from 45" }] });
+    const symbol = md({ id: "m", kind: "menu", currency: "$", tiers: [{ id: "a", name: "A", price: "from 45" }] });
     expect(symbol).toContain("from &#36;45");
   });
 
@@ -314,7 +314,7 @@ describe("menu", () => {
   });
 
   it("cannot have its table broken by a pipe in a price (FR-003)", () => {
-    const out = md({ id: "m", kind: "menu", tiers: [{ name: "A|B", price: "1|2" }] });
+    const out = md({ id: "m", kind: "menu", tiers: [{ id: "a-b", name: "A|B", price: "1|2" }] });
     // Every pipe the artist wrote is escaped, so the only unescaped ones left
     // are cell separators, and a broken table would have more in one row than
     // in the header. Asserted as rectangularity rather than as a fixed count of
@@ -327,7 +327,7 @@ describe("menu", () => {
   });
 
   it("cannot have its table broken by a newline in a cell (FR-003)", () => {
-    const out = md({ id: "m", kind: "menu", tiers: [{ name: "A\nB", price: "1" }] });
+    const out = md({ id: "m", kind: "menu", tiers: [{ id: "a-b", name: "A\nB", price: "1" }] });
     expect(out.split("\n").filter((l) => l.startsWith("|"))).toHaveLength(3);
   });
 
@@ -345,7 +345,7 @@ describe("menu", () => {
    */
   it("leaves out an item that has neither a name nor a price, and says so", () => {
     const out = compile(
-      page({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }, { name: "", price: "" }] }),
+      page({ id: "m", kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "45" }, { id: "blank", name: "", price: "" }] }),
       "portable",
     );
     expect(out.markdown).toContain("| Bust | 45 |");
@@ -360,7 +360,7 @@ describe("menu", () => {
     const out = md({
       id: "m",
       kind: "menu",
-      tiers: [{ name: "Sketch", price: "" }, { name: "", price: "DM me" }],
+      tiers: [{ id: "sketch", name: "Sketch", price: "" }, { id: "blank", name: "", price: "DM me" }],
     });
     expect(out).toContain("| Sketch |  |");
     expect(out).toContain("|  | DM me |");
@@ -368,7 +368,7 @@ describe("menu", () => {
 
   it("drops the empty item from the list form too, where there are no tables", () => {
     const out = compile(
-      page({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "45" }, { name: "", price: "" }] }),
+      page({ id: "m", kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "45" }, { id: "blank", name: "", price: "" }] }),
       NO_TABLES,
     );
     expect(out.markdown).toContain("**Bust**: 45");
@@ -376,7 +376,7 @@ describe("menu", () => {
   });
 
   it("emits nothing at all when every item is empty", () => {
-    const out = compile(page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }] }), "portable");
+    const out = compile(page({ id: "m", kind: "menu", tiers: [{ id: "blank", name: "", price: "" }] }), "portable");
     expect(out.markdown).toBe("");
     expect(out.diagnostics.some((d) => d.code === "item_omitted")).toBe(true);
   });
@@ -419,7 +419,7 @@ describe("menu", () => {
   });
 
   it("does not call a price list empty when its only item was left out", () => {
-    const out = compile(page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }] }), "portable");
+    const out = compile(page({ id: "m", kind: "menu", tiers: [{ id: "blank", name: "", price: "" }] }), "portable");
     expect(out.markdown).toBe("");
     expect(out.diagnostics.map((d) => d.code)).toEqual(["item_omitted"]);
   });
@@ -440,7 +440,7 @@ describe("menu", () => {
 
   it("warns once however many empty items there are", () => {
     const out = compile(
-      page({ id: "m", kind: "menu", tiers: [{ name: "", price: "" }, { name: "", price: "" }] }),
+      page({ id: "m", kind: "menu", tiers: [{ id: "a", name: "", price: "" }, { id: "b", name: "", price: "" }] }),
       "portable",
     );
     expect(out.diagnostics.filter((d) => d.code === "item_omitted")).toHaveLength(1);
@@ -635,7 +635,7 @@ describe("SC-002: nothing an artist writes escapes its section", () => {
     const out = compile(
       page(
         { id: "p", kind: "profile", displayName: payload, tagline: payload, paymentMethods: [payload] },
-        { id: "m", kind: "menu", heading: payload, tiers: [{ name: payload, price: payload }] },
+        { id: "m", kind: "menu", heading: payload, tiers: [{ id: "row", name: payload, price: payload }] },
         { id: "g", kind: "gallery", heading: payload, layout: "grid", items: [] },
         { id: "t", kind: "prose", heading: payload, text: payload },
       ),
@@ -654,8 +654,8 @@ describe("SC-002: nothing an artist writes escapes its section", () => {
 
 describe("menu tier sample images (roadmap 3.1)", () => {
   const withImage = [
-    { name: "Bust", price: "45", imageUrls: ["https://e.test/bust.png"] },
-    { name: "Full body", price: "80" },
+    { id: "bust", name: "Bust", price: "45", imageUrls: ["https://e.test/bust.png"] },
+    { id: "full-body", name: "Full body", price: "80" },
   ];
 
   it("adds an Example column only when a tier actually has an image", () => {
@@ -668,7 +668,7 @@ describe("menu tier sample images (roadmap 3.1)", () => {
   });
 
   it("omits the column entirely when no tier has one", () => {
-    const out = md({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1" }] });
+    const out = md({ id: "m", kind: "menu", tiers: [{ id: "a", name: "A", price: "1" }] });
     expect(out).not.toContain("Example");
   });
 
@@ -676,7 +676,7 @@ describe("menu tier sample images (roadmap 3.1)", () => {
     // Every optional column earns its place. A name, a price and a unit is a
     // whole price list for a greengrocer, and it used to come out with an empty
     // "What you get" column on every row.
-    const bare = md({ id: "m", kind: "menu", tiers: [{ name: "Bananas", price: "20", unit: "per lb" }] });
+    const bare = md({ id: "m", kind: "menu", tiers: [{ id: "bananas", name: "Bananas", price: "20", unit: "per lb" }] });
     expect(bare).toContain("| Item | Price |");
     expect(bare).toContain("| --- | --- |");
     expect(bare).not.toContain("What you get");
@@ -699,7 +699,7 @@ describe("menu tier sample images (roadmap 3.1)", () => {
 
   it("refuses an unsafe example address and warns rather than dropping it silently", () => {
     const out = compile(
-      page({ id: "m", kind: "menu", tiers: [{ name: "A", price: "1", imageUrls: ["javascript:alert(1)"] }] }),
+      page({ id: "m", kind: "menu", tiers: [{ id: "a", name: "A", price: "1", imageUrls: ["javascript:alert(1)"] }] }),
       "portable",
     );
     expect(out.markdown).not.toContain("javascript");
