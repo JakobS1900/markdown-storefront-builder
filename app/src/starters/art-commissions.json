@@ -8,11 +8,10 @@
       "kind": "profile",
       "displayName": "Your name or handle",
       "tagline": "What you draw, in one line",
-      "status": "open",
       "links": [
         { "label": "Your gallery", "url": "https://example.com/your-gallery" }
       ],
-      "paymentMethods": ["PayPal", "Ko-fi"]
+      "paymentMethods": ["How you take payment"]
     },
     {
       "id": "prices",

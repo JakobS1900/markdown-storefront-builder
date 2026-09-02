@@ -8,11 +8,10 @@
       "kind": "profile",
       "displayName": "Your store name",
       "tagline": "What you sell, in one line",
-      "status": "open",
       "links": [
         { "label": "Your storefront", "url": "https://example.com/your-store" }
       ],
-      "paymentMethods": ["PayPal", "Card"]
+      "paymentMethods": ["How you take payment"]
     },
     {
       "id": "stock",
@@ -49,7 +48,7 @@
       "id": "how-to-order",
       "kind": "prose",
       "heading": "How to order",
-      "text": "Message me with what you want and where it is going, and I will confirm the total before you pay."
+      "text": "Add what you want to your order and tell me where it is going, and I will confirm the total before you pay."
     }
   ]
 }

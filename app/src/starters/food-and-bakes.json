@@ -8,11 +8,10 @@
       "kind": "profile",
       "displayName": "Your bakery name",
       "tagline": "What you bake, in one line",
-      "status": "open",
       "links": [
         { "label": "Your page", "url": "https://example.com/your-bakery" }
       ],
-      "paymentMethods": ["Cash", "Card"]
+      "paymentMethods": ["How you take payment"]
     },
     {
       "id": "menu",

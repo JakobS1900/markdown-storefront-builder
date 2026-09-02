@@ -8,11 +8,10 @@
       "kind": "profile",
       "displayName": "Your shop name",
       "tagline": "What you print, in one line",
-      "status": "open",
       "links": [
         { "label": "Your shop", "url": "https://example.com/your-shop" }
       ],
-      "paymentMethods": ["PayPal", "Card"]
+      "paymentMethods": ["How you take payment"]
     },
     {
       "id": "prints",

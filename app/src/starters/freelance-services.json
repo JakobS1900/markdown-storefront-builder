@@ -8,11 +8,10 @@
       "kind": "profile",
       "displayName": "Your name or studio",
       "tagline": "What you do, in one line",
-      "status": "open",
       "links": [
         { "label": "Your portfolio", "url": "https://example.com/your-portfolio" }
       ],
-      "paymentMethods": ["PayPal", "Bank transfer"]
+      "paymentMethods": ["How you take payment"]
     },
     {
       "id": "rates",

@@ -263,6 +263,41 @@ work of disclaiming.
 This is the same distinction `engine/src/document/empty.ts` already draws when
 it refuses to write `""` as a title. An absent title is not an invented one.
 
+**"How to order", present in seven of the eight starters, is structural rather
+than identity-bearing, and this is the ruling that says why.** Each one closes
+with a line in the seller's own voice ending on a commitment such as "I will
+confirm the price before you pay" or "I will send the download link once
+payment clears". The test above asks what kind of lie the text would be if
+published unchanged, and a generic process statement carrying no number, no
+date, no category and no amount is not a lie at all: it describes the universal
+mechanics of a transaction rather than this seller's particular terms, so any
+seller who uses this app can publish it unedited and it stays true. That is the
+line: "I will confirm the price before you pay" stays because it names nothing.
+"Turnaround is usually one to two weeks" did not, earlier in this section,
+because a week count is a specific, checkable claim about this seller.
+
+**`profile.paymentMethods` and `profile.status` were reviewed against the same
+test after the starters shipped, and ruled inconsistent with each other.**
+`paymentMethods` renders as a line of finished-looking content, `Payment: Cash,
+Card`, right beside `links`, which carries an instructional label, "Your
+gallery". A seller who replaces the obvious placeholders and leaves the payment
+line standing has published a term, how they expect to be paid, that they may
+not actually accept, and the field does not look like a placeholder at all,
+which makes exactly that partial edit the likely failure. The ruling is not
+uniform removal, because the two fields are not alike:
+
+- **`paymentMethods` keeps the field**, rewritten the way `links` is, with
+  content nobody would mistake for finished: one entry is enough, and it stays
+  because a starting point that omitted it would not teach a seller the field
+  exists.
+- **`status` is removed from every starter.** Its only values are `open`,
+  `closed` and `waitlist`. Unlike a payment method, none of the three is
+  expressible as an obvious placeholder: every value it can hold is a real
+  claim about whether this seller is currently taking orders. `blankBlock`
+  (`app/src/ui/forms.ts`) already leaves it out of a hand-added profile section
+  for the same reason, and `engine/src/document/empty.ts` already draws the
+  underlying distinction: an absent value is not an invented one.
+
 **This rule is reviewer-judged, not gate-enforced.** `app/tests/starters.test.ts`
 checks that every starting point parses, validates, and compiles with zero
 diagnostics. Nothing in it, or anywhere else, checks whether a sentence is a lie
