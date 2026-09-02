@@ -92,7 +92,7 @@ describe("what an artist writes never becomes a live address", () => {
     const host = renderCompiled(
       { id: "h", kind: "heading", text: hostile, level: 2 },
       { id: "p", kind: "prose", text: hostile },
-      { id: "m", kind: "menu", tiers: [{ name: hostile, price: hostile }] },
+      { id: "m", kind: "menu", tiers: [{ id: "t", name: hostile, price: hostile }] },
       { id: "g", kind: "gallery", layout: "list", items: [{ imageUrl: "https://e.test/a.png", caption: hostile }] },
       { id: "u", kind: "profile", displayName: hostile, links: [{ label: hostile, url: "https://e.test" }] },
     );
@@ -112,7 +112,7 @@ describe("the entities the escaper produces are shown as their characters", () =
    * because it only knew how to decode the three named entities.
    */
   it("shows a price of $45 as $45, not as its entity", () => {
-    const host = renderCompiled({ id: "m", kind: "menu", tiers: [{ name: "Bust", price: "$45" }] });
+    const host = renderCompiled({ id: "m", kind: "menu", tiers: [{ id: "bust", name: "Bust", price: "$45" }] });
     expect(host.textContent).toContain("$45");
     expect(host.textContent, "the artist is being shown the plumbing").not.toContain("&#36;");
   });

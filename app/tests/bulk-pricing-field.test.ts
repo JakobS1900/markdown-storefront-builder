@@ -43,7 +43,7 @@ function itemSection(): void {
   addBlock(blankBlock("menu"));
   const block = getState().doc.blocks[0];
   if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
-  updateBlock(block.id, { ...block, tiers: [{ name: "Bananas", price: "20" }] });
+  updateBlock(block.id, { ...block, tiers: [{ id: "bananas", name: "Bananas", price: "20" }] });
   selectBlock(block.id);
 }
 
@@ -162,6 +162,7 @@ describe("what the field shows on the way back", () => {
       ...block,
       tiers: [
         {
+          id: "bananas",
           name: "Bananas",
           price: "20",
           quantities: [

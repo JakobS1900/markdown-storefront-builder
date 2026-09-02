@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "target": "rentry",
   "title": "Bakery",
   "blocks": [
@@ -20,6 +20,7 @@
       "currency": "USD",
       "tiers": [
         {
+          "id": "chocolate-chip-cookies",
           "name": "Chocolate chip cookies",
           "price": "3",
           "unit": "each",
@@ -29,13 +30,15 @@
           ]
         },
         {
+          "id": "cupcakes",
           "name": "Cupcakes",
           "price": "3.5",
           "unit": "each",
           "quantities": [{ "amount": "1 dozen", "price": "36" }]
         },
-        { "name": "Banana bread loaf", "price": "8", "unit": "each" },
+        { "id": "banana-bread-loaf", "name": "Banana bread loaf", "price": "8", "unit": "each" },
         {
+          "id": "custom-cake",
           "name": "Custom cake",
           "price": "DM me",
           "blurb": "Tell me the size, flavour, and date you need it by"

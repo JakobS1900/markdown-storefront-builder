@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "target": "rentry",
   "title": "Downloads",
   "blocks": [
@@ -20,24 +20,28 @@
       "currency": "USD",
       "tiers": [
         {
+          "id": "lightroom-presets",
           "name": "Lightroom preset pack",
           "price": "8",
           "unit": "each",
           "includes": [".xmp preset files", ".dng preview files", "Install guide PDF"]
         },
         {
+          "id": "font-pack",
           "name": "Font pack",
           "price": "12",
           "unit": "each",
           "includes": [".otf file", ".ttf file", "Character map PDF"]
         },
         {
+          "id": "notion-template",
           "name": "Notion template",
           "price": "6",
           "unit": "each",
           "includes": ["Template link", "Setup guide PDF"]
         },
         {
+          "id": "photoshop-brushes",
           "name": "Photoshop brush set",
           "price": "10",
           "unit": "each",

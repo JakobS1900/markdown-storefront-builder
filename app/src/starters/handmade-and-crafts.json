@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "target": "rentry",
   "title": "Handmade",
   "blocks": [
@@ -20,18 +20,21 @@
       "currency": "USD",
       "tiers": [
         {
+          "id": "resin-coasters",
           "name": "Resin coaster set",
           "price": "18",
           "unit": "each",
           "imageUrls": ["https://example.com/pieces/coasters.jpg"]
         },
         {
+          "id": "beaded-bracelet",
           "name": "Beaded bracelet",
           "price": "12",
           "unit": "each",
           "imageUrls": ["https://example.com/pieces/bracelet.jpg"]
         },
         {
+          "id": "custom-candle",
           "name": "Custom candle",
           "price": "DM me",
           "blurb": "Tell me your scent and colour preferences",

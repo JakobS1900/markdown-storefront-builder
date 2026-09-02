@@ -212,7 +212,7 @@ export function blankBlock(kind: Block["kind"]): Block {
     case "menu":
       // One empty item already there. A price list whose first screen is two
       // optional settings and a button does not read as a price list.
-      return { id, kind, tiers: [{ name: "", price: "" }] };
+      return { id, kind, tiers: [{ id: newId(), name: "", price: "" }] };
     case "gallery":
       return { id, kind, layout: "grid", items: [{ imageUrl: "" }] };
     case "profile":
@@ -333,10 +333,20 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
     withTiers((tiers) =>
       i < tiers.length
         ? tiers.map((t, j) => (i === j ? change(t) : t))
-        : [...tiers, change({ name: "", price: "" })],
+        // Minted here, inside the handler, not while drawing the placeholder
+        // row below. Typing is what turns the placeholder into a real row, and
+        // this runs once per keystroke that does that, so the id is stable
+        // from then on. See the placeholder's own comment for what goes wrong
+        // if a render path minted it instead.
+        : [...tiers, change({ id: newId(), name: "", price: "" })],
     );
 
-  const shown = block.tiers.length > 0 ? block.tiers : [{ name: "", price: "" }];
+  // A constant, not `newId()`: this row is redrawn every repaint and is not in
+  // the document, so a minted id here would be a fresh one on every repaint
+  // while the store settles, and the checkbox Task 5 adds must never treat it
+  // as selectable. `rowTools` already excludes it by index, since `count` is
+  // `block.tiers.length` rather than `shown.length`.
+  const shown = block.tiers.length > 0 ? block.tiers : [{ id: "", name: "", price: "" }];
 
   const tiers = shown.map((tier, i) =>
     el("fieldset", { class: "sub item" }, [
@@ -476,7 +486,7 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
     button({
       label: "Add another item",
       variant: "primary",
-      onClick: () => withTiers((tiers) => [...tiers, { name: "", price: "" }]),
+      onClick: () => withTiers((tiers) => [...tiers, { id: newId(), name: "", price: "" }]),
     }),
     disclosure({
       summary: "Section settings",

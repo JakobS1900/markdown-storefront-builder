@@ -337,7 +337,12 @@ describe("the field being typed into is never swapped out underneath the typist"
 
     const after = getState().doc.blocks[0];
     if (after === undefined || after.kind !== "menu") throw new Error("not a menu");
-    expect(after.tiers).toEqual([{ name: "F", price: "" }]);
+    // The id is minted by newId() when the placeholder row is typed into, so
+    // its value is not predictable here. Checked separately from the field the
+    // typist actually put a character into.
+    expect(after.tiers).toHaveLength(1);
+    expect(after.tiers[0]).toMatchObject({ name: "F", price: "" });
+    expect(after.tiers[0]?.id).not.toBe("");
   });
 
   it("catches the interface up once the field is left", async () => {

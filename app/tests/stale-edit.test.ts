@@ -95,7 +95,11 @@ describe("editing two fields before the interface catches up", () => {
     put("Item", "Full colour bust");
     put("Price", "120");
 
-    expect(menu().tiers).toEqual([{ name: "Full colour bust", price: "120" }]);
+    // The id comes from blankBlock's newId() call and is not predictable here,
+    // so it is checked separately from the fields the test is actually about.
+    expect(menu().tiers).toHaveLength(1);
+    expect(menu().tiers[0]).toMatchObject({ name: "Full colour bust", price: "120" });
+    expect(menu().tiers[0]?.id).not.toBe("");
   });
 
   it("keeps the name when a tagline is typed straight after", () => {

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "target": "rentry",
   "title": "Freelance",
   "blocks": [
@@ -20,14 +20,16 @@
       "currency": "USD",
       "tiers": [
         {
+          "id": "hourly-work",
           "name": "Hourly work",
           "price": "45",
           "unit": "per hour",
           "blurb": "Small fixes, edits, and anything that does not fit a fixed price"
         },
-        { "name": "Logo design", "price": "250", "unit": "per project" },
-        { "name": "Website page", "price": "400", "unit": "per project" },
+        { "id": "logo-design", "name": "Logo design", "price": "250", "unit": "per project" },
+        { "id": "website-page", "name": "Website page", "price": "400", "unit": "per project" },
         {
+          "id": "something-else",
           "name": "Something else",
           "price": "DM me",
           "blurb": "Tell me what you need and I will quote a price"

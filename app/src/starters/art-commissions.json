@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "target": "rentry",
   "title": "Commissions",
   "blocks": [
@@ -20,6 +20,7 @@
       "currency": "USD",
       "tiers": [
         {
+          "id": "bust",
           "name": "Bust",
           "price": "35",
           "unit": "per character",
@@ -27,6 +28,7 @@
           "includes": ["One revision", "Full resolution file"]
         },
         {
+          "id": "half-body",
           "name": "Half body",
           "price": "60",
           "unit": "per character",
@@ -34,6 +36,7 @@
           "includes": ["Two revisions", "Full resolution file"]
         },
         {
+          "id": "full-body",
           "name": "Full body",
           "price": "95",
           "unit": "per character",
@@ -41,6 +44,7 @@
           "includes": ["Two revisions", "Full resolution file", "Transparent background"]
         },
         {
+          "id": "something-else",
           "name": "Something else",
           "price": "DM me",
           "blurb": "Backgrounds, group pieces, anything not listed"

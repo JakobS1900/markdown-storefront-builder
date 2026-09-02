@@ -92,7 +92,12 @@ describe("a Prices section holding no items", () => {
 
     const block = getState().doc.blocks[0];
     if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
-    expect(block.tiers).toEqual([{ name: "Full body", price: "" }]);
+    // The id is minted by newId() when the placeholder row is typed into, so
+    // its value is not predictable here. Checked separately from the fields
+    // the artist actually typed, which still match exactly.
+    expect(block.tiers).toHaveLength(1);
+    expect(block.tiers[0]).toMatchObject({ name: "Full body", price: "" });
+    expect(block.tiers[0]?.id).not.toBe("");
   });
 
   it("writes nothing while the artist has not typed anything", () => {
@@ -111,7 +116,10 @@ describe("a Prices section holding no items", () => {
 
     const block = getState().doc.blocks[0];
     if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
-    expect(block.tiers).toEqual([{ name: "", price: "120" }]);
+    // See the comment above on the same minted-id reasoning.
+    expect(block.tiers).toHaveLength(1);
+    expect(block.tiers[0]).toMatchObject({ name: "", price: "120" });
+    expect(block.tiers[0]?.id).not.toBe("");
   });
 });
 

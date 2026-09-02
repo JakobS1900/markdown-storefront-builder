@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "target": "rentry",
   "title": "Prints",
   "blocks": [
@@ -20,6 +20,7 @@
       "currency": "USD",
       "tiers": [
         {
+          "id": "small-figure",
           "name": "Small figure, up to 5cm",
           "price": "10",
           "unit": "each",
@@ -29,6 +30,7 @@
           ]
         },
         {
+          "id": "medium-figure",
           "name": "Medium figure, 5 to 10cm",
           "price": "18",
           "unit": "each",
@@ -38,6 +40,7 @@
           ]
         },
         {
+          "id": "large-figure",
           "name": "Large figure, 10 to 20cm",
           "price": "32",
           "unit": "each",
@@ -47,6 +50,7 @@
           ]
         },
         {
+          "id": "custom-part",
           "name": "Custom part or design",
           "price": "DM me",
           "blurb": "Send your file or idea and I will quote it"

@@ -43,9 +43,9 @@ function shop(): string {
   updateBlock(block.id, {
     ...block,
     tiers: [
-      { name: "Bust", price: "45" },
-      { name: "Half body", price: "80" },
-      { name: "Full body", price: "120" },
+      { id: "bust", name: "Bust", price: "45" },
+      { id: "half-body", name: "Half body", price: "80" },
+      { id: "full-body", name: "Full body", price: "120" },
     ],
   });
   selectBlock(block.id);
@@ -101,7 +101,7 @@ describe("reordering a product", () => {
     addBlock(blankBlock("menu"));
     const block = getState().doc.blocks[0];
     if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
-    updateBlock(block.id, { ...block, tiers: [{ name: "Only", price: "1" }] });
+    updateBlock(block.id, { ...block, tiers: [{ id: "only", name: "Only", price: "1" }] });
     selectBlock(block.id);
     const labels = [...document.querySelectorAll("#surface button")].map(
       (b) => b.getAttribute("aria-label") ?? "",
@@ -117,8 +117,8 @@ describe("reordering a product", () => {
     updateBlock(block.id, {
       ...block,
       tiers: [
-        { name: "Bust", price: "45", unit: "each", details: [{ label: "Ink", value: "black" }] },
-        { name: "Half body", price: "80" },
+        { id: "bust", name: "Bust", price: "45", unit: "each", details: [{ label: "Ink", value: "black" }] },
+        { id: "half-body", name: "Half body", price: "80" },
       ],
     });
     selectBlock(block.id);
@@ -126,6 +126,7 @@ describe("reordering a product", () => {
     const after = getState().doc.blocks[0];
     if (after === undefined || after.kind !== "menu") throw new Error("not a menu");
     expect(after.tiers[1]).toEqual({
+      id: "bust",
       name: "Bust",
       price: "45",
       unit: "each",
@@ -161,6 +162,7 @@ describe("removing a product can be undone", () => {
     const block = getState().doc.blocks[0];
     if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
     const rich = {
+      id: "dragon",
       name: "Articulated dragon",
       price: "18",
       unit: "each",
@@ -169,7 +171,7 @@ describe("removing a product can be undone", () => {
       blurb: "One piece, no supports.",
       imageUrl: "https://e.test/d.png",
     };
-    updateBlock(block.id, { ...block, tiers: [rich, { name: "Desk tray", price: "12" }] });
+    updateBlock(block.id, { ...block, tiers: [rich, { id: "desk-tray", name: "Desk tray", price: "12" }] });
     selectBlock(block.id);
 
     press("Remove item 1");

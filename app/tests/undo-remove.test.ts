@@ -121,7 +121,7 @@ describe("putting it back", () => {
   it("restores the section's contents, not a blank one of the same kind", () => {
     const root = live();
     live();
-    addBlock({ id: "m", kind: "menu", tiers: [{ name: "Full colour bust", price: "45" }] });
+    addBlock({ id: "m", kind: "menu", tiers: [{ id: "bust", name: "Full colour bust", price: "45" }] });
     selectBlock(undefined);
     renderShell(root);
 

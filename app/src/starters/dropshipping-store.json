@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "target": "rentry",
   "title": "Store",
   "blocks": [
@@ -19,16 +19,16 @@
       "heading": "In stock",
       "currency": "USD",
       "tiers": [
-        { "name": "Phone stand", "price": "12.99", "unit": "each" },
-        { "name": "Cable organiser, 5 pack", "price": "9.99", "unit": "each" },
-        { "name": "LED strip, 2m", "price": "16.99", "unit": "each" },
-        { "name": "Keyring light", "price": "6.99", "unit": "each" },
-        { "name": "Desk mat", "price": "24.99", "unit": "each" },
-        { "name": "Laptop stand", "price": "29.99", "unit": "each" },
-        { "name": "Screen cleaner kit", "price": "8.99", "unit": "each" },
-        { "name": "Cable, 1m", "price": "7.99", "unit": "each" },
-        { "name": "Wall hook, 4 pack", "price": "10.99", "unit": "each" },
-        { "name": "Travel pouch", "price": "14.99", "unit": "each" }
+        { "id": "phone-stand", "name": "Phone stand", "price": "12.99", "unit": "each" },
+        { "id": "cable-organiser", "name": "Cable organiser, 5 pack", "price": "9.99", "unit": "each" },
+        { "id": "led-strip", "name": "LED strip, 2m", "price": "16.99", "unit": "each" },
+        { "id": "keyring-light", "name": "Keyring light", "price": "6.99", "unit": "each" },
+        { "id": "desk-mat", "name": "Desk mat", "price": "24.99", "unit": "each" },
+        { "id": "laptop-stand", "name": "Laptop stand", "price": "29.99", "unit": "each" },
+        { "id": "screen-cleaner-kit", "name": "Screen cleaner kit", "price": "8.99", "unit": "each" },
+        { "id": "cable-1m", "name": "Cable, 1m", "price": "7.99", "unit": "each" },
+        { "id": "wall-hook", "name": "Wall hook, 4 pack", "price": "10.99", "unit": "each" },
+        { "id": "travel-pouch", "name": "Travel pouch", "price": "14.99", "unit": "each" }
       ]
     },
     {
