@@ -276,6 +276,15 @@ line: "I will confirm the price before you pay" stays because it names nothing.
 "Turnaround is usually one to two weeks" did not, earlier in this section,
 because a week count is a specific, checkable claim about this seller.
 
+A review of this section asked what happens to a claim that is checkable but is
+none of those four things, offering "I only ship domestically" as the example.
+The four are a shortcut, not the rule, and the shortcut is not the test. "I only
+ship domestically" is identity-bearing, because a seller who ships to Ireland
+and published it unchanged has turned away business by asserting a limit that is
+not theirs. Anything that describes **this seller's practice** rather than **the
+trade's mechanics** takes instructional text, whether or not a number appears in
+it. When the shortcut and the question disagree, the question wins.
+
 **`profile.paymentMethods` and `profile.status` were reviewed against the same
 test after the starters shipped, and ruled inconsistent with each other.**
 `paymentMethods` renders as a line of finished-looking content, `Payment: Cash,

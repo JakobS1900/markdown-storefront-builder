@@ -43,7 +43,7 @@ answerable without reading fifty commit messages.
 | [018 more hosts](018-more-hosts/) | 2026-09-01 | alongside | no | no | no | no |
 | [019 reviewed as a seller](019-reviewed-as-a-seller/) | 2026-09-01 | after the fact | no | no | no | no |
 | [020 several pictures](020-several-pictures/) | 2026-09-01 | after the fact | no | no | no | no |
-| [021 starting points](021-starting-points/) | 2026-09-02 | **before** | yes | no | no | no |
+| [021 starting points](021-starting-points/) | 2026-09-02 | **before** | yes | no | no | **yes** |
 
 There is no 015. The number was skipped and nothing was lost: it is recorded
 here so nobody goes looking for a missing document.
@@ -94,7 +94,17 @@ Plan, tasks and review columns are left honestly empty. Writing a retrospective
 "plan" for work already finished would be fiction, and a retrospective task list
 would be a commit log with the dates filed off. The architecture and holistic
 reviews for 001 to 003 are real documents produced before and after that code
-was written, which is why they are marked yes and nothing later is.
+was written, which is why they are marked yes.
+
+021 is the first since 003 to carry a holistic review, and it is worth saying
+why rather than only ticking the column.
+[`021-starting-points/holistic-review.md`](021-starting-points/holistic-review.md)
+records what a whole-diff review found that five per-task reviews structurally
+could not: a defect in a file no task after the first ever touched, the same
+copied sentence wrong in two starters when it had been logged against one, and
+a guard in `scripts/contrast.mjs` that this feature quietly stopped protecting.
+`CLAUDE.md` has asked for that review on every feature over roughly three chunks
+since the beginning. Eighteen features went without one.
 
 **021 shipped the same day it was specified**, on 2026-09-02. 021 is also the
 first that specifies one feature and records three more it decomposed into: the

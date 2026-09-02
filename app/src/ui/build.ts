@@ -148,6 +148,13 @@ function starterPicker(id: string): HTMLElement {
                 void starter
                   .load()
                   .then((doc) => openBackup(serializeDocument(doc)))
+                  // Catches a rejection, which is the offline `load()` and a
+                  // `serializeDocument` throw. It deliberately does not cover
+                  // `openBackup` RESOLVING `{ ok: false }`, whose message is
+                  // written for a file import and would read as nonsense here.
+                  // That path needs a starting point that fails to parse, and
+                  // `app/tests/starters.test.ts` refuses to let one ship. If
+                  // that gate is ever removed, this needs its own message.
                   .catch(() => ({
                     ok: false,
                     message: "That template could not be opened. Nothing has been changed.",

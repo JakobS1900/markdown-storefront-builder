@@ -118,9 +118,21 @@ cpSync(DIST, B, { recursive: true });
  */
 function brand(root, name) {
   const html = readFileSync(join(root, "index.html"), "utf8");
-  const match = /<script[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/.exec(html);
-  if (match === null) throw new Error(`no module entry script found in ${root}/index.html`);
-  const js = match[1].replace(/^\.\/assets\//, "");
+
+  // Two independent reads rather than one regex spanning both attributes. The
+  // single-regex version required type="module" to appear before src, which is
+  // how Vite happens to emit it today and is not a promise it makes.
+  const tag = (html.match(/<script\b[^>]*>/g) ?? []).find((t) => /\btype="module"/.test(t));
+  if (tag === undefined) throw new Error(`no module entry script found in ${root}/index.html`);
+
+  const src = /\bsrc="([^"]+)"/.exec(tag);
+  if (src === null) throw new Error(`module entry script has no src in ${root}/index.html`);
+
+  // Coupled to `base: "./"` in vite.config.ts. An absolute or subpath base
+  // would leave the prefix on and the join below would build a path that does
+  // not exist, which throws ENOENT here rather than passing quietly. Loud is
+  // the correct failure for a gate, but the coupling is worth knowing about.
+  const js = src[1].replace(/^\.\/assets\//, "");
   const marker = `;globalThis.__BUILD__=${JSON.stringify(name)};`;
   const path = join(root, "assets", js);
   writeFileSync(path, marker + readFileSync(path, "utf8"), "utf8");
