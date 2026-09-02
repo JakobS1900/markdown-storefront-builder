@@ -683,7 +683,24 @@ export async function openPage(id: string): Promise<void> {
     return;
   }
 
-  set({ pageId: stored.id, doc: result.document, status: { kind: "idle" }, selectedBlockId: undefined, undo: undefined });
+  // The selection and the pricing panel's inputs go too, for the same reason
+  // `setSurface` already clears them: `State.selectedTiers`' own comment calls
+  // the selection a question left standing over one screen, and replacing the
+  // whole document out from under it is at least as strong a reason as
+  // leaving the screen. Starters and reopened backups keep the block and tier
+  // ids from their file, so a page made from the same template as the one on
+  // screen can share a `blockId` and tier ids such as `t0`, and a stale
+  // selection would go on matching rows in a document the seller never
+  // ticked anything in.
+  set({
+    pageId: stored.id,
+    doc: result.document,
+    status: { kind: "idle" },
+    selectedBlockId: undefined,
+    undo: undefined,
+    selectedTiers: undefined,
+    bulkPricingInputs: undefined,
+  });
 }
 
 /**
@@ -694,7 +711,18 @@ export async function openPage(id: string): Promise<void> {
  * mean a page could be written before anyone had checked it parses.
  */
 export function adopt(pageId: string, doc: Document): void {
-  set({ pageId, doc, status: { kind: "idle" }, selectedBlockId: undefined, undo: undefined });
+  // The selection and the pricing inputs go too. See `openPage`'s comment:
+  // block and tier ids survive a reopen, so a stale selection can go on
+  // matching rows in a document the seller never touched.
+  set({
+    pageId,
+    doc,
+    status: { kind: "idle" },
+    selectedBlockId: undefined,
+    undo: undefined,
+    selectedTiers: undefined,
+    bulkPricingInputs: undefined,
+  });
 }
 
 /**
@@ -705,6 +733,9 @@ export function adopt(pageId: string, doc: Document): void {
  * look like the button had not worked.
  */
 export async function newPage(target: string): Promise<void> {
+  // The selection and the pricing inputs go too, for the reason `openPage`'s
+  // comment gives: a fresh document starts from a starter template whose
+  // block and tier ids can match the ones a stale selection was still naming.
   set({
     pageId: newId(),
     doc: emptyDocument(target),
@@ -712,6 +743,8 @@ export async function newPage(target: string): Promise<void> {
     selectedBlockId: undefined,
     pendingPageDeleteId: undefined,
     undo: undefined,
+    selectedTiers: undefined,
+    bulkPricingInputs: undefined,
   });
   await save();
   await refreshPages();

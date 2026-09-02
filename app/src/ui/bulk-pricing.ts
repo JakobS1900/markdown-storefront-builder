@@ -176,14 +176,16 @@ export function computeBulkPreview(tiers: readonly Tier[], selectedIds: readonly
  * deleted row is not counted as if it still named something.
  */
 export function bulkPricingToolbar(block: Extract<Block, { kind: "menu" }>): HTMLElement {
-  const ids = block.tiers.map((tier) => tier.id);
   const selected = selectedIdsIn(block);
 
   return el("div", { class: "bulk-toolbar", role: "group", "aria-label": "Choose items to price" }, [
     el("p", { class: "count" }, [`${String(selected.length)} selected`]),
     button({
       label: "Select all",
-      onClick: () => selectTiers(block.id, ids),
+      // Read live rather than the `ids` captured at render time, matching
+      // `selectedIdsIn` beside it: a handler is run long after the render that
+      // built it, and by then the tiers can differ from what was on screen.
+      onClick: () => selectTiers(block.id, liveBlock(block.id, block).tiers.map((tier) => tier.id)),
     }),
     button({
       label: "Select none",
@@ -209,25 +211,35 @@ export function bulkPricingPanel(block: MenuBlock): HTMLElement[] {
   const inputs = getState().bulkPricingInputs ?? BLANK_BULK_PRICING_INPUTS;
   const { changed, skipped } = computeBulkPreview(block.tiers, selected, inputs);
 
+  // Read at the moment a handler runs, not the moment the panel was drawn.
+  // Mirrors `nowBlock` in `forms.ts`: repaints are deferred while a field
+  // holds focus (`store.ts`'s `typing`), so nothing repaints between typing
+  // the multiplier and typing the addition, and every handler below still
+  // closes over the `inputs` this render started with. Spreading that stale
+  // snapshot in a second handler wrote the first field back to blank the
+  // moment it ran. `app/tests/stale-edit.test.ts` is the same defect against
+  // `nowBlock`'s callers; this is `bulk-pricing.ts` adopting it.
+  const now = () => getState().bulkPricingInputs ?? BLANK_BULK_PRICING_INPUTS;
+
   return [
     el("div", { class: "bulk-apply", role: "group", "aria-label": "Apply pricing" }, [
       field({
         label: "Multiply cost by",
         value: inputs.multiplier,
         inputMode: "decimal",
-        onInput: (v) => setBulkPricingInputs({ ...inputs, multiplier: v }),
+        onInput: (v) => setBulkPricingInputs({ ...now(), multiplier: v }),
       }),
       field({
         label: "Add",
         value: inputs.extra,
         inputMode: "decimal",
-        onInput: (v) => setBulkPricingInputs({ ...inputs, extra: v }),
+        onInput: (v) => setBulkPricingInputs({ ...now(), extra: v }),
       }),
       select({
         label: "Round up to",
         value: inputs.rounding,
         options: ROUNDING_OPTIONS,
-        onChange: (v) => setBulkPricingInputs({ ...inputs, rounding: v as Rounding }),
+        onChange: (v) => setBulkPricingInputs({ ...now(), rounding: v as Rounding }),
       }),
       ...(changed.length === 0
         ? []
@@ -254,12 +266,20 @@ export function bulkPricingPanel(block: MenuBlock): HTMLElement[] {
         variant: "primary",
         disabled: changed.length === 0,
         onClick: () => {
+          // Recomputed from the live block and the live inputs, not from
+          // `changed` above: that was built from whatever this render started
+          // with, and the two can disagree by the time the button is actually
+          // pressed for the same reason the three fields above can. Applying
+          // the render-time preview against the live document would let a
+          // change typed after the last repaint be silently dropped.
           const current = liveBlock(block.id, block);
+          const liveSelected = selectedIdsIn(current);
+          const { changed: liveChanged } = computeBulkPreview(current.tiers, liveSelected, now());
           const nextTiers = current.tiers.map((tier) => {
-            const row = changed.find((r) => r.id === tier.id);
+            const row = liveChanged.find((r) => r.id === tier.id);
             return row === undefined ? tier : { ...tier, price: row.newPrice };
           });
-          const label = `${String(changed.length)} item${changed.length === 1 ? "" : "s"}`;
+          const label = `${String(liveChanged.length)} item${liveChanged.length === 1 ? "" : "s"}`;
           // One `replaceBlocks` call inside `applyBulkPricing`, not one per
           // row: forty rows through one call is one save, not forty.
           applyBulkPricing(current.id, { ...current, tiers: nextTiers }, label);
