@@ -243,7 +243,7 @@ named categories, "NSFW content, extreme gore, and mecha or vehicle designs are
 commonly declined", which is exactly this failure. `f7cc583` replaced it with
 instructional text that names no category at all: "Write two short lists here:
 what you are happy to take on, and what you are not. A few examples on each
-side is enough for people to tell quickly whether their idea fits."
+side are enough for people to tell quickly whether their idea fits."
 
 **A third form was tried and rejected: realistic specifics followed by a
 trailing "replace this" sentence.** The two files did not read identically,
