@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 2,
+  "target": "rentry",
+  "title": "Commissions",
+  "blocks": [
+    {
+      "id": "profile",
+      "kind": "profile",
+      "displayName": "Your name or handle",
+      "tagline": "What you draw, in one line",
+      "status": "open",
+      "links": [
+        { "label": "Your gallery", "url": "https://example.com/your-gallery" }
+      ],
+      "paymentMethods": ["PayPal", "Ko-fi"]
+    },
+    {
+      "id": "prices",
+      "kind": "menu",
+      "heading": "Prices",
+      "currency": "USD",
+      "tiers": [
+        {
+          "name": "Bust",
+          "price": "35",
+          "unit": "per character",
+          "blurb": "Head and shoulders, flat colour",
+          "includes": ["One revision", "Full resolution file"]
+        },
+        {
+          "name": "Half body",
+          "price": "60",
+          "unit": "per character",
+          "blurb": "Waist up, flat colour",
+          "includes": ["Two revisions", "Full resolution file"]
+        },
+        {
+          "name": "Full body",
+          "price": "95",
+          "unit": "per character",
+          "blurb": "Head to toe, shaded",
+          "includes": ["Two revisions", "Full resolution file", "Transparent background"]
+        },
+        {
+          "name": "Something else",
+          "price": "DM me",
+          "blurb": "Backgrounds, group pieces, anything not listed"
+        }
+      ],
+      "addOns": [
+        { "name": "Extra character", "price": "+75%" },
+        { "name": "Simple background", "price": "15" },
+        { "name": "Commercial use", "price": "+100%" }
+      ]
+    },
+    {
+      "id": "terms",
+      "kind": "prose",
+      "heading": "Terms",
+      "text": "Payment up front. Turnaround is usually one to two weeks and I will tell you if it will be longer. I will send a sketch before colouring, and revisions happen at that stage. Replace this with your own terms."
+    },
+    {
+      "id": "will-and-wont",
+      "kind": "prose",
+      "heading": "What I will and will not draw",
+      "text": "Say here what you are happy to take on and what you are not. Being specific saves you turning people down later."
+    },
+    { "id": "rule", "kind": "divider" },
+    {
+      "id": "how-to-order",
+      "kind": "prose",
+      "heading": "How to order",
+      "text": "Message me with what you want, which tier it is, and any references. I will confirm the price before you pay."
+    }
+  ]
+}
