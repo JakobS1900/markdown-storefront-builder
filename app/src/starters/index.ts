@@ -44,8 +44,11 @@ export const STARTERS: readonly Starter[] = Object.entries(metas)
     const id = path.slice("./".length, -META_SUFFIX.length);
     const load = documents[`./${id}.json`];
     // A meta with no document beside it is a half-added starting point. It is
-    // dropped here rather than thrown, so a mistake in this directory cannot
-    // stop the app from opening, and the test above fails loudly instead.
+    // dropped here rather than thrown, so that specific mistake cannot stop
+    // the app from opening, and the test above fails loudly instead. This does
+    // not cover every mistake in this directory: a `.meta.ts` with a
+    // wrong-shaped `meta` export still produces an entry, reading "undefined"
+    // in the picker, which `app/tests/starters.test.ts` now gates on.
     return load === undefined ? [] : [{ id, label: meta.label, description: meta.description, load }];
   })
   .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));

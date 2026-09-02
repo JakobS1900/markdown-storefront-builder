@@ -24,10 +24,10 @@
       "heading": "Work",
       "layout": "grid",
       "items": [
-        { "imageUrl": "https://example.com/work/piece-1.jpg", "caption": "Recent piece" },
-        { "imageUrl": "https://example.com/work/piece-2.jpg", "caption": "Recent piece" },
-        { "imageUrl": "https://example.com/work/piece-3.jpg", "caption": "Older piece" },
-        { "imageUrl": "https://example.com/work/piece-4.jpg", "caption": "Older piece" }
+        { "imageUrl": "https://example.com/work/piece-1.jpg", "caption": "Most recent piece" },
+        { "imageUrl": "https://example.com/work/piece-2.jpg", "caption": "Another recent piece" },
+        { "imageUrl": "https://example.com/work/piece-3.jpg", "caption": "An older piece" },
+        { "imageUrl": "https://example.com/work/piece-4.jpg", "caption": "One from earlier still" }
       ]
     }
   ]

@@ -152,7 +152,11 @@ describe("the starting point picker", () => {
     renderShell(root);
 
     const said = document.getElementById("live-region")?.textContent ?? "";
-    expect(said).not.toBe("");
+    // Not just "not empty": the failure path, "That template could not be
+    // opened. Nothing has been changed.", is also non-empty and also mentions
+    // no backup, so those two assertions alone would pass whether the starter
+    // opened or not. This checks it actually reports success.
+    expect(said).toContain("Started a new page from");
     // `openBackup` says "the page you had open is still saved", which is right
     // for a backup and meaningless for a template.
     expect(said).not.toContain("backup");
