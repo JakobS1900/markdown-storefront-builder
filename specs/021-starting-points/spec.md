@@ -78,8 +78,13 @@ it before knowing whether a starting point is enough would be guessing.
 - **FR-053a**: Choosing a starting point MUST NOT modify or replace the page
   already open. It arrives as a new page with its own id, on the same rule
   `openBackup` follows and for the same reason.
-- **FR-053b**: Adding a starting point MUST require adding one file and editing
-  nothing else. No list, no manifest, no registration.
+- **FR-053b**: Adding a starting point MUST require adding files to one
+  directory and editing nothing else. No list, no manifest, no registration, no
+  code change of any kind.
+
+  This said "one file" when it was written on 2026-09-02 and was corrected the
+  same day, before implementation, because it was measured and found impossible.
+  See "Why two files, measured".
 - **FR-053c**: Every starting point MUST parse, validate, and compile with zero
   diagnostics against every target. A starting point that triggers a capability
   fallback teaches a shape the host cannot render, which is worse than offering
@@ -123,29 +128,55 @@ narrower thing than the one described.
 
 ## How a starting point is stored
 
-One JSON file per starting point in `app/src/starters/`, each describing itself
-so that it carries its own entry in the picker:
+Two files per starting point, in `app/src/starters/`, sharing a stem:
 
-```json
-{
-  "label": "3D printed goods",
-  "description": "Sizes, materials, colours, and turnaround",
-  "document": { "schemaVersion": 2, "target": "rentry", "blocks": [] }
-}
+```
+art-commissions.meta.ts     export const meta = { label, description }
+art-commissions.json        the Document itself
 ```
 
-They are enumerated with `import.meta.glob`, lazily, so each is its own chunk
-and none is in the main bundle until it is chosen. That is a feature of the
-bundler this project already uses, so it adds nothing to the toolchain.
+They are enumerated with `import.meta.glob`: the `.meta.ts` files eagerly,
+because the picker has to show every label before anything is chosen, and the
+`.json` files lazily, so each document is its own chunk and none is downloaded
+until somebody picks it.
 
 `import.meta.glob` rather than a fetch from `public/` is deliberate and buys
-three things. Adding a starting point becomes one file with no second edit,
-which is FR-053b. The set is known at build time, so a missing file is a build
-failure rather than a 404 in somebody's hands. And it has no URL to get wrong:
-`app/tests/example.test.ts` carries a dedicated test that `example.json` is
-requested by a relative path, because the app is served from a subdirectory on
-the web and from the root of a custom scheme inside the Android shell. A
+two things beyond FR-053b. The set is known at build time, so a missing file is
+a build failure rather than a 404 in somebody's hands. And it has no URL to get
+wrong: `app/tests/example.test.ts` carries a dedicated test that `example.json`
+is requested by a relative path, because the app is served from a subdirectory
+on the web and from the root of a custom scheme inside the Android shell. A
 build time glob cannot have that bug.
+
+### Why two files, measured
+
+The first draft of this spec said one self-describing file per starting point,
+holding its own label, description and document. That is not achievable
+together with lazy loading, and the reason is worth recording rather than
+rediscovering.
+
+A file cannot be read for its label without being loaded. Probed on 2026-09-02
+with two throwaway starters carrying marked payloads:
+
+- **One file, `import.meta.glob(..., { eager: true, import: "meta" })`.** The
+  eager reference to one named export pulls the whole module into the main
+  chunk. No lazy chunks were emitted at all, and both payload markers were
+  found in `index-*.js`. Rollup does not tree-shake the unused default export
+  out when the same module is also the target of a dynamic import.
+- **Two files sharing a stem.** Three chunks were emitted, one per starter plus
+  the entry. Both payload markers were absent from the main bundle and each was
+  present in its own chunk, while both labels were in the main bundle, which is
+  exactly what the picker needs.
+
+The cost of choosing eager instead would not be small. `example.json` is 9,725
+bytes, 3,215 gzipped. Eight of those eagerly bundled is roughly 26 kB gzipped
+added to a main bundle currently measuring 20.0 kB gzipped, so first load would
+roughly triple for content of which a visitor uses at most one and most use
+none. On a tool whose performance notes are written about a Moto G7, that is
+not a trade worth making to save a file.
+
+So FR-053b holds in the sense that matters, which is the one it was written for:
+adding a niche is dropping files into a directory, and touches no code.
 
 ## The honesty rule
 
