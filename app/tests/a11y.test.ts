@@ -36,7 +36,17 @@ vi.mock("../src/upload.js", () => ({
 }));
 
 import { writePage } from "../src/db.js";
-import { addBlock, getState, init, refreshPages, selectBlock, selectTiers, setSurface } from "../src/store.js";
+import {
+  addBlock,
+  getState,
+  init,
+  refreshPages,
+  selectBlock,
+  selectTiers,
+  setPasteText,
+  setSurface,
+  startPasting,
+} from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -118,6 +128,27 @@ describe("the shell is accessible", () => {
     renderShell(root);
 
     expect(document.querySelector('[aria-label="Apply pricing"]')).not.toBeNull();
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations with the paste a price list panel open", async () => {
+    // Same failure as the Apply panel above, and FR-067 claims this gate
+    // enforces the feature's accessibility. It could not: `pastePanel` returns
+    // nothing until `startPasting`, and its body renders nothing until there
+    // is text, so a gate that does neither never sees the textarea, the
+    // checkboxes, the Add button, or the hidden file picker that has to stay
+    // out of the tab order.
+    const root = mount();
+    addBlock(blankBlock("menu"));
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+    selectBlock(block.id);
+    startPasting(block.id);
+    setPasteText("COMMISSIONS\nSketch, 30\nFull colour, 80\n\n| --- |");
+    renderShell(root);
+
+    expect(document.querySelector('[aria-label="Paste a price list"]')).not.toBeNull();
+    expect(document.querySelectorAll(".paste-lines input[type=checkbox]").length).toBeGreaterThan(0);
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 

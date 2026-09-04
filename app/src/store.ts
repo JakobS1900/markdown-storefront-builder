@@ -17,6 +17,7 @@ import {
 
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
+import { canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 
 export type Surface = "build" | "preview" | "export";
 
@@ -69,7 +70,22 @@ export interface State {
   readonly undo?:
     | { readonly kind: "block"; readonly block: Block; readonly index: number }
     | { readonly kind: "row"; readonly block: Block; readonly label: string }
-    | { readonly kind: "bulk"; readonly block: Block; readonly label: string };
+    | {
+        readonly kind: "bulk";
+        readonly block: Block;
+        readonly label: string;
+        /**
+         * What was done to the section, so the offer can say it.
+         *
+         * Absent means "priced", which is what this variant meant when feature
+         * 022 was the only thing setting it. Feature 023 writes a whole
+         * section at once too, and "Undo pricing 25 items" is the wrong
+         * sentence for a conversion that priced nothing. A fourth undo kind
+         * was not added, because the comment above already argues that both
+         * are the same fact: the section changed, and here is what it was.
+         */
+        readonly action?: "priced" | "added";
+      };
   /**
    * The saved page whose removal is waiting on an answer.
    *
@@ -116,6 +132,43 @@ export interface State {
    * such as ticking another row's checkbox.
    */
   readonly bulkPricingInputs?: { readonly multiplier: string; readonly extra: string; readonly rounding: Rounding };
+  /**
+   * A price list the seller has pasted but not yet converted, and which of its
+   * lines are ticked.
+   *
+   * Deliberately NOT held as draft rows in the document, which was the cheaper
+   * design and would have reused feature 022's row selection for free. A draft
+   * row is not a draft: it is a real product, so it saves to IndexedDB, it
+   * compiles, and it publishes. A seller pasting sixty lines to keep twenty
+   * five would have had thirty five lines they never agreed to on their live
+   * page, which inverts the one rule this feature exists to uphold.
+   *
+   * Ticks are held by line index, and that is not the mistake `selectedTiers`
+   * exists to avoid. A tier id is needed there because the document underneath
+   * a selection can be reordered or shortened while the selection stands, and
+   * an index would then name a different row. This text is not immutable, and
+   * an earlier version of this comment wrongly said it was. What is true is
+   * narrower and is the part that carries the argument: the only thing that
+   * can change the text is `setPasteText`, and it recomputes the ticks against
+   * the new text in the same breath. The two are never written apart, so an
+   * index can never be left over from a list it no longer describes.
+   *
+   * `blockId` names the price list the seller opened this from, which is where
+   * the converted rows go. It is also why there is no "which list" question to
+   * answer: they answered it by pressing the button where they pressed it.
+   *
+   * Cleared wherever `selectedTiers` is cleared, and for the same reason
+   * `openPage` gives there: starters and reopened backups keep the block ids
+   * from their file, so two pages made from one starting point share a menu
+   * block id. A paste left standing across a page switch would reappear under
+   * a price list in a document the seller never pasted anything into, and Add
+   * would write it there.
+   */
+  readonly pasting?: {
+    readonly blockId: string;
+    readonly text: string;
+    readonly ticked: readonly number[];
+  };
   readonly status: Status;
   readonly storageOk: boolean;
   /**
@@ -327,6 +380,7 @@ export function setSurface(surface: Surface): void {
     undo: undefined,
     selectedTiers: undefined,
     bulkPricingInputs: undefined,
+    pasting: undefined,
   });
 }
 
@@ -387,6 +441,122 @@ export function selectedIdsIn(block: Extract<Block, { kind: "menu" }>): readonly
 /** Replaces what the three "Apply pricing" inputs hold. */
 export function setBulkPricingInputs(next: { multiplier: string; extra: string; rounding: Rounding }): void {
   set({ bulkPricingInputs: next });
+}
+
+/**
+ * Opens the paste screen against one price list, which is where its rows land.
+ *
+ * Reopening the same list keeps whatever is already there, rather than wiping
+ * it. Nothing is discarded until the seller says so is the rule this feature
+ * exists to uphold, and "you pressed the button twice" is not them saying so.
+ */
+export function startPasting(blockId: string): void {
+  if (state.pasting?.blockId === blockId) return;
+  set({ pasting: { blockId, text: "", ticked: [] } });
+}
+
+/**
+ * Replaces the pasted text, and re-reads which lines look like items.
+ *
+ * The ticks are recomputed rather than carried over, because they are indices
+ * into the old text and the new text is a different list. Keeping them would
+ * be the "held by position" bug that `selectedTiers` exists to avoid, arriving
+ * by the one route this screen is actually exposed to.
+ *
+ * Note what this does NOT call: `update()`. That writes the document and
+ * clears the standing undo offer, and a paste changes no document. Routing
+ * this through it would have thrown away the seller's undo for a keystroke in
+ * a text box.
+ */
+export function setPasteText(text: string): void {
+  const current = state.pasting;
+  if (current === undefined) return;
+
+  const ticked = readCandidates(text).flatMap((candidate, i) => (candidate.suggested ? [i] : []));
+  set({ pasting: { blockId: current.blockId, text, ticked } });
+}
+
+/** Ticks or unticks one pasted line. */
+export function togglePasteLine(index: number): void {
+  const current = state.pasting;
+  if (current === undefined) return;
+
+  const ticked = current.ticked.includes(index)
+    ? current.ticked.filter((i) => i !== index)
+    // Sorted, so the ticks stay in paste order however the seller clicked
+    // them, and so `toProducts` does not have to care.
+    : [...current.ticked, index].sort((a, b) => a - b);
+
+  set({ pasting: { ...current, ticked } });
+}
+
+/**
+ * Ticks every line that could be a product.
+ *
+ * Not every line: a blank line and a Markdown table's rule have no reading
+ * that is somebody's product, and ticking them would turn "select all" into a
+ * way to create empty rows.
+ */
+export function tickAllPasteLines(): void {
+  const current = state.pasting;
+  if (current === undefined) return;
+
+  const ticked = readCandidates(current.text).flatMap((candidate, i) => (canBeProduct(candidate) ? [i] : []));
+  set({ pasting: { ...current, ticked } });
+}
+
+export function untickAllPasteLines(): void {
+  const current = state.pasting;
+  if (current === undefined) return;
+  set({ pasting: { ...current, ticked: [] } });
+}
+
+/** Puts the paste screen away and forgets the text. */
+export function stopPasting(): void {
+  set({ pasting: undefined });
+}
+
+/**
+ * Whether this section is a price list nobody has typed into yet.
+ *
+ * `blankBlock` gives every new menu section one empty tier, so a seller who
+ * adds a price list in order to paste into it has one placeholder sitting
+ * there. Appending after it would leave a blank first product in every list
+ * built that way, which is the common path into this feature rather than an
+ * edge case.
+ */
+function isBlankPlaceholder(tiers: Extract<Block, { kind: "menu" }>["tiers"]): boolean {
+  const only = tiers.length === 1 ? tiers[0] : undefined;
+  return only !== undefined && only.name === "" && only.price === "";
+}
+
+/**
+ * Turns the ticked lines into products in the price list they were pasted
+ * into, as one write and one undo.
+ *
+ * Converting twice appends twice, on purpose. This does not remember which
+ * lines it has already converted, because the seller may well mean it: a
+ * second pass over the lines they did not tick the first time is a real thing
+ * to want. Only the most recent conversion is undoable, which is not a choice
+ * made here but what `State.undo` is: one slot, cleared by the next write.
+ */
+export function convertPaste(): void {
+  const current = state.pasting;
+  if (current === undefined) return;
+
+  const block = state.doc.blocks.find((b) => b.id === current.blockId);
+  if (block === undefined || block.kind !== "menu") return;
+
+  const products = toProducts(readCandidates(current.text), current.ticked);
+  // Nothing ticked, or nothing ticked that could be a product. FR-066: this
+  // does nothing rather than writing an empty section.
+  if (products.length === 0) return;
+
+  const existing = isBlankPlaceholder(block.tiers) ? [] : block.tiers;
+  const tiers = [...existing, ...products.map((product) => ({ id: newId(), ...product }))];
+  const label = `${String(products.length)} item${products.length === 1 ? "" : "s"}`;
+
+  applyWholesale(block.id, { ...block, tiers }, label, "added");
 }
 
 export function selectBlock(selectedBlockId: string | undefined): void {
@@ -579,11 +749,23 @@ export function removeRow(id: string, next: Block, label: string): void {
  * the multiplier, and apply again.
  */
 export function applyBulkPricing(blockId: string, next: Block, label: string): void {
+  applyWholesale(blockId, next, label, "priced");
+}
+
+/**
+ * The mechanism underneath `applyBulkPricing` and `convertPaste` alike.
+ *
+ * Both replace a whole section in one write and remember the section as it
+ * was, which is one fact, not two. `action` exists only so the offer can name
+ * what happened: "Undo pricing 25 items" is the wrong sentence for a
+ * conversion that priced nothing.
+ */
+function applyWholesale(blockId: string, next: Block, label: string, action: "priced" | "added"): void {
   const previous = state.doc.blocks.find((b) => b.id === blockId);
   if (previous === undefined) return;
 
   replaceBlocks(state.doc.blocks.map((b) => (b.id === blockId ? next : b)));
-  set({ undo: { kind: "bulk", block: previous, label } });
+  set({ undo: { kind: "bulk", block: previous, label, action } });
 }
 
 /** Puts back whatever was last removed or applied: a section, a row, or a bulk price change. */
@@ -712,6 +894,7 @@ export async function openPage(id: string): Promise<void> {
     undo: undefined,
     selectedTiers: undefined,
     bulkPricingInputs: undefined,
+    pasting: undefined,
   });
 }
 
@@ -734,6 +917,7 @@ export function adopt(pageId: string, doc: Document): void {
     undo: undefined,
     selectedTiers: undefined,
     bulkPricingInputs: undefined,
+    pasting: undefined,
   });
 }
 
@@ -757,6 +941,7 @@ export async function newPage(target: string): Promise<void> {
     undo: undefined,
     selectedTiers: undefined,
     bulkPricingInputs: undefined,
+    pasting: undefined,
   });
   await save();
   await refreshPages();

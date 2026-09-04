@@ -10,6 +10,7 @@ import type { Block } from "@mdsb/engine";
 import { bulkPricingPanel, bulkPricingToolbar, bulkUndoOffer } from "./bulk-pricing.js";
 import { button, checkbox, disclosure, el, field, select } from "./dom.js";
 import { imageField } from "./image-field.js";
+import { pasteOpener, pastePanel } from "./price-list-paste.js";
 import { formatMoney, parseMoney } from "../money.js";
 import { getState, newId, removeRow, selectedIdsIn, toggleTier, undoLast } from "../store.js";
 
@@ -563,8 +564,21 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
       variant: "primary",
       onClick: () => withTiers((tiers) => [...tiers, { id: newId(), name: "", price: "" }]),
     }),
+    // Beside "Add another item", because it answers the same question for
+    // somebody whose list already exists somewhere else. Feature 023.
+    ...pasteOpener(block.id),
+    ...pastePanel(block.id),
     disclosure({
       summary: "Section settings",
+      // A stable id, which is exactly what `disclosure` asks for from a group
+      // that exists once per section. The numbered ids are a function of how
+      // many controls were rendered before this point, and the paste panel
+      // above renders one checkbox per pasted line. Without this, changing the
+      // line count renumbered this group, `restoreOpenGroups` could no longer
+      // find it, and Section settings folded itself shut underneath the
+      // seller. That is the same defect the page list already hit, recorded in
+      // `dom.ts`'s comment on `nextFieldId`.
+      id: `menu-settings-${block.id}`,
       children: [
         field({
           label: "Section heading (optional)",

@@ -45,6 +45,7 @@ answerable without reading fifty commit messages.
 | [020 several pictures](020-several-pictures/) | 2026-09-01 | after the fact | no | no | no | no |
 | [021 starting points](021-starting-points/) | 2026-09-02 | **before** | yes | no | no | **yes** |
 | [022 bulk pricing](022-bulk-pricing/) | 2026-09-02 | **before** | yes | no | no | no |
+| [023 bringing in a price list](023-import/) | 2026-09-04 | **before** | yes | no | no | **yes** |
 
 There is no 015. The number was skipped and nothing was lost: it is recorded
 here so nobody goes looking for a missing document.
@@ -118,6 +119,21 @@ memory.
 It has a plan and no separate task list, unlike 011 and 012, which have
 neither. `specs/021-starting-points/plan.md` carries the task breakdown itself,
 five chunks written out in full rather than split into its own document.
+
+**023 is the second to carry a holistic review, and it is the stronger argument
+for the practice.** 021's review found real defects in shipped code. 023's ran
+before a single line of implementation was committed and found ten, of which two
+would have made the feature unusable rather than merely wrong:
+`specs/023-import/holistic-review.md` has both. The first is a panel that showed
+a seller nothing at all after they pasted, because the app refuses to repaint
+while a text field holds focus and the whole panel sat behind that. Twenty one
+tests passed over it, all of them using a helper that never focused the box. The
+second is a paste surviving a page switch into a different document that shares
+a block id with it, which is the same class of defect `openPage` already carries
+a comment about for a different field.
+
+Both are disagreements between two pieces of code that are correct on their own,
+which is precisely what a per-chunk review is structurally unable to see.
 
 ## Where the phases landed
 

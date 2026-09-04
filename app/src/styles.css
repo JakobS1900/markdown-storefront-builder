@@ -739,6 +739,73 @@ fieldset.item > .btn.icon.danger {
   }
 }
 
+/*
+ * Pasting a price list, feature 023.
+ *
+ * The list of lines scrolls within itself rather than pushing the buttons off
+ * the bottom of the page. A seller with sixty items should not have to scroll
+ * past sixty checkboxes to reach the one that adds them.
+ */
+.paste {
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.paste > * + * {
+  margin-top: 0.75rem;
+}
+
+.paste-count {
+  margin: 0;
+  color: var(--muted);
+}
+
+.paste-capped {
+  margin: 0;
+  color: var(--muted);
+}
+
+.paste-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.paste-lines {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.paste-lines li {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.paste-lines li:last-child {
+  border-bottom: 0;
+}
+
+/* What the line will become, under the line itself. Muted because the line the
+   seller pasted is the thing they are reading; this is the confirmation. */
+.paste-becomes {
+  margin: 0 0 0 var(--tap);
+  color: var(--muted);
+}
+
+/* A pasted line that cannot be a product: a blank, or a Markdown table rule.
+   Shown, because the seller has to see everything they pasted, but with no
+   checkbox, because there is nothing here for them to decide. */
+.paste-skipped {
+  margin: 0;
+  color: var(--muted);
+}
+
 /* Respect a stated preference for less motion. Nothing here animates yet, and
    this is the guard for when something does. */
 @media (prefers-reduced-motion: reduce) {

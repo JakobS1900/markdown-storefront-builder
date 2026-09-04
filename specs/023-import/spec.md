@@ -265,6 +265,16 @@ Numbering continues from feature 022, whose last requirement is FR-056b.
 - **FR-062b**: List decoration MUST NOT end up in a product name: a leading
   "- ", "* ", "1. ", or surrounding Markdown table pipes are separators, not
   part of what the seller is selling.
+- **FR-062c**: A separator inside a number MUST NOT be treated as a column
+  boundary. "Sofa, 1,200" is one product at one thousand two hundred, not a
+  product at one with a supplier cost of two hundred. Added after the holistic
+  review found it: `parseMoney` accepts grouped thousands on purpose, and the
+  splitter split on every comma, so the two modules were each correct alone and
+  wrong where they met.
+- **FR-062d**: A column the named fields do not claim MUST be kept, not
+  dropped. A five column export has more in it than a name, a price, a unit and
+  a cost, and SC-003 promises what the seller wrote is distributed between
+  fields rather than discarded. The leftovers go to `blurb`.
 - **FR-063**: Where a line carries what the seller paid as well as what they
   charge, the app MUST place it in `cost`, which is never published. The
   guarantee enforced by `engine/tests/compile/cost-never-published.test.ts` MUST
@@ -281,7 +291,19 @@ Numbering continues from feature 022, whose last requirement is FR-056b.
 - **FR-066**: Converting nothing MUST do nothing, and MUST say so rather than
   creating an empty section.
 - **FR-067**: Every control added by this feature MUST carry a real accessible
-  name and meet the touch target minimum, which `npm run a11y` enforces.
+  name and meet the touch target minimum, which `npm run a11y` enforces. The
+  gate MUST render this panel with text in it, or it enforces nothing here: it
+  renders no control it has not been made to draw, which is the failure that
+  file's own docstring already records against an unlabelled file input.
+- **FR-068**: The panel MUST show the seller their lines without waiting for
+  them to move focus out of the paste box. `repaint` defers while a text field
+  holds focus, which on a phone is the entire time, so a panel drawn only by
+  `repaint` showed a fresh paste nothing at all: no count, no ticks, and no way
+  forward but the button that discards it.
+- **FR-069**: A paste MUST NOT outlive the page it was made in. Pages made from
+  one starting point share block ids, so a paste left standing across a page
+  switch would reappear under a price list in a document it was never meant
+  for.
 
 ### Key Entities
 

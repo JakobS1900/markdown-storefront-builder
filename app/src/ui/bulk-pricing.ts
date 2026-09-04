@@ -301,11 +301,16 @@ export function bulkPricingPanel(block: MenuBlock): HTMLElement[] {
 export function bulkUndoOffer(blockId: string): HTMLElement[] {
   const undo = getState().undo;
   if (undo === undefined || undo.kind !== "bulk" || undo.block.id !== blockId) return [];
+
+  // Absent means priced, which is what this variant meant when 022 was the
+  // only thing setting it. Feature 023 replaces a whole section too, and it
+  // priced nothing.
+  const added = undo.action === "added";
   return [
     el("div", { class: "undone" }, [
-      el("p", {}, [`Priced ${undo.label}.`]),
+      el("p", {}, [`${added ? "Added" : "Priced"} ${undo.label}.`]),
       button({
-        label: `Undo pricing ${undo.label}`,
+        label: `Undo ${added ? "adding" : "pricing"} ${undo.label}`,
         variant: "primary",
         onClick: () => undoLast(),
       }),
