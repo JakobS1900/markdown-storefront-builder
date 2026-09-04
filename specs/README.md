@@ -44,7 +44,7 @@ answerable without reading fifty commit messages.
 | [019 reviewed as a seller](019-reviewed-as-a-seller/) | 2026-09-01 | after the fact | no | no | no | no |
 | [020 several pictures](020-several-pictures/) | 2026-09-01 | after the fact | no | no | no | no |
 | [021 starting points](021-starting-points/) | 2026-09-02 | **before** | yes | no | no | **yes** |
-| [022 bulk pricing](022-bulk-pricing/) | 2026-09-02 | **before** | yes | no | no | no |
+| [022 bulk pricing](022-bulk-pricing/) | 2026-09-02 | **before** | yes | no | no | **yes** |
 | [023 bringing in a price list](023-import/) | 2026-09-04 | **before** | yes | no | no | **yes** |
 
 There is no 015. The number was skipped and nothing was lost: it is recorded

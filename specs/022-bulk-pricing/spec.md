@@ -93,9 +93,15 @@ violate Principle I and still pass lint. This feature closes that by adding
   gaining deterministic positional ids. A page already at version 3 is untouched.
 - **FR-054b**: A menu tier MAY carry a `cost`, free text, meaning what the
   seller paid.
-- **FR-054c**: `cost` MUST NOT appear in compiled output for any target, ever. A
-  test compiles every fixture and all eight starting points against every entry
-  in `TARGETS` and fails if any cost value appears in the result.
+- **FR-054c**: `cost` MUST NOT appear in compiled output for any target, ever.
+  `engine/tests/compile/cost-never-published.test.ts` compiles a document
+  carrying a sentinel cost against every entry in `TARGETS`, twice: once with
+  plain tiers, and once with a tier carrying every other optional field the
+  descriptor allows, since an emitter walking a tier's fields generically would
+  leak only on the richer shape. A third case asserts the sentinel reaches no
+  diagnostic either, because a warning naming the cost would put it in the app's
+  own interface. See the third amendment below for what this line claimed
+  before 2026-09-04 and why that claim was worse than no claim at all.
 - **FR-055**: The seller MUST be able to select any subset of the rows in one
   price list, and to select all or none in one action.
 - **FR-055a**: A selection MUST be held by tier `id`, never by position, so it
@@ -213,6 +219,48 @@ produced the same number. What changed is that both defaults are blank, and
 Apply is disabled until the seller has entered a real multiplier and a real
 addition, so pressing it with nothing decided is not a state the panel can be
 in.
+
+**FR-054c described a gate that did not exist, and would have been worthless if
+it had.** Found on 2026-09-04 by the holistic review this feature shipped
+without. The line promised a test compiling "every fixture and all eight
+starting points" and failing "if any cost value appears in the result". No such
+test was ever written. The one that was written is better, and the difference is
+the whole lesson: not one starting point, not one compile fixture, and not
+`app/public/example.json` carries a `cost` field at all, so the promised sweep
+would have compiled nineteen documents that had nothing to leak and reported
+green forever. It is the same mistake as the contrast gate measuring an empty
+page, recorded in `CLAUDE.md`, arriving this time in a requirement rather than
+in a script. A sentinel value in a document built to carry one is what actually
+proves the promise, which is what `cost-never-published.test.ts` does.
+
+Both were verified firing on 2026-09-04, rather than trusted: making `pricedAs`
+in `engine/src/compile/emit/menu.ts` append the cost to the price failed two of
+that file's three cases across all three targets, and left the diagnostics case
+correctly passing. A sweep over the shipped documents was written as a throwaway
+probe at the same time to check the reasoning above rather than to keep: with
+the same leak injected it flagged thirty document and target pairs, and with the
+leak reverted it passed while carrying no cost anywhere. It was not kept,
+because it catches nothing the sentinel test does not already catch and this
+suite does not need a second gate for one promise.
+
+**Nothing exercised a reorder and an apply in one run.** Also found by the
+2026-09-04 holistic review, and the reason that review is worth running at all:
+each half was thoroughly covered and the join between them was not.
+`tier-selection.test.ts` proves a reorder leaves the selection unchanged, and
+`bulk-apply.test.ts` proves a selection writes the right rows, but no test
+reordered a row with a selection standing and then pressed Apply. That
+composition is the one FR-055a exists for and the one this spec calls the worst
+defect the feature could ship, so it was the wrong place to be inferring
+correctness from two passing halves. It holds: the apply path resolves every row
+by `id` against the live block, so there is no defect here, and the gap was in
+the evidence rather than in the code. `bulk-apply.test.ts` now closes it, and
+the test was verified to discriminate by holding the selection at the position
+it was made at instead of by id, which left the moved row unpriced.
+
+Worth recording precisely, because the reflex is to overclaim: the rest of the
+suite is not blind to a position-held selection. That same injection failed two
+of `tier-selection.test.ts`'s removal cases. What no test caught was the bug
+arriving through a reorder and being spent on a reprice.
 
 ## What this does not do
 

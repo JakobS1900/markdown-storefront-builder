@@ -4,15 +4,19 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-**Current state**: feature 023, bringing in a price list, is complete, verified
-and committed as `fa8eb28` on `master`. Its spec landed separately in `d23881d`.
-Working tree clean, nothing pushed, no branch left behind.
+**Current state**: feature 023 is complete and committed as `fa8eb28`. Feature
+022's missing holistic review has now been run, and is the most recent work on
+`master`. Working tree clean, nothing pushed, no branch left behind.
+
+Every feature through 023 now has a holistic review except the ones
+`specs/README.md` marks `no` for structural reasons, and that column is the
+honest record of it.
 
 ## Next up, in order
 
 1. **Run `npm run verify` from PowerShell before anything else.** It is the
    check that tells you whether the tree is actually where this file says it is.
-   Expect 1079 tests, a11y 34, contrast clean in both palettes, pwa gate green.
+   Expect 1080 tests, a11y 34, contrast clean in both palettes, pwa gate green.
    If it fails, read "Traps" below before believing it: several of its failures
    are environmental rather than real.
 2. **F4, the interview wizard, is the last of the four features the 2026-09-02
@@ -22,19 +26,41 @@ Working tree clean, nothing pushed, no branch left behind.
    guessing. F1 (021 starting points) has now shipped, so **the gate is a
    question for Jakob, not a task**: has anyone used a starting point? Ask
    before specifying F4.
-3. **022 bulk pricing still has no holistic review.** It is seven plan sections,
-   well over the three chunk threshold `CLAUDE.md` sets, and `specs/README.md`
-   marks the column `no`. 023's review found ten defects in four chunks, two of
-   which would have shipped a broken feature, so this is not a formality. It is
-   the highest value work available that needs nothing from Jakob.
-4. **Consider the test suite's timing fragility** (see "Traps"). Not urgent, and
-   nobody has asked for it, so do not start it without saying so first.
+3. **Consider the test suite's timing fragility** (see "Traps"). Not urgent, and
+   nobody has asked for it, so do not start it without saying so first. With
+   022's review done, this is the largest thing left that needs nothing from
+   Jakob, which is not the same as it being worth doing.
+
+022's holistic review is **done**, so it is no longer on this list. It found no
+defect in the code and two gaps in the evidence, both closed. Details are in the
+last two entries of `specs/022-bulk-pricing/spec.md` under "Amendments made
+during implementation", and the short version is worth carrying:
+
+- FR-054c promised a gate that was never built, and the sweep it described would
+  have compiled nineteen documents that carry no `cost` between them and passed
+  forever. The real gate is a sentinel test, and it is better than the one the
+  spec asked for.
+- No test reordered a row with a selection standing and then applied pricing,
+  which is the exact composition the version 3 schema change was taken for. It
+  holds, because the apply path resolves rows by `id` throughout. There is now a
+  test, and it was verified to discriminate.
 
 ## Verified live, do not re-probe
 
-- **`npm run verify` passes end to end** as of `fa8eb28`, run alone on a quiet
-  machine. 1079 tests in 63 files, a11y 34, contrast 164 elements and 12
-  sections in both light and dark with 0 failures, pwa update gate green.
+- **`npm run verify` passes end to end**, run alone on a quiet machine, both
+  before and after 022's review. 1080 tests in 63 files, a11y 34, contrast 164
+  elements and 12 sections in both light and dark with 0 failures, pwa update
+  gate green. It was 1079 before the review added one test.
+- **`cost` genuinely never publishes.** Not inferred from a passing test:
+  `pricedAs` in `engine/src/compile/emit/menu.ts` was temporarily made to append
+  the cost to the price, and `cost-never-published.test.ts` failed two of its
+  three cases across all three targets, correctly leaving the diagnostics case
+  green. Reverted. Do not re-probe this.
+- **No starting point, no compile fixture and not `app/public/example.json`
+  carries a `cost` field.** Checked directly. This is why the sweep FR-054c used
+  to describe would have been worthless, and it is the fact that settles it.
+- **A selection survives a reorder and still prices the right row.** Verified
+  end to end, not inferred from the two halves that were already covered.
 - **Master was green before 023 started.** The baseline run appeared to fail
   with 8 timeouts; every one was load flakiness, confirmed by re-running the
   files alone.
@@ -67,6 +93,21 @@ Working tree clean, nothing pushed, no branch left behind.
 - **`findLastIndex` does not typecheck here.** The project targets ES2022 on
   purpose. Vitest ran it happily on Node, so only `npm run typecheck` caught it.
   Do not raise the project's floor to save four lines.
+- **`rtk` rewrites shell commands and mangles their output.** A hook sends
+  `git`, `grep` and friends through the `rtk` proxy. It prints
+  `Failed to resolve 'rg' via PATH`, renumbers `grep -n` output so the line
+  numbers belong to a different file than the paths beside them, and reduced a
+  `git status --short` to the single word `ok` and a whole vitest run to
+  `PASS (1) FAIL (0)`. None of that is your code failing. **Do not read a
+  gate's result through it.** Run anything whose exact output matters through
+  the PowerShell tool instead, which is not intercepted, and prefer the Read and
+  Grep tools over shell `cat` and `grep`.
+- **`cat >>` corrupted a file again on 2026-09-04**, in the exact way
+  `CLAUDE.md` says it will, this time appending a test to
+  `app/tests/bulk-apply.test.ts` and breaking a comment forty lines further up.
+  It is cheap to recover with `git checkout -- <file>` when the tree is
+  otherwise clean, and the fix is to use the Write or Edit tools. The warning is
+  in `CLAUDE.md` and was still walked into, so it is worth two lines here too.
 - **A file named `nul` in the repo root is a Git Bash redirect accident**, but
   check before deleting: the one found this session was a valid 248 KB GIF. It
   was copied to the scratchpad before removal.
@@ -78,6 +119,17 @@ Working tree clean, nothing pushed, no branch left behind.
   implementation code. 023's found two defects that no per-chunk review could
   have seen, because each was a disagreement between two pieces of code that
   were correct on their own.
+- **A late holistic review still earns it, and pays differently.** 022's was run
+  two days after the feature shipped and found no defect, because by then the
+  code had been exercised. What it found instead was two places where the
+  evidence did not cover what the spec claimed: a gate that did not exist, and a
+  composition nothing tested. That is the characteristic yield of a late review,
+  and it is worth having. Do not treat "it found no bug" as "it was not worth
+  running".
+- **Check a gate by breaking the thing it guards.** Both of 022's promises were
+  confirmed by injecting the defect and watching the right tests fail, then
+  reverting. Every gate this project trusts was verified this way, and the two
+  it did not verify are the two that turned out to be measuring nothing.
 - **A review is evidence, not authority.** 023's reviewer reported an untracked
   `nul` file that had already been removed. Check findings before acting.
 - **Tests that pass can still be blind.** Twenty one tests covered the paste
