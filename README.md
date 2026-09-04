@@ -94,7 +94,7 @@ refuses to report a pass unless enough content was actually on screen.
 ```powershell
 npm install     # from PowerShell, not Git Bash. See CLAUDE.md for why
 npm run dev     # the app
-npm run verify  # typecheck, lint, 896 tests, secret scan, dash scan, accessibility
+npm run verify  # typecheck, lint, 991 tests, secret scan, dash scan, accessibility
 npm run shots   # regenerates every image above from the built app
 ```
 
