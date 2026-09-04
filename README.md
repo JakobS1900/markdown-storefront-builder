@@ -7,6 +7,13 @@ who has. This turns that into a compiler problem.
 A block document goes in. Host-correct Markdown comes out, along with a warning
 for every compromise made on the way.
 
+![Starting a page from a template, changing a price, and copying the finished Markdown for rentry.co and then for text.is](docs/media/demo.gif)
+
+*Twelve seconds, recorded from the built app: start from a template, change a
+price, watch the preview catch up, and copy the Markdown out for the host you
+chose. Nothing here is a mockup. `npm run shots` regenerates every image on
+this page.*
+
 **Try it:** [jakobs1900.github.io/markdown-storefront-builder](https://jakobs1900.github.io/markdown-storefront-builder/)
 Works on a phone, installs to a home screen, and runs with no network. Nothing
 is sent anywhere: storage, compilation, and preview are all local.
@@ -21,12 +28,74 @@ Twelve sections in, 6,673 characters of Markdown out, pasted into the real host.
 
 **Case study:** [jakobs1900.github.io/portfolio/storefront-builder.html](https://jakobs1900.github.io/portfolio/storefront-builder.html)
 
+## What it looks like
+
+Six phone screens, in order, from arriving to pasting.
+
+| ![The empty state, offering an example page and a list of templates including art commissions, digital downloads and handmade crafts](docs/media/01-start.png) | ![A page shown as a list of sections: text, about you, prices and gallery, each with buttons to move or remove it](docs/media/02-sections.png) | ![An open prices section showing plain form fields for the item name, its price and what the price buys](docs/media/03-editing.png) |
+|:--|:--|:--|
+| **Arrive.** An example page and eight templates. The first screen is something to change, not an empty form. | **A page is a list of sections.** Move one, remove one, open one. There is no Markdown on this screen and never is. | **Open a section and fill it in.** Fields with ordinary names. The syntax is the compiler's problem, not yours. |
+
+| ![The apply pricing panel: multiply cost by 4.2, round up to ending .99, and a preview naming each row it will change](docs/media/04-pricing.png) | ![The preview tab rendering a price table with items, prices and what each price includes](docs/media/05-preview.png) | ![The copy tab showing a host picker set to rentry.co and the compiled Markdown in a selectable box](docs/media/06-copy.png) |
+|:--|:--|:--|
+| **Price the whole list at once.** Cost times a multiplier, rounded, previewed row by row before a single price is written, and reversible in one press. A row with no cost recorded is named and skipped rather than guessed at. | **See it before you post it.** The preview renders the compiled Markdown and says plainly that it approximates the host rather than being it. | **Copy it out.** Pick where you are pasting and the output changes with it, along with the steps underneath for that host. |
+
+### The part you would otherwise pay somebody to know
+
+<table>
+<tr>
+<td width="42%">
+
+![A warning reading: one of your images does not have an http or https address, so it has been left out, with a button that jumps to the gallery section it came from](docs/media/10-warnings.png)
+
+</td>
+<td>
+
+Every compromise the compiler makes is reported, in the artist's words, with a
+button that goes to the section it happened in. That is the whole product: not
+that it writes Markdown, but that it tells you what the host will not do with
+it before you find out in public.
+
+This one was provoked on purpose for the screenshot, by naming a picture the
+way a person names a file on their own computer.
+
+</td>
+</tr>
+</table>
+
+### On a screen with room for it
+
+The preview moves beside the editor rather than onto a tab of its own. Both
+palettes ship, so both are tested and both are shown.
+
+![The wide layout in the light palette: the section list and an open prices form on the left, the rendered page on the right](docs/media/08-wide-light.png)
+
+<table>
+<tr>
+<td width="30%">
+
+![The section list on a phone in the dark palette](docs/media/07-dark.png)
+
+</td>
+<td>
+
+![The same wide layout in the dark palette](docs/media/09-wide-dark.png)
+
+</td>
+</tr>
+</table>
+
+Contrast in both is measured rather than eyeballed. `npm run contrast` runs
+axe in headless Chrome over a real storefront, once in each palette, and
+refuses to report a pass unless enough content was actually on screen.
+
 ## Running it
 
 ```powershell
 npm install     # from PowerShell, not Git Bash. See CLAUDE.md for why
 npm run dev     # the app
 npm run verify  # typecheck, lint, 896 tests, secret scan, dash scan, accessibility
+npm run shots   # regenerates every image above from the built app
 ```
 
 ## What is where
@@ -38,6 +107,7 @@ npm run verify  # typecheck, lint, 896 tests, secret scan, dash scan, accessibil
 | `engine/tests/compile/golden/` | Expected output, byte compared. Readable Markdown, so a human can judge a diff. |
 | `app/` | The editor. Mobile first, local only, no account, no framework. |
 | `android/` | The native shell. A Capacitor wrapper, a back handler, and a file handoff, because a `download` attribute does nothing in a WebView. |
+| `docs/media/` | The images on this page, and `demo.mp4` for anywhere a GIF is too coarse. Written by `scripts/screenshots.mjs`, which drives the built app in headless Chrome and fails the run if a step it was told to perform found nothing to press. |
 | `specs/` | Every specification, committed beside the code. `specs/README.md` says which ones were written before the code and which after, because most were after. |
 | `docs/research/` | What was observed on a live host, with the date. Every capability value in a target record cites one of these. |
 

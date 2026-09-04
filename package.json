@@ -25,6 +25,7 @@
     "android:apk": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug",
     "android:open": "cap open android",
     "contrast": "npm run build:app && node scripts/contrast.mjs",
+    "shots": "npm run build:app && node scripts/screenshots.mjs",
     "pwa-update": "npm run build:app && node scripts/pwa-update.mjs"
   },
   "devDependencies": {
