@@ -382,3 +382,36 @@ describe("computeBulkPreview directly", () => {
     ]);
   });
 });
+
+describe("a selection that outlived a reorder", () => {
+  /**
+   * The composition the schema change was taken for, and the one seam the
+   * tests either side of it left open. `tier-selection.test.ts` proves a
+   * reorder leaves the selection unchanged, and "applying" above proves a
+   * selection writes the right rows, but until this test nothing did both in
+   * one run. A selection held by position passes each of those halves on its
+   * own and still reprices the wrong product here, which
+   * `specs/022-bulk-pricing/spec.md` calls the worst defect this feature
+   * could ship.
+   */
+  it("reprices the row that moved, not the row that took its place", () => {
+    const root = shop();
+    // Gadget alone: cost 10, price 20, sitting second of four.
+    selectTiers(menuBlock().id, ["b"]);
+    renderShell(root);
+
+    press("Move item 2 up");
+    renderShell(root);
+    expect(tierRecords().map((tier) => tier["id"])).toEqual(["b", "a", "c", "d"]);
+
+    fillPanel(root, "3", "2", "99");
+    press("Apply pricing");
+
+    // Gadget is the row that was chosen and it is now first: 10 * 3 + 2 = 32,
+    // rounded up to .99.
+    expect(tierRecords()[0]).toMatchObject({ id: "b", price: "32.99" });
+    // Widget took the position the selection used to occupy and was never
+    // chosen. Held by position, this would read "from 38.99" instead.
+    expect(tierRecords()[1]).toMatchObject({ id: "a", price: "from 12" });
+  });
+});
