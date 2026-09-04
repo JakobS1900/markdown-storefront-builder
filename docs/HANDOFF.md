@@ -21,13 +21,23 @@ honest record of it.
    Expect 1080 tests, a11y 34, contrast clean in both palettes, pwa gate green.
    If it fails, read "Traps" below before believing it: several of its failures
    are environmental rather than real.
-2. **F4, the interview wizard, is the last of the four features the 2026-09-02
-   ideas decomposed into.** It is explicitly gated, not merely unstarted:
-   `specs/021-starting-points/spec.md` says building a question by question
-   interview before knowing whether a starting point was enough would be
-   guessing. F1 (021 starting points) has now shipped, so **the gate is a
-   question for Jakob, not a task**: has anyone used a starting point? Ask
-   before specifying F4.
+2. **F4, the interview wizard, is UNGATED as of 2026-09-04 and is the next
+   feature.** `specs/021-starting-points/spec.md` gated it on whether a
+   starting point turned out to be enough, because building a question by
+   question interview before knowing that would be guessing. Jakob was asked on
+   2026-09-04 and answered: **somebody used a starting point and it was not
+   enough.** That is the evidence the gate was waiting for, and it opens.
+
+   Route it as `CLAUDE.md` says: `/speckit-specify`, then `-plan`, `-tasks`,
+   `-analyze`. It is a whole surface with its own state machine, so it will be
+   several chunks, which means a holistic review before committing
+   implementation code is mandatory rather than optional.
+
+   **Do not start writing the spec without asking Jakob HOW it fell short**, and
+   do not infer it from the code. The gate exists to stop this feature being
+   guessed at, and opening it only to guess at the shape instead would waste the
+   waiting. That question was put to Jakob on 2026-09-04 and this file will say
+   so here once it is answered.
 3. **Consider the test suite's timing fragility** (see "Traps"). Not urgent, and
    nobody has asked for it, so do not start it without saying so first. With
    022's review done, this is the largest thing left that needs nothing from
@@ -145,7 +155,8 @@ during implementation", and the short version is worth carrying:
 
 ## Deferred deliberately, do not "fix" without asking
 
-- **F4, the interview wizard.** Gated on F1 usage. See Next up.
+- **F4, the interview wizard.** No longer deferred. The gate opened on
+  2026-09-04. See Next up.
 - **No cost range filter, no target margin mode, no bulk change to existing
   prices.** All three declined in `specs/022-bulk-pricing/spec.md` with reasons.
 - **No fetching a price list from a URL, no image import, no second pass
@@ -157,9 +168,11 @@ during implementation", and the short version is worth carrying:
 
 ## Blocked on Jakob
 
-- **F4's gate**: has anyone actually used a starting point from feature 021?
-  Unlocks specifying and building the interview wizard, the largest remaining
-  idea from 2026-09-02.
+- **F4's shape**, not its gate. The gate is open: asked and answered on
+  2026-09-04, somebody used a starting point and it was not enough. What is
+  still needed before a spec can be written is HOW it fell short, which only
+  Jakob saw. Unlocks specifying and building the interview wizard, the largest
+  remaining idea from 2026-09-02.
 - **Pushing anything.** Policy is commit locally, never push; a remote exists
   and `master` tracks `origin/master`, so the two have diverged by two commits
   and that is intended.
