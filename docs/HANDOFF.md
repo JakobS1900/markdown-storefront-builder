@@ -5,8 +5,10 @@ The live document a new session reads first. `CLAUDE.md` still points at
 happening right now and what to do next.
 
 **Current state**: feature 023 is complete and committed as `fa8eb28`. Feature
-022's missing holistic review has now been run, and is the most recent work on
-`master`. Working tree clean, nothing pushed, no branch left behind.
+022's missing holistic review has now been run: `b69266a` is the test it added,
+`20d3192` is what it found, and this file describes the tree at `20d3192` plus
+its own commit on top. Working tree clean, nothing pushed, no branch left
+behind.
 
 Every feature through 023 now has a holistic review except the ones
 `specs/README.md` marks `no` for structural reasons, and that column is the
