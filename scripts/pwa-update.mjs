@@ -31,12 +31,19 @@ import {
 } from "node:fs";
 import { join, extname } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
-const DIST = new URL("../app/dist/", import.meta.url).pathname.replace(/^\//, "");
+// See the note in contrast.mjs: trimming a leading slash off `pathname` is a
+// Windows-only path, and it produced a relative one on the Linux CI runner.
+const DIST = fileURLToPath(new URL("../app/dist/", import.meta.url));
 const PORT = 8801;
 const CDP_PORT = 9483;
+// Per platform rather than per laptop, and overridable. See contrast.mjs.
 const CHROME =
-  process.env["CHROME_PATH"] ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
+  process.env["CHROME_PATH"] ??
+  (process.platform === "win32"
+    ? "C:/Program Files/Google/Chrome/Application/chrome.exe"
+    : "google-chrome");
 
 if (!existsSync(DIST)) {
   console.error(`No build at ${DIST}. Run "npm run build:app" first.`);

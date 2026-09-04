@@ -25,14 +25,23 @@ import { createServer } from "node:http";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("../app/dist/", import.meta.url).pathname.replace(/^\//, "");
-const OUT = new URL("../docs/media/", import.meta.url).pathname.replace(/^\//, "");
-const PORT = 8801;
-const CDP_PORT = 9483;
+// See the note in contrast.mjs on why this is not `pathname` with the leading
+// slash trimmed off.
+const ROOT = fileURLToPath(new URL("../app/dist/", import.meta.url));
+const OUT = fileURLToPath(new URL("../docs/media/", import.meta.url));
+// Not the ports pwa-update.mjs uses. Nothing runs the two at once today, and a
+// shared port is a confusing way to find out when something does.
+const PORT = 8803;
+const CDP_PORT = 9485;
 
+// Per platform rather than per laptop, and overridable. See contrast.mjs.
 const CHROME =
-  process.env["CHROME_PATH"] ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
+  process.env["CHROME_PATH"] ??
+  (process.platform === "win32"
+    ? "C:/Program Files/Google/Chrome/Application/chrome.exe"
+    : "google-chrome");
 const FFMPEG = process.env["FFMPEG_PATH"] ?? "ffmpeg";
 
 /** A phone, because that is the device this app was designed for. */

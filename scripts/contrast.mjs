@@ -20,14 +20,27 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { join, extname } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("../app/dist/", import.meta.url).pathname.replace(/^\//, "");
-const AXE = new URL("../node_modules/axe-core/axe.min.js", import.meta.url).pathname.replace(/^\//, "");
+// fileURLToPath rather than trimming a leading slash off `pathname`. That trick
+// is right on Windows, where the pathname is "/F:/repo/app/dist/", and wrong
+// everywhere else: on the Linux CI runner it turned "/home/runner/..." into the
+// relative "home/runner/...", so this gate reported "No build at ..." and
+// exited 2 on every push to master while passing on the laptop that wrote it.
+const ROOT = fileURLToPath(new URL("../app/dist/", import.meta.url));
+const AXE = fileURLToPath(new URL("../node_modules/axe-core/axe.min.js", import.meta.url));
 const PORT = 8799;
 const CDP_PORT = 9481;
 
+// The default is per platform, not per author's laptop. A Windows path handed
+// to spawn on Linux fails as ENOENT and then as "headless Chrome did not
+// start", which reads like a broken runner rather than a wrong filename.
+// CHROME_PATH overrides both.
 const CHROME =
-  process.env["CHROME_PATH"] ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
+  process.env["CHROME_PATH"] ??
+  (process.platform === "win32"
+    ? "C:/Program Files/Google/Chrome/Application/chrome.exe"
+    : "google-chrome");
 
 if (!existsSync(ROOT)) {
   console.error(`No build at ${ROOT}. Run "npm run build:app" first.`);
