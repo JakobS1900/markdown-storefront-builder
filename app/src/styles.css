@@ -188,15 +188,27 @@ body {
   border-radius: 0 0 var(--r-sm) var(--r-sm);
   font-weight: 600;
   text-decoration: none;
-  box-shadow: var(--e-accent);
   /* Off the top of the screen rather than off the side, so it drops into view
      from where a skip link belongs. */
   transform: translateY(-110%);
   transition: transform var(--med) var(--ease);
 }
 
+/*
+ * The shadow arrives with the link, and not before it.
+ *
+ * It used to be on `.skip` itself. Parked, the box sits 5px above the top edge,
+ * which -110% of a 49px control comes to, while the shadow is offset 6px down
+ * and blurred 16, so it reached 17px INTO the page. Every screen in the app had
+ * a soft purple smudge in its top left corner, and it was in every screenshot
+ * taken of it. A thing parked off screen should cast nothing onto the screen.
+ *
+ * On focus rather than on the element keeps this true whatever the control's
+ * height turns out to be, which parking it further away would not.
+ */
 .skip:focus {
   transform: none;
+  box-shadow: var(--e-accent);
 }
 
 :focus-visible {
