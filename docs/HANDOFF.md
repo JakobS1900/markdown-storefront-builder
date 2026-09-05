@@ -5,9 +5,14 @@ The live document a new session reads first. `CLAUDE.md` still points at
 happening right now and what to do next.
 
 **Released**: `v0.4.0`, 2026-09-05, from `ce72671`. Tag and 28 commits pushed,
-GitHub Release published with the signed APK, versionCode 7. That is the first
-release in four days and it carried seventy commits, which is too many to sit on
-again. The previous six tags all landed on 2026-09-01.
+GitHub Release published with the signed APK, versionCode 7.
+
+**Tag often from here.** Jakob's instruction on 2026-09-05, after 0.4.0 went out
+carrying seventy commits and four days. A tag per feature or per handful of
+fixes, not a fortnight in one. The policy and the reasoning are in
+`docs/RELEASE.md` under "How often"; this line exists so a session that reads
+only the handoff still knows. Note it does NOT grant the push: that is still
+asked for every time.
 
 **Current state**: feature 023 is complete and committed as `fa8eb28`. Feature
 022's missing holistic review has now been run: `b69266a` is the test it added,

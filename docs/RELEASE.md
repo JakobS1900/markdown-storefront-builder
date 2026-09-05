@@ -72,9 +72,31 @@ not install anywhere; check which file you have before sending one to anybody.
 **must increase on every build anyone else receives**. `versionName` is the
 string a human reads.
 
-Currently `versionCode 1`, `versionName "0.1.0"`, both in
+Currently `versionCode 7`, `versionName "0.4.0"`, both in
 `android/app/build.gradle`. Not 1.0: the roadmap has open items and everything
 has been verified on one handset by the person who wrote it.
+
+This section said `versionCode 1` and `0.1.0` until 2026-09-05, six releases
+after that stopped being true. It is two numbers in one file and it still went
+stale, which is the argument for reading the file rather than this paragraph.
+
+## How often
+
+**Tag often. Small releases, not batched ones.** A tag per feature, or per
+handful of fixes, rather than a fortnight of work in one.
+
+0.4.0 is why this is written down. It carried seventy commits over four days,
+three features, a whole restyle and five design fixes. Nothing went wrong that a
+smaller release would have prevented, but one thing nearly did: the first build
+of it packaged web assets four days stale, and it was correctly signed and said
+BUILD SUCCESSFUL. On a release carrying one feature that is an obvious mistake
+with an obvious cause. On a release carrying seventy commits it is a needle, and
+the only reason it was found is that somebody thought to compare a filename
+inside the APK against the one in `app/dist`.
+
+The cost of a release here is a version bump, a build, a signature check and a
+tag. The cost of a batched one is that every problem in it arrives at once and
+none of them is obviously yours. Prefer the cheap thing more often.
 
 ## Installing a release build over a debug one
 
