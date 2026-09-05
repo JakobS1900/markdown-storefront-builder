@@ -79,23 +79,44 @@ honest record of it.
    are environmental rather than real. It earned its place on 2026-09-05, when
    it caught a real failure that had been latent for days and was NOT one of
    the environmental ones. See the starters-picker entry under "Traps".
-2. **F4, the interview wizard, is UNGATED as of 2026-09-04 and is the next
-   feature.** `specs/021-starting-points/spec.md` gated it on whether a
-   starting point turned out to be enough, because building a question by
-   question interview before knowing that would be guessing. Jakob was asked on
-   2026-09-04 and answered: **somebody used a starting point and it was not
-   enough.** That is the evidence the gate was waiting for, and it opens.
+2. **F4, the interview wizard, is UNGATED and is the next feature.**
+   `specs/021-starting-points/spec.md` gated it on whether a starting point
+   turned out to be enough, because building a question by question interview
+   before knowing that would be guessing.
+
+   **The gate is open on this, said by Jakob on 2026-09-05: somebody used a
+   starting point and could not figure out what to write. They got
+   overwhelmed.** That is first hand, it is the HOW as well as the whether, and
+   it is what the rest of this item is built on.
+
+   Read the next paragraph before trusting anything else about this gate.
+   This file previously recorded that Jakob was asked on 2026-09-04 and answered
+   "somebody used a starting point and it was not enough". Told about it on
+   2026-09-05, **Jakob did not recall saying it.** It entered in one commit,
+   `2266252`, written by the session that opened the gate, in the file that
+   session was maintaining, with nothing corroborating it anywhere: no spec
+   amendment, no second record, and authorship proves nothing because every
+   commit here is authored as Jakob by project rule. So it is unverifiable and
+   it is treated as withdrawn. It did not matter in the end, because the
+   first-hand answer above arrived and is strictly better evidence, but the near
+   miss is the point: a feature was one session away from being specified on a
+   claim about a user that nobody can source. **Do not record something Jakob
+   said unless he said it in the session that writes it down.**
 
    Route it as `CLAUDE.md` says: `/speckit-specify`, then `-plan`, `-tasks`,
    `-analyze`. It is a whole surface with its own state machine, so it will be
    several chunks, which means a holistic review before committing
    implementation code is mandatory rather than optional.
 
-   **Do not start writing the spec without asking Jakob HOW it fell short**, and
-   do not infer it from the code. The gate exists to stop this feature being
-   guessed at, and opening it only to guess at the shape instead would waste the
-   waiting. That question was put to Jakob on 2026-09-04 and this file will say
-   so here once it is answered.
+   **What the answer actually says, before anybody specifies against it.** The
+   failure is not that the starting point had the wrong sections in it. It is
+   that a blank field with a label over it does not tell somebody what to type,
+   and eight of them at once is worse than one. That points at an interview, and
+   it also points at two cheaper things that are not one: fewer fields on first
+   sight, and examples in the fields rather than only hints above them. A wizard
+   is the largest of the three answers to this, not the only one, and the spec
+   should say why it is the right one rather than assume it. Ask Jakob before
+   ruling the cheap ones out.
 3. **Drive the app before believing anything about how it looks.** The design
    review on 2026-09-05 is done and found three defects, all fixed, none of
    which was visible in `docs/media`. That is the standing lesson: the stills
@@ -321,11 +342,13 @@ during implementation", and the short version is worth carrying:
 
 ## Blocked on Jakob
 
-- **F4's shape**, not its gate. The gate is open: asked and answered on
-  2026-09-04, somebody used a starting point and it was not enough. What is
-  still needed before a spec can be written is HOW it fell short, which only
-  Jakob saw. Unlocks specifying and building the interview wizard, the largest
-  remaining idea from 2026-09-02.
+- **Whether F4 is the right answer**, not whether the problem is real. The
+  problem is confirmed first hand on 2026-09-05: somebody could not figure out
+  what to write and got overwhelmed. What is not settled is that a wizard is the
+  fix. Fewer fields on first sight, and examples inside the fields rather than
+  hints above them, address the same complaint for a fraction of a new surface
+  with its own state machine. Jakob has not been asked to choose. Unlocks
+  specifying whatever wins.
 - **Pushing anything.** Still the policy, and still asked each time. It was
   asked and granted once, on 2026-09-05, for the 0.4.0 release: 28 commits and
   the tag went to `origin` and the GitHub Release was published. Local and
