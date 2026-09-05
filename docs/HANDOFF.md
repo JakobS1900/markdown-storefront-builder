@@ -6,9 +6,10 @@ happening right now and what to do next.
 
 **Current state**: feature 023 is complete and committed as `fa8eb28`. Feature
 022's missing holistic review has now been run: `b69266a` is the test it added,
-`20d3192` is what it found, and this file describes the tree at `20d3192` plus
-its own commit on top. Working tree clean, nothing pushed, no branch left
-behind.
+`20d3192` is what it found. On top of that sit two UI fixes asked for directly
+rather than through a feature: `e0f345b` is the preview table and the checkbox,
+`053bdae` is the regenerated screenshots. This file describes the tree at
+`053bdae`. Working tree clean, nothing pushed, no branch left behind.
 
 Every feature through 023 now has a holistic review except the ones
 `specs/README.md` marks `no` for structural reasons, and that column is the
@@ -81,6 +82,27 @@ during implementation", and the short version is worth carrying:
   paste from. It fails without the fix and passes with it.
 - **`cost` still never publishes** for any target, including rows created by
   pasting. Asserted by compiling a converted row, not by inspecting the field.
+- **The preview table's widths are measured, not guessed** (`e0f345b`). Driven
+  in headless Chrome at 390px, before and after. Before: port 316 against
+  content 336, columns 91, 60, 100, 84, cell height 590. After: port 316
+  against 544, columns 103, 63, 235, 142, cell height 206, and the page still
+  does not scroll sideways. Two dead ends were measured rather than reasoned
+  about, and both are worth not repeating: a `min-width` floor on the cells
+  gives every column exactly that floor (144, 144, 144, 144 at 9rem), because
+  once the minimums pass the port there is no surplus for auto layout to hand
+  out; and a floor on the table with no wrapper distributes correctly but sets
+  the whole page scrolling sideways, since one element cannot be both the port
+  and the content.
+- **`min-width: 34rem` is inert in the split view.** Checked, not assumed: at
+  1180px the table measures 110, 64, 311, 175 at 662 wide, identical to the old
+  rule re-imposed at that width.
+- **The checkbox accent follows the palette**: `rgb(122, 75, 214)` light,
+  `rgb(179, 148, 245)` dark, where it was the browser's own blue. One
+  declaration covers every checkbox, because `app/src/ui/dom.ts` has the only
+  helper that makes one.
+- **`npm run verify` passes on `053bdae`**, run alone. 1081 tests in 63 files,
+  a11y 34, contrast 164 elements and 12 sections clean in both palettes, pwa
+  gate green. It was 1080 before the table fix added one test.
 
 ## Traps that cost real time in this session
 
@@ -161,6 +183,15 @@ during implementation", and the short version is worth carrying:
   prices.** All three declined in `specs/022-bulk-pricing/spec.md` with reasons.
 - **No fetching a price list from a URL, no image import, no second pass
   tracking** in 023. Reasons in `specs/023-import/spec.md`.
+- **No gate on the preview table's `34rem`.** The test added in `e0f345b`
+  guards the structure the fix needs, that the table has a `.table-scroll`
+  wrapper, which is what a later edit would quietly drop. jsdom lays nothing
+  out, so the widths themselves were verified with a throwaway browser script
+  rather than a repo gate, and that script was not kept. Promoting it to sit
+  beside `contrast.mjs` was offered and not taken up. Ask before building it.
+- **No affordance saying the preview table scrolls.** It is discoverable the
+  usual way, by content visibly cut off at the right edge. A fade or a shadow
+  was considered and not added.
 - **`gstack` review gates** (`plan-eng-review`, `review`, `qa`, `ship`, `cso`)
   are installed at `C:/Users/Emu/.claude/skills/` and unreachable from a
   `.claude-personal/` session. `CLAUDE.md` calls this a known gap being carried,
@@ -174,8 +205,9 @@ during implementation", and the short version is worth carrying:
   Jakob saw. Unlocks specifying and building the interview wizard, the largest
   remaining idea from 2026-09-02.
 - **Pushing anything.** Policy is commit locally, never push; a remote exists
-  and `master` tracks `origin/master`, so the two have diverged by two commits
-  and that is intended.
+  and `master` tracks `origin/master`, so local is ten commits ahead and none
+  behind. That is intended, and the number only grows. Do not read it as
+  something to tidy up.
 - **Whether feature work should use branches at all.** Delivery has gone
   straight to master since `Merge 009-imgur` on 2026-08-25, but
   `.specify/extensions.yml` still runs a mandatory branch-creating hook before
