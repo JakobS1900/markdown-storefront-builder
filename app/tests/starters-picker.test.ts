@@ -37,8 +37,34 @@ function starterButtons(): HTMLButtonElement[] {
   return [...document.querySelectorAll<HTMLButtonElement>(".starters button")];
 }
 
+const tick = (): Promise<unknown> => new Promise((r) => setTimeout(r, 0));
+
+/** Enough for a save to land, which is a fixed amount of local work. */
 async function settle(): Promise<void> {
-  for (let i = 0; i < 12; i += 1) await new Promise((r) => setTimeout(r, 0));
+  for (let i = 0; i < 12; i += 1) await tick();
+}
+
+/**
+ * Waits for something to become true, rather than guessing how long it takes.
+ *
+ * Opening a starting point dynamically imports its document, because the
+ * documents are lazy chunks on purpose: see `app/src/starters/index.ts`. The
+ * first such import in a run is not a fixed cost. Measured on 2026-09-05, it
+ * needed 30 ticks and 36ms cold against 3 ticks and 7ms once the module was
+ * loaded, and `settle()` allowed 12.
+ *
+ * That is the whole of this file's flakiness, and it was invisible because it
+ * depended on order: whichever test opened a starter first paid the import and
+ * failed, every later one was warm and passed, and a suite that had already
+ * run something else passed all of them. It failed here the moment this file
+ * ran on a cold transform cache.
+ *
+ * The ceiling is a stop, not a wait. It is only reached when the condition
+ * never becomes true, and then the assertion that follows reports the real
+ * failure rather than this helper hanging until the suite timeout.
+ */
+async function settleUntil(until: () => boolean): Promise<void> {
+  for (let i = 0; i < 200 && !until(); i += 1) await tick();
 }
 
 beforeEach(() => {
@@ -134,7 +160,7 @@ describe("the starting point picker", () => {
     const first = starterButtons()[0];
     expect(first).toBeDefined();
     first?.click();
-    await settle();
+    await settleUntil(() => getState().pageId !== before);
     renderShell(root);
 
     expect(getState().pageId).not.toBe(before);
@@ -148,7 +174,9 @@ describe("the starting point picker", () => {
     const root = live();
 
     starterButtons()[0]?.click();
-    await settle();
+    // Same import to wait on, and this one has only the announcement to wait
+    // for. It passed on a warm module and would fail the day it ran first.
+    await settleUntil(() => (document.getElementById("live-region")?.textContent ?? "") !== "");
     renderShell(root);
 
     const said = document.getElementById("live-region")?.textContent ?? "";
