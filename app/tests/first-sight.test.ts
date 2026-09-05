@@ -23,7 +23,7 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { addBlock, getState, init, subscribe, updateBlock } from "../src/store.js";
+import { addBlock, getState, init, selectTiers, subscribe, updateBlock } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 import { settle } from "./settle.js";
@@ -94,6 +94,72 @@ describe("a blank price row", () => {
     addBlock(blankBlock("menu"));
 
     expect(group()?.open).toBe(false);
+  });
+});
+
+describe("the bulk pricing controls on a section too small to need them", () => {
+  /**
+   * `blankBlock` seeds one real row on purpose, so the guard that was already
+   * here, `block.tiers.length === 0`, never fired for a new section: a price
+   * list with one empty row still drew "0 selected", "Select all" and "Select
+   * none" above it, which is three controls doing what the row's own checkbox
+   * does. It is BULK pricing. Below two rows there is no bulk.
+   */
+  function menuWith(rows: number): void {
+    live();
+    addBlock(blankBlock("menu"));
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("no menu block");
+    const first = block.tiers[0];
+    if (first === undefined) throw new Error("no tier");
+    updateBlock(block.id, {
+      ...block,
+      tiers: Array.from({ length: rows }, (_, i) => ({
+        ...first,
+        id: `t${String(i)}`,
+        name: `Item ${String(i)}`,
+        price: "10",
+      })),
+    });
+  }
+
+  it("draws no toolbar and no checkbox on a one row section", async () => {
+    menuWith(1);
+    await settle();
+    renderShell(document.getElementById("app") as HTMLElement);
+
+    expect(document.querySelector("#surface .bulk-toolbar")).toBeNull();
+    expect(document.querySelectorAll("#surface fieldset.item input[type=checkbox]").length).toBe(0);
+  });
+
+  it("brings both back as soon as there are two rows to choose between", async () => {
+    menuWith(2);
+    await settle();
+    renderShell(document.getElementById("app") as HTMLElement);
+
+    expect(document.querySelector("#surface .bulk-toolbar")).not.toBeNull();
+    expect(document.querySelectorAll("#surface fieldset.item input[type=checkbox]").length).toBe(2);
+  });
+
+  it("takes the apply panel away with them, so no selection is left unreachable", async () => {
+    // The trap this closes. The panel renders whenever something is selected,
+    // and a selection outlives the row count changing. Hiding the checkboxes
+    // without hiding the panel would leave somebody looking at Apply pricing
+    // with no control on screen able to clear what it acts on.
+    menuWith(2);
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("no menu block");
+    selectTiers(block.id, ["t0", "t1"]);
+    await settle();
+    renderShell(document.getElementById("app") as HTMLElement);
+    expect(document.querySelector("#surface .bulk-apply")).not.toBeNull();
+
+    updateBlock(block.id, { ...block, tiers: [{ ...block.tiers[0] }] } as typeof block);
+    await settle();
+    renderShell(document.getElementById("app") as HTMLElement);
+
+    expect(document.querySelector("#surface .bulk-toolbar")).toBeNull();
+    expect(document.querySelector("#surface .bulk-apply")).toBeNull();
   });
 });
 

@@ -232,8 +232,24 @@ describe("the selection is scoped to one price list, never the whole document", 
     if (first === undefined || first.kind !== "menu" || second === undefined || second.kind !== "menu") {
       throw new Error("expected two menu blocks");
     }
-    updateBlock(first.id, { ...first, tiers: [{ id: "t0", name: "Knife", price: "40" }] });
-    updateBlock(second.id, { ...second, tiers: [{ id: "t0", name: "Lamp", price: "25" }] });
+    // Two rows each, not one. The collision is the point of this fixture and
+    // it is still here, on `t0`; the second row exists because selection
+    // controls only appear once there is a choice between rows, which
+    // `first-sight.test.ts` covers. A one row block draws no checkbox to click.
+    updateBlock(first.id, {
+      ...first,
+      tiers: [
+        { id: "t0", name: "Knife", price: "40" },
+        { id: "t1", name: "Axe", price: "60" },
+      ],
+    });
+    updateBlock(second.id, {
+      ...second,
+      tiers: [
+        { id: "t0", name: "Lamp", price: "25" },
+        { id: "t1", name: "Shade", price: "15" },
+      ],
+    });
   }
 
   function blocks(): [ReturnType<typeof menuBlock>, ReturnType<typeof menuBlock>] {

@@ -344,12 +344,16 @@ function profitLine(tier: { readonly price: string; readonly cost?: string }): N
  * another item.
  *
  * The one thing ahead of the items is the bulk pricing toolbar, and only once
- * there is a real row for it to act on: "0 selected", "Select all" and
- * "Select none" ahead of the first Item field would read as settings for a
- * price list that does not exist yet, the same complaint that moved the
- * settings disclosure to the end in the first place. So the toolbar is left
- * out entirely while `block.tiers` is empty, which is also when it would have
- * nothing to select.
+ * there are rows to choose BETWEEN: "0 selected", "Select all" and "Select
+ * none" ahead of the first Item field read as settings for a price list that
+ * does not exist yet, the same complaint that moved the settings disclosure to
+ * the end in the first place.
+ *
+ * That used to be written as `block.tiers.length === 0`, and it was the right
+ * idea measured against the wrong number. `blankBlock` seeds one real row on
+ * purpose, so the guard never fired for a section anybody had just added, and
+ * a brand new price list drew all three controls over its single empty row.
+ * The threshold is two, and `choosable` in `menuForm` carries it.
  *
  * BLANK_ROW. Seeding a new section was not enough. A section saved before that
  * change, or one whose last row has just been removed, holds no rows at all,
@@ -393,17 +397,41 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
   // selected here. See `State.selectedTiers` and the accessor's own comment.
   const selectedIds = selectedIdsIn(block);
 
+  /**
+   * Whether there is a choice to make between rows.
+   *
+   * It is BULK pricing, and below two rows there is no bulk. The guard used to
+   * be `tiers.length === 0`, which never fired for a section anybody had just
+   * added: `blankBlock` seeds one real row on purpose, so a new price list drew
+   * "0 selected", "Select all" and "Select none" above its single empty row.
+   * Three controls to do what that row's own checkbox does.
+   *
+   * All three of the toolbar, the per-row checkbox and the apply panel read
+   * this, and that is not tidiness. The panel renders whenever something is
+   * selected and a selection outlives the row count changing, so hiding the
+   * checkboxes while leaving the panel would strand somebody in front of Apply
+   * pricing with nothing on screen able to clear what it acts on.
+   *
+   * A selection made at two rows survives a drop to one. It is not cleared
+   * here, because clearing state while rendering is how a repaint starts
+   * editing the document. It comes back visible, and checked, when a second row
+   * does.
+   */
+  const choosable = block.tiers.length >= 2;
+
   const tiers = shown.map((tier, i) =>
     el("fieldset", { class: "sub item" }, [
       el("legend", {}, [`Item ${i + 1}`]),
       // FR-055. No checkbox on the placeholder row: `i < block.tiers.length`
       // is the same test `rowTools` already uses, since a row that is not in
-      // the document has nothing to select. The name falls back to its
-      // position rather than a bare "Select", because a fieldset legend does
-      // not fold into a control's accessible name: a price list of sixty
-      // rows named only "Item" in their legend would otherwise present sixty
-      // controls all called "Select".
-      ...(i < block.tiers.length
+      // the document has nothing to select. And none on a section with a single
+      // row, per `choosable` above, because selecting the only row is what
+      // editing it already does. The name falls back to its position rather
+      // than a bare "Select", because a fieldset legend does not fold into a
+      // control's accessible name: a price list of sixty rows named only "Item"
+      // in their legend would otherwise present sixty controls all called
+      // "Select".
+      ...(choosable && i < block.tiers.length
         ? [
             checkbox({
               label: `Select ${tier.name.trim() === "" ? `item ${i + 1}` : tier.name.trim()}`,
@@ -565,8 +593,8 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
   );
 
   return el("div", {}, [
-    ...(block.tiers.length === 0 ? [] : [bulkPricingToolbar(block)]),
-    ...bulkPricingPanel(block),
+    ...(choosable ? [bulkPricingToolbar(block)] : []),
+    ...(choosable ? bulkPricingPanel(block) : []),
     ...tiers,
     ...rowUndo(block.id),
     ...bulkUndoOffer(block.id),

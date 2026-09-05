@@ -46,6 +46,7 @@ import {
   setPasteText,
   setSurface,
   startPasting,
+  updateBlock,
 } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
@@ -118,6 +119,20 @@ describe("the shell is accessible", () => {
     // control it had never rendered."
     const root = mount();
     addBlock(blankBlock("menu"));
+    const seeded = getState().doc.blocks[0];
+    if (seeded === undefined || seeded.kind !== "menu") throw new Error("not a menu");
+    // Two rows, because the selection controls and the panel with them only
+    // appear once there is a choice between rows: it is bulk pricing, and one
+    // row is not bulk. `blankBlock` seeds exactly one, so a gate built on it
+    // alone would render none of what this is here to audit, which is the
+    // failure this test's own comment is about.
+    updateBlock(seeded.id, {
+      ...seeded,
+      tiers: [
+        { id: "t0", name: "Bust", price: "40" },
+        { id: "t1", name: "Half body", price: "80" },
+      ],
+    });
     const block = getState().doc.blocks[0];
     if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
     selectBlock(block.id);
