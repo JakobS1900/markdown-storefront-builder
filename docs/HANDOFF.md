@@ -15,12 +15,21 @@ This file describes the tree at `4d26e5f`, and `npm run verify` is green on it.
 The restyle that was sitting uncommitted is now `a3998c3`, with the twelve
 regenerated media files as `a9ecb4d`. **Working tree clean, nothing pushed.**
 
-The design review of it ran on 2026-09-05 and found three defects, all fixed
-and committed one apiece: `b940fd0` the detached tab bar, `6b8bc45` the seven
-solid accent buttons, `e1138d9` the skip link's leaking shadow. `3bc399e` is
-the regenerated media, and it carries a correction: a claim in `e1138d9` that
-the smudge appeared in the committed screenshots is wrong, and the pixels say
-so. The defect was real, the claim about where it showed was not.
+The design review of it ran on 2026-09-05 and found four defects, all fixed and
+committed one apiece: `b940fd0` the detached tab bar, `6b8bc45` the seven solid
+accent buttons, `e1138d9` the skip link's leaking shadow, `b8efe30` summaries
+that stopped mid sentence with no ellipsis. `3bc399e` is the regenerated media,
+and it carries a correction: a claim in `e1138d9` that the smudge appeared in
+the committed screenshots is wrong, and the pixels say so. The defect was real,
+the claim about where it showed was not.
+
+**What the review checked and found clean**, so it does not get re-checked:
+touch targets (nothing under 44px), focus rings (solid 3px accent on buttons,
+selects, textareas, the tab bar and the skip link), horizontal overflow (none at
+390px on any tab), the radius scale (9, 15, 999, a real hierarchy rather than
+one bubbly value), and contrast in both palettes. Two paddings are off the 4px
+scale, 8.8px and 10.4px, and were left alone: churn across every surface for
+nothing anybody can see.
 
 Its provenance, because it is not in any spec and a later session will wonder:
 Jakob commissioned it from a session that was cut off partway when an account
@@ -269,6 +278,20 @@ during implementation", and the short version is worth carrying:
 
 ## Blocked on Jakob
 
+- **Where "add a section" lives on the Build surface.** Measured on the twelve
+  section example at 390x844: the section list runs from 320 to 1358, the add
+  row sits at 1382, and the page is 1579 tall in an 844 viewport. So adding
+  anything means scrolling past everything already made, and the cost grows with
+  the page being built. This is the closest thing found to the complaint that
+  the interface is tiring to navigate, and it is the one finding the design
+  review did NOT fix, because it is a decision about the surface rather than a
+  defect in it. Options, none of them free: move the row above the list and
+  accept that new sections then land off screen below it; keep it where it is
+  and make it stick to the bottom above the tab bar, which costs vertical room
+  on a phone that has little; or put a second copy at the top, which is a
+  duplicate control and an accessible-name collision of exactly the kind
+  `starterPicker` already had to be careful about. Unlocks the last of the
+  design work on the Build surface.
 - **F4's shape**, not its gate. The gate is open: asked and answered on
   2026-09-04, somebody used a starting point and it was not enough. What is
   still needed before a spec can be written is HOW it fell short, which only
