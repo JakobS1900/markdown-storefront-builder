@@ -18,7 +18,22 @@ regenerated media files as `a9ecb4d`. **Working tree clean, nothing pushed.**
 The design review of it ran on 2026-09-05 and found four defects, all fixed and
 committed one apiece: `b940fd0` the detached tab bar, `6b8bc45` the seven solid
 accent buttons, `e1138d9` the skip link's leaking shadow, `b8efe30` summaries
-that stopped mid sentence with no ellipsis. `3bc399e` is the regenerated media,
+that stopped mid sentence with no ellipsis, and `dc68870` docking the
+add-a-section row above the tab bar, which Jakob chose from three options after
+the cost of each was measured. That one costs 117px: at 390x844 the chrome is
+237 of 844 and 607 is left for content. A single scrolling row would buy most of
+it back and would hide options behind a swipe, and that was not taken.
+
+`a6d1314` came out of the same session and is not a design fix. The contrast
+gate was failing about half the time inside `verify`, which `CLAUDE.md`
+described as occasional and told you to re-run alone. Re-running alone always
+worked, which is what hid the cause: a fixed 1500ms sleep in front of a click
+that fetches and stores the example document. It now waits for the same counts
+the guard checks. **Two fixed-wait bugs in unrelated files in one day**, this
+and `4d26e5f`, is the pattern worth carrying: a fixed wait in front of
+asynchronous work is a bug with a delay on it, and this repo has more of them.
+
+`3bc399e` is the regenerated media,
 and it carries a correction: a claim in `e1138d9` that the smudge appeared in
 the committed screenshots is wrong, and the pixels say so. The defect was real,
 the claim about where it showed was not.
@@ -198,11 +213,15 @@ during implementation", and the short version is worth carrying:
   seconds and passed again with the changes restored.
 - **Do not run anything else while `npm run verify` is going.** That is what
   made the baseline look broken.
-- **The contrast gate can fail without any contrast being wrong.** Its light run
-  occasionally does not load the example page, reports `0 sections`, and refuses
-  to claim a pass. That is the guard working. Both palettes reported
-  `0 contrast failure(s)` while the gate said FAILED. Re-run `npm run contrast`
-  alone.
+- **The contrast gate's light run is FIXED** (`a6d1314`, 2026-09-05). This entry
+  used to say the failure was occasional and to re-run the gate alone. Both
+  halves were true and together they hid the cause for weeks: a fixed 1500ms
+  sleep in front of an asynchronous load. It failed about half the time inside
+  `verify`, where it runs straight after the full test suite, and never once
+  when re-run alone on a quiet machine. The light pass goes first and is
+  therefore the cold one, which is why it was always light. If it fails again it
+  now says what it was waiting for and for how long, and that is a real failure
+  rather than something to re-run.
 - **`findLastIndex` does not typecheck here.** The project targets ES2022 on
   purpose. Vitest ran it happily on Node, so only `npm run typecheck` caught it.
   Do not raise the project's floor to save four lines.
@@ -278,20 +297,6 @@ during implementation", and the short version is worth carrying:
 
 ## Blocked on Jakob
 
-- **Where "add a section" lives on the Build surface.** Measured on the twelve
-  section example at 390x844: the section list runs from 320 to 1358, the add
-  row sits at 1382, and the page is 1579 tall in an 844 viewport. So adding
-  anything means scrolling past everything already made, and the cost grows with
-  the page being built. This is the closest thing found to the complaint that
-  the interface is tiring to navigate, and it is the one finding the design
-  review did NOT fix, because it is a decision about the surface rather than a
-  defect in it. Options, none of them free: move the row above the list and
-  accept that new sections then land off screen below it; keep it where it is
-  and make it stick to the bottom above the tab bar, which costs vertical room
-  on a phone that has little; or put a second copy at the top, which is a
-  duplicate control and an accessible-name collision of exactly the kind
-  `starterPicker` already had to be careful about. Unlocks the last of the
-  design work on the Build surface.
 - **F4's shape**, not its gate. The gate is open: asked and answered on
   2026-09-04, somebody used a starting point and it was not enough. What is
   still needed before a spec can be written is HOW it fell short, which only
