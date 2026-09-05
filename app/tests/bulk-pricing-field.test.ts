@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { addBlock, getState, init, selectBlock, subscribe, updateBlock } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
+import { settle } from "./settle.js";
 
 const LABEL = "Bulk pricing (optional)";
 
@@ -79,14 +80,51 @@ function tier(): Record<string, unknown> {
 }
 
 describe("the field is reachable without opening anything", () => {
-  it("sits outside every fold, not merely somewhere in the document", () => {
-    // A label inside a closed <details> is still in the DOM, so finding it
-    // proves nothing about whether anyone can see it. Asserting on the
-    // ancestor is the actual property: this field decides the section's whole
-    // layout and must not be behind a disclosure nobody opens.
+  // This used to assert `closest("details")` was null: the field sat outside
+  // every fold, because it decides the section's whole layout and must not be
+  // behind a disclosure nobody opens. That was right about the property and
+  // wrong about how to get it, and the evidence that settled it arrived later:
+  // somebody met five fields on a blank row, could not work out what to write,
+  // and stopped. The field is now in the fold, and reachability is asserted
+  // directly instead of via placement.
+  //
+  // A label inside a closed `details` is still in the DOM, so finding it proves
+  // nothing about whether anyone can see it. These two are what "reachable"
+  // actually means now.
+
+  it("is never more than one fold deep", () => {
+    // One press to reach it, always. A disclosure inside a disclosure is how a
+    // control becomes unfindable, and it is the failure the old assertion was
+    // really aimed at.
     itemSection();
     const control = fieldByLabel(LABEL);
-    expect(control.closest("details")).toBeNull();
+    const fold = control.closest("details");
+    expect(fold).not.toBeNull();
+    expect(fold?.parentElement?.closest("details") ?? null).toBeNull();
+  });
+
+  it("is already on screen when the row has a bulk price, rather than folded over it", async () => {
+    // The case that matters. A bulk price somebody typed must never be hidden
+    // by the fold that exists to keep a BLANK row short, because bulk pricing
+    // reads these rows and a value nobody can find is a value nobody can fix.
+    itemSection();
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+    const first = block.tiers[0];
+    if (first === undefined) throw new Error("no item");
+    updateBlock(block.id, {
+      ...block,
+      tiers: [{ ...first, quantities: [{ amount: "5 lb", price: "90" }] }],
+    });
+    // The shell defers repaints rather than running one per keystroke, so the
+    // fold is rebuilt after this settles rather than inside `updateBlock`.
+    await settle();
+    const root = document.getElementById("app");
+    if (root === null) throw new Error("missing #app");
+    renderShell(root);
+
+    const control = fieldByLabel(LABEL);
+    expect(control.closest("details")?.open).toBe(true);
   });
 
   it("is above the fold that holds the secondary fields", () => {

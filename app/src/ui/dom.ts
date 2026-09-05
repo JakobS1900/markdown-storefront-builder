@@ -219,11 +219,31 @@ export function disclosure(opts: {
   children: Node[];
   className?: string;
   id?: string;
+  /**
+   * Start open, for a group whose contents are not empty.
+   *
+   * Folding is about what somebody meets on a blank row, never about hiding
+   * what they already typed. A cost entered and then folded out of sight is
+   * worse than the clutter folding removes, and quietly so: bulk pricing reads
+   * `cost` off every selected row, so a cost nobody can find is a feature that
+   * prices nothing and says it skipped the row.
+   *
+   * Known wart, stated rather than discovered later. `restoreOpenGroups` in the
+   * shell only ever opens a group, never closes one, so while this is true the
+   * group cannot be collapsed: closing it works until the next repaint, which
+   * builds it open again. Showing somebody their own data is worth more than
+   * being able to fold it away, and making close stick means keeping a set of
+   * deliberately closed ids across repaints, which is state this does not have.
+   */
+  open?: boolean;
 }): HTMLElement {
-  return el("details", { class: `more${opts.className === undefined ? "" : ` ${opts.className}`}`, id: opts.id ?? nextFieldId() }, [
+  const node = el("details", { class: `more${opts.className === undefined ? "" : ` ${opts.className}`}`, id: opts.id ?? nextFieldId() }, [
     el("summary", {}, [opts.summary]),
     el("div", { class: "more-body" }, opts.children),
-  ]);
+  ]) as HTMLDetailsElement;
+
+  if (opts.open === true) node.open = true;
+  return node;
 }
 
 /** Replaces a container's children. */

@@ -423,8 +423,19 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         hint: 'Anything you like: "45", "from 45", or "DM me".',
         onInput: (price) => editTier(i, (t) => ({ ...t, price })),
       }),
-      // Beside the price, because that is what it is measured against. Never
-      // compiled: engine/src/document/descriptor.ts says why, and
+      disclosure({
+        summary: "More details",
+        // Open when any of it is filled in. Folding is about a blank row; a
+        // cost somebody typed and can no longer see is worse than the clutter
+        // this removes, and worse quietly, because bulk pricing reads `cost`
+        // off every selected row and reports one it cannot find as skipped.
+        open:
+          (tier.cost ?? "") !== "" ||
+          (tier.unit ?? "") !== "" ||
+          (tier.quantities ?? []).length > 0 ||
+          (tier.details ?? []).length > 0,
+        children: [
+      // Never compiled: engine/src/document/descriptor.ts says why, and
       // engine/tests/compile/cost-never-published.test.ts is the test that
       // makes the promise true. A customer never sees this field; only the
       // seller who typed it does.
@@ -435,19 +446,22 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         onInput: (v) => editTier(i, (t) => withOptional(t, "cost", v)),
       }),
       ...profitLine(tier),
-      // Beside the price, because it qualifies the price. Twenty dollars of
-      // bananas is not a price until you know it buys a pound, and this is
-      // where somebody is already looking when they type the twenty.
+      // It qualifies the price. Twenty dollars of bananas is not a price until
+      // you know it buys a pound.
       field({
         label: "What the price buys (optional)",
         value: tier.unit ?? "",
         hint: 'Leave empty for one of something. Or: "per lb", "each", "per hour".',
         onInput: (v) => editTier(i, (t) => withOptional(t, "unit", v)),
       }),
-      // Kept at the top level rather than folded away, even though it makes an
-      // already long form one field longer. It is the only field here that
-      // changes how the whole section is laid out, and a control with that much
-      // reach that nobody can find is worse than the extra scroll.
+      // This was kept at the top level on the argument that it is the only
+      // field here that changes how the whole section is laid out, and that a
+      // control with that much reach that nobody can find is worse than the
+      // extra scroll. The argument was sound and the evidence went the other
+      // way: somebody met five fields on a blank row, could not work out what
+      // to write, and stopped. Reach is why it is in the FIRST group rather
+      // than behind a second one, and why the group opens itself the moment
+      // there is a bulk price in it.
       field({
         label: "Bulk pricing (optional)",
         value: (tier.quantities ?? []).map((q) => `${q.amount} = ${q.price}`).join("\n"),
@@ -475,9 +489,6 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
           });
         },
       }),
-      disclosure({
-        summary: "More details",
-        children: [
           field({
             label: "Details (optional)",
             value: (tier.details ?? []).map((d) => `${d.label}: ${d.value}`).join("\n"),
