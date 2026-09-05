@@ -8,8 +8,18 @@ happening right now and what to do next.
 022's missing holistic review has now been run: `b69266a` is the test it added,
 `20d3192` is what it found. On top of that sit two UI fixes asked for directly
 rather than through a feature: `e0f345b` is the preview table and the checkbox,
-`053bdae` is the regenerated screenshots. This file describes the tree at
-`053bdae`. Working tree clean, nothing pushed, no branch left behind.
+`053bdae` is the regenerated screenshots. `4d26e5f` then fixed a real test
+failure that `npm run verify` caught on 2026-09-05, described under "Traps".
+This file describes the tree at `4d26e5f`, and `npm run verify` is green on it.
+
+**The working tree is NOT clean, and what is in it is not this session's.** A
+full visual restyle of `app/src/styles.css` sits uncommitted, 530 lines added
+and 97 removed, with all twelve files in `docs/media` regenerated to match it.
+Nothing else is touched: no TypeScript, no tests, no specs. It is a coherent
+piece of work rather than a scratch edit. It passes everything, contrast
+included, in both palettes. It was left alone rather than committed or
+reverted, because whose it is and whether it is finished are Jakob's to say.
+See "Blocked on Jakob".
 
 Every feature through 023 now has a holistic review except the ones
 `specs/README.md` marks `no` for structural reasons, and that column is the
@@ -19,9 +29,11 @@ honest record of it.
 
 1. **Run `npm run verify` from PowerShell before anything else.** It is the
    check that tells you whether the tree is actually where this file says it is.
-   Expect 1080 tests, a11y 34, contrast clean in both palettes, pwa gate green.
+   Expect 1081 tests, a11y 34, contrast clean in both palettes, pwa gate green.
    If it fails, read "Traps" below before believing it: several of its failures
-   are environmental rather than real.
+   are environmental rather than real. It earned its place on 2026-09-05, when
+   it caught a real failure that had been latent for days and was NOT one of
+   the environmental ones. See the starters-picker entry under "Traps".
 2. **F4, the interview wizard, is UNGATED as of 2026-09-04 and is the next
    feature.** `specs/021-starting-points/spec.md` gated it on whether a
    starting point turned out to be enough, because building a question by
@@ -106,13 +118,30 @@ during implementation", and the short version is worth carrying:
 
 ## Traps that cost real time in this session
 
+- **`starters-picker` is FIXED and is no longer on the fragile list**
+  (`4d26e5f`, 2026-09-05). Read this before assuming a failure there is
+  environmental, because for days it was assumed and it was not. Nothing timed
+  out. `settle()` waited a fixed twelve macrotask ticks; a probe measured the
+  starter open path needing **30 ticks cold and 3 warm**, because opening a
+  starting point dynamically imports its document and the documents are lazy
+  chunks on purpose. So the failure is ordinal rather than random: whichever
+  test opens a starter first pays the module load and fails, every later one is
+  warm and passes, and a run where something else already loaded the module
+  passes all of them. The same tree passed verify on 2026-09-04 and failed on
+  2026-09-05 for exactly that. `settleUntil` now waits on the condition, and
+  was verified to discriminate by making the open path resolve without opening.
+  **The lesson generalises and the other seven files have not had it applied:**
+  a fixed tick count in front of anything that can dynamically import is a bug
+  waiting for the right ordering, not a slow test.
 - **The test suite has genuine timing fragility, and it is not yours.** Several
   tests sit at 3.8 to 4.7 seconds against a 5000ms default timeout:
-  `starters-picker`, `page-list`, `page-lifecycle`, `example`, `undo-last`,
-  `bulk-apply`, `repaint-while-typing`, `a11y`. Under any parallel load, or with
+  `page-list`, `page-lifecycle`, `example`, `undo-last`, `bulk-apply`,
+  `repaint-while-typing`, `a11y`. Under any parallel load, or with
   a cold transform cache after edits, they time out. A timed-out test also
   pollutes the rest of its own file, which turns one timeout into what look like
-  three unrelated assertion failures.
+  three unrelated assertion failures. Pollution is real and was seen again on
+  2026-09-05: the starters-picker fix above presented as two failures, and the
+  second vanished when the file was run alone.
   **Before believing a failure, re-run the file alone.** An A/B/A against a
   `git stash` settled one such scare: the same four files took 100 seconds and
   failed on a cold cache, 22 seconds and passed on pristine master, then 36
@@ -199,6 +228,17 @@ during implementation", and the short version is worth carrying:
 
 ## Blocked on Jakob
 
+- **The uncommitted restyle of `app/src/styles.css`.** It was in the tree
+  already when the 2026-09-05 session opened, and no commit, spec or handoff
+  entry accounts for it. What is needed is whether to commit it, whether it is
+  finished, and whether the twelve regenerated media files go with it. Do not
+  commit it as if it were this project's own work and do not revert it: the
+  rule about never deleting Jakob's work covers a working tree as much as a
+  saved document. A copy was taken to the session scratchpad before a `git
+  stash` round trip and verified identical afterwards, ignoring line endings,
+  which the repo's `.gitattributes` rewrites to CRLF. Unlocks committing it, or
+  a design review of it, and it is the reason `docs/media` cannot be trusted to
+  match any commit right now.
 - **F4's shape**, not its gate. The gate is open: asked and answered on
   2026-09-04, somebody used a starting point and it was not enough. What is
   still needed before a spec can be written is HOW it fell short, which only
