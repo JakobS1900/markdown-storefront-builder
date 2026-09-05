@@ -702,6 +702,46 @@ fieldset.item > .btn.icon.danger {
 }
 
 /*
+ * The add-a-section row docks above the tab bar on a phone.
+ *
+ * It is the last thing on the surface and it is the control reached for most,
+ * which is the wrong way round. Measured on the twelve section example at
+ * 390x844 before this: the list ran 320 to 1358, the row sat at 1382, and the
+ * page was 1579 tall in an 844 viewport. Adding anything meant scrolling past
+ * everything already built, and it got worse the more there was to scroll.
+ *
+ * Sticky rather than fixed, and that is not a preference. A fixed descendant
+ * resolves against the nearest transformed ancestor, and `#app` is one keyframe
+ * away from being that again: see the note on `#app` and what it cost the tab
+ * bar. Sticky also settles into the flow at the end of the list rather than
+ * hovering over the gap below it.
+ *
+ * `bottom` is the tab bar's own height written out: the 44px control, the
+ * 0.4rem it is padded with top and bottom, its 1px top border, and whatever the
+ * device reserves at the bottom edge. The two rules have to agree or this row
+ * either overlaps the bar or floats clear of it. Leaving the border out of the
+ * sum measured as a 1px overlap, which is how this arrived at 1px.
+ *
+ * The negative margin is the page gutter from `main`, so the row reaches the
+ * edges like the bar it sits on rather than being a floating slab with the
+ * background showing down both sides.
+ *
+ * Phone only. Above 900px the tab bar is at the top, this offset would be
+ * measured from nothing, and the split view has the room this was short of.
+ */
+@media (max-width: 899px) {
+  .adders-dock {
+    position: sticky;
+    bottom: calc(var(--tap) + 0.8rem + 1px + env(safe-area-inset-bottom));
+    z-index: 5;
+    margin-inline: -1rem;
+    padding: 0.6rem 1rem;
+    background: var(--veil);
+    border-top: 1px solid var(--line);
+  }
+}
+
+/*
  * `.ghost` rather than `.btn`, and the same below for the starting points.
  *
  * `.adders .btn` scores the same as `.btn.primary` and sits later in the file,

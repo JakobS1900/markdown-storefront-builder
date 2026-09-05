@@ -524,7 +524,11 @@ export function buildSurface(container: HTMLElement): void {
 
   const adders = el(
     "div",
-    { class: "adders", role: "group", "aria-label": "Add a section" },
+    // `adders-dock` is the one that stays reachable: on a phone it sticks above
+    // the tab bar rather than sitting at the far end of the list. The other
+    // `.adders` on this surface, the one in `pageList`, is not docked, because
+    // starting a new page is not a thing anybody does repeatedly.
+    { class: "adders adders-dock", role: "group", "aria-label": "Add a section" },
     ADDABLE.map((kind) =>
       button({
         label: KIND_LABEL[kind],
