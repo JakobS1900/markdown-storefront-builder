@@ -135,6 +135,21 @@ body {
  *
  * `#app` is never replaced, only its children are, so this plays once per
  * document load and never again. Every repaint after it leaves it alone.
+ *
+ * Opacity only, and that is not taste. A transform on `#app` makes it the
+ * containing block for every `position: fixed` descendant, and `.tabs` is one.
+ * `transform: none` in the `to` keyframe does not save it: animated, it
+ * computes to the identity matrix rather than to the keyword, and `both`
+ * persists that for the life of the page. Measured at 390x844, the tab bar
+ * pinned to the bottom of `#app` instead of the window and sat 206px up the
+ * screen with dead ground beneath it on any page shorter than the viewport.
+ * The empty state is such a page, so this was the first thing a new user saw.
+ * Above 900px `.tabs` is `sticky`, which is why the split view looked right
+ * and this survived being screenshotted.
+ *
+ * The 6px rise went with it. It cannot be kept here: the containing block
+ * switch is not proportional to the distance travelled, so even a 6px
+ * translate moved the bar the full 206px for the length of the animation.
  */
 #app {
   animation: arrive 420ms var(--ease) both;
@@ -143,11 +158,9 @@ body {
 @keyframes arrive {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
