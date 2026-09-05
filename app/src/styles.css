@@ -4,35 +4,114 @@
  * Constitution Principle VI is enforced here as much as in the markup: every
  * interactive control is at least 44 by 44 CSS pixels, focus is always visible,
  * and nothing depends on hover or on a pointing device.
+ *
+ * The visual language is one idea: a section is a slab of material you pick up
+ * and put down. A slab lies flat until you open it, and the open one lifts.
+ * Everything else stays quiet so that lift means something, which is why the
+ * fieldsets, the icon buttons and the paste panel have no border of their own.
+ * Elevation is the hierarchy here; an outline round every box is not.
+ *
+ * Motion is deliberately narrow, because the shell rebuilds its whole DOM on
+ * every keystroke. An entrance keyframe on anything inside `#app` would re-fire
+ * while somebody types. So what moves is pointer and focus state, which is
+ * immune to repaints, plus one page load sequence on `#app` itself, which
+ * survives every repaint and therefore plays exactly once.
  */
 
 :root {
-  --bg: #fbfaf8;
+  /* Ground, raised material, and inset material. Three surfaces, not one. */
+  --bg: #f3f1f7;
   --panel: #ffffff;
-  --ink: #1b1a19;
-  --muted: #5c5955;
-  --line: #e2ded8;
+  --sunken: #efedf5;
+  /*
+   * The header and the tab bar sit over content, so they are their own tone
+   * rather than the panel's, and they are opaque.
+   *
+   * They were translucent with a backdrop blur, which looked right and cost
+   * too much. A blur behind a bar the full width of the window is recomposited
+   * on every scrolled frame, and the device this is built for is a Moto G7.
+   * Measured rather than assumed: it also pushed the first render of the app
+   * past the screenshot script's 2200ms window in headless Chrome, where there
+   * is no GPU to hide it, and sixteen steps in a row then found nothing on
+   * screen to act on. An opaque bar is a hair's difference to look at and free.
+   */
+  --veil: #ffffff;
+
+  --ink: #16151b;
+  --muted: #57545f;
+  --line: #e5e2ed;
   --accent: #7a4bd6;
   --accent-ink: #ffffff;
   --danger: #a3271f;
   --warn-bg: #fdf3e3;
   --warn-ink: #7a4b06;
+
+  /* State layers, in Material's sense: a tint laid over a control to say the
+     pointer is on it or the finger is down. Cheaper than a second palette. */
+  --wash: rgba(22, 21, 27, 0.055);
+  --accent-wash: rgba(122, 75, 214, 0.1);
+  --danger-wash: rgba(163, 39, 31, 0.09);
+
+  /* Two levels of elevation, and only two. A slab at rest and a slab lifted. */
+  --e1: 0 1px 2px rgba(24, 20, 38, 0.06), 0 1px 1px rgba(24, 20, 38, 0.04);
+  --e2: 0 8px 20px rgba(24, 20, 38, 0.1), 0 2px 6px rgba(24, 20, 38, 0.06);
+  --e-accent: 0 6px 16px rgba(122, 75, 214, 0.28);
+
+  /* A radius scale, because a text field and a section are not the same object
+     and giving them the same corner said they were. */
+  --r-sm: 9px;
+  --r-md: 15px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+  /* Kept as the mid step's name so nothing that still asks for it is stranded. */
+  --radius: var(--r-md);
+
+  /* Type scale, a minor third off 16px. */
+  --t-xs: 0.8125rem;
+  --t-sm: 0.875rem;
+  --t-md: 1rem;
+  --t-lg: 1.125rem;
+  --t-xl: 1.375rem;
+
   --tap: 44px;
-  --radius: 10px;
+
+  /* One easing curve for everything, so the whole interface moves as one
+     object. Decelerating: fast to leave, slow to settle. */
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --fast: 120ms;
+  --med: 200ms;
+
+  /* Height of the header on a wide screen, where the tab bar sticks to its
+     underside and therefore has to know it. */
+  --bar-h: 3.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16151a;
-    --panel: #201f26;
+    --bg: #111016;
+    --panel: #1f1e26;
+    --sunken: #191821;
+    --veil: #22212a;
+
     --ink: #f2f0ee;
-    --muted: #a9a49e;
-    --line: #35333c;
+    --muted: #a7a3b0;
+    --line: #302e3a;
     --accent: #b394f5;
     --accent-ink: #17131f;
     --danger: #ffa79f;
     --warn-bg: #302713;
     --warn-ink: #f0cd8b;
+
+    --wash: rgba(255, 255, 255, 0.07);
+    --accent-wash: rgba(179, 148, 245, 0.16);
+    --danger-wash: rgba(255, 167, 159, 0.14);
+
+    /* A shadow is nearly invisible on a dark ground, so most of the lift comes
+       from the panel being a lighter tone than the page. The shadow is still
+       here to seat the edge. */
+    --e1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --e2: 0 10px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --e-accent: 0 6px 18px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -44,9 +123,32 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: var(--t-md) / 1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   /* Room for the fixed tab bar, and for the phone's own home indicator. */
   padding-bottom: calc(var(--tap) + 1.5rem + env(safe-area-inset-bottom));
+}
+
+/*
+ * The one orchestrated moment.
+ *
+ * `#app` is never replaced, only its children are, so this plays once per
+ * document load and never again. Every repaint after it leaves it alone.
+ */
+#app {
+  animation: arrive 420ms var(--ease) both;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Visible to screen readers, out of the way of everyone else. */
@@ -63,17 +165,25 @@ body {
 }
 
 .skip {
-  position: absolute;
-  left: -9999px;
+  position: fixed;
+  left: 1rem;
   top: 0;
-  z-index: 10;
-  padding: 0.75rem 1rem;
+  z-index: 20;
+  padding: 0.75rem 1.1rem;
   background: var(--accent);
   color: var(--accent-ink);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--e-accent);
+  /* Off the top of the screen rather than off the side, so it drops into view
+     from where a skip link belongs. */
+  transform: translateY(-110%);
+  transition: transform var(--med) var(--ease);
 }
 
 .skip:focus {
-  left: 0;
+  transform: none;
 }
 
 :focus-visible {
@@ -81,60 +191,87 @@ body {
   outline-offset: 2px;
 }
 
+/* Header */
+
 .bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
-  align-items: end;
-  padding: 1rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: var(--veil);
 }
 
 .bar h1 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--t-xl);
+  font-weight: 600;
+  letter-spacing: -0.015em;
   flex: 1 1 auto;
 }
 
 main {
-  padding: 1rem;
+  padding: 1.25rem 1rem 2rem;
 }
 
 .stack > * + * {
-  margin-top: 1.25rem;
+  margin-top: 1.5rem;
 }
 
 /* Fields */
 
 .field label {
   display: block;
+  font-size: var(--t-sm);
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.005em;
+  margin-bottom: 0.3rem;
 }
 
 .field .hint {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.45rem;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--t-xs);
 }
 
+/*
+ * Inset, not outlined. A field is a recess in the material the slab is made
+ * of, which is what tells it apart from the slab itself at a glance. It comes
+ * up to the panel colour when it takes focus, so the field being typed into is
+ * the brightest thing on screen.
+ */
 .field input,
 .field textarea,
 .field select {
   width: 100%;
   min-height: var(--tap);
-  padding: 0.6rem 0.7rem;
+  padding: 0.65rem 0.75rem;
   font: inherit;
   color: inherit;
-  background: var(--panel);
+  background: var(--sunken);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--r-sm);
+  transition:
+    background-color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  background: var(--panel);
+  border-color: var(--accent);
 }
 
 .field textarea {
   min-height: calc(var(--tap) * 2.5);
   resize: vertical;
+  line-height: 1.55;
 }
 
 /* A checkbox row, not a stretched text box. Overrides `.field input` above by
@@ -157,6 +294,7 @@ main {
 
 .field.checkbox label {
   margin: 0;
+  font-size: var(--t-md);
   font-weight: 400;
 }
 
@@ -165,31 +303,100 @@ main {
 .btn {
   min-height: var(--tap);
   min-width: var(--tap);
-  padding: 0.5rem 0.9rem;
+  padding: 0.55rem 1rem;
   font: inherit;
-  border-radius: var(--radius);
+  font-weight: 500;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--ink);
   cursor: pointer;
   text-align: left;
+  /* Our own press feedback replaces the platform's grey flash, which sat on
+     top of the scale below and read as two different things happening. */
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+}
+
+/*
+ * Hover is a pointer's affordance and nothing else depends on it. Gated so a
+ * touch device never gets a hover state stuck on the last thing tapped, which
+ * is the usual way a lift like this goes wrong on a phone.
+ */
+@media (hover: hover) {
+  .btn:hover:not([disabled]) {
+    background: var(--wash);
+    border-color: var(--line);
+  }
+
+  .btn.primary:hover:not([disabled]) {
+    background: var(--accent);
+    box-shadow: var(--e-accent);
+    transform: translateY(-1px);
+  }
+
+  .btn.danger:hover:not([disabled]) {
+    background: var(--danger-wash);
+  }
+}
+
+/* The press. Immune to repaints, because it is pointer state rather than an
+   animation on an element the shell is about to throw away. */
+.btn:active:not([disabled]) {
+  transform: scale(0.97);
+  transition-duration: 60ms;
 }
 
 .btn.primary {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: transparent;
+  border-radius: var(--r-pill);
   font-weight: 600;
+  text-align: center;
+  box-shadow: var(--e1);
 }
 
 .btn.danger {
   color: var(--danger);
 }
 
+/*
+ * An icon button carries no box of its own.
+ *
+ * Three outlined rectangles beside every section title made move, move and
+ * remove look as important as the section they act on. They are still 44 by 44
+ * and still spaced, which is what the rule actually asks for; what they lost is
+ * the border, and the state layer below is what shows a pointer has found them.
+ */
 .btn.icon {
   text-align: center;
   padding: 0.5rem;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  border-color: transparent;
+  background: transparent;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+}
+
+.btn.icon.danger {
+  color: var(--danger);
+}
+
+@media (hover: hover) {
+  .btn.icon:hover:not([disabled]) {
+    background: var(--wash);
+    color: var(--ink);
+  }
+
+  .btn.icon.danger:hover:not([disabled]) {
+    background: var(--danger-wash);
+    color: var(--danger);
+  }
 }
 
 .btn[disabled] {
@@ -199,34 +406,78 @@ main {
 
 /* Section list */
 
+/*
+ * The top margin is here rather than left to `.stack > * + *`.
+ *
+ * Both selectors score the same, and this one is later in the file, so `margin:
+ * 0` won and the section list sat flush against the title field above it. That
+ * was true before the slabs got a shadow; what changed is that it now looks
+ * like a mistake rather than like tight spacing.
+ */
 .blocks {
   list-style: none;
-  margin: 0;
+  margin: 1.5rem 0 0;
   padding: 0;
 }
 
+/*
+ * A slab. Flat while it waits, lifted while it is open.
+ *
+ * The lift is the whole visual argument of this stylesheet, so nothing else in
+ * the app is allowed to sit at --e2 at rest.
+ */
 .block {
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--r-md);
   background: var(--panel);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
   overflow: hidden;
+  box-shadow: var(--e1);
+  transition:
+    box-shadow var(--med) var(--ease),
+    border-color var(--med) var(--ease);
 }
 
+@media (hover: hover) {
+  .block:hover {
+    box-shadow: var(--e2);
+  }
+}
+
+/*
+ * The open one. Lifted, and marked down its leading edge.
+ *
+ * The edge is an inset shadow rather than a border, so opening a section does
+ * not change its width and nudge every control inside it three pixels along.
+ */
 .block.selected {
-  border-color: var(--accent);
+  box-shadow: var(--e2), inset 3px 0 0 var(--accent);
+}
+
+.block.selected .block-row {
+  background: var(--accent-wash);
 }
 
 .block-row {
   display: flex;
   gap: 0.5rem;
   align-items: stretch;
+  transition: background-color var(--med) var(--ease);
 }
 
 .block-row > .btn:first-child {
   flex: 1 1 auto;
   border: 0;
   background: transparent;
+  padding: 0.75rem 0.9rem;
+  font-weight: 500;
+  border-radius: 0;
+}
+
+@media (hover: hover) {
+  .block-row > .btn:first-child:hover {
+    background: var(--wash);
+  }
 }
 
 /*
@@ -247,6 +498,7 @@ main {
   display: flex;
   gap: 0.5rem;
   padding: 0.35rem;
+  align-items: center;
 }
 
 .block-tools > .danger {
@@ -279,43 +531,56 @@ main {
 .undone {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.6rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem;
-  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.6rem;
   border: 1px dashed var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--r-md);
+  background: var(--sunken);
   color: var(--muted);
 }
 
 .undone p {
   margin: 0;
+  font-size: var(--t-sm);
 }
 
 .block-editor {
-  padding: 1rem;
+  padding: 1.1rem 1rem 1.25rem;
   border-top: 1px solid var(--line);
 }
 
 .block-editor > div > * + * {
-  margin-top: 1rem;
+  margin-top: 1.1rem;
 }
 
+/*
+ * A group of fields inside a section, and not a box.
+ *
+ * The border came off because a slab already has one, and a bordered group
+ * inside a bordered slab inside a bordered field set reads as three nested
+ * frames rather than as one thing containing another. The rule down the leading
+ * edge does the same job in a quarter of the ink.
+ */
 fieldset.sub {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  margin: 1rem 0 0;
+  border: 0;
+  border-left: 2px solid var(--line);
+  border-radius: 0;
+  padding: 0.15rem 0 0.15rem 0.85rem;
+  margin: 1.25rem 0 0;
 }
 
 fieldset.sub legend {
-  padding: 0 0.4rem;
+  padding: 0;
+  font-size: var(--t-sm);
   font-weight: 600;
+  color: var(--muted);
 }
 
 fieldset.sub > * + * {
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
 }
 
 /*
@@ -329,24 +594,72 @@ fieldset.sub > * + * {
 .more > summary {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   min-height: var(--tap);
   cursor: pointer;
-  font-size: 0.9rem;
-  color: var(--ink-soft, inherit);
+  font-size: var(--t-sm);
+  color: var(--muted);
+  list-style: none;
+}
+
+.more > summary::-webkit-details-marker {
+  display: none;
+}
+
+/*
+ * The disclosure mark, drawn rather than typed, so it does not depend on a
+ * glyph being in whatever font the phone happens to have.
+ *
+ * It is not transitioned. A repaint builds a fresh `details` and the shell then
+ * reopens it, so a rotation here would spin on every keystroke typed inside an
+ * opened group.
+ */
+.more > summary::before {
+  content: "";
+  width: 0.36rem;
+  height: 0.36rem;
+  border-right: 1.75px solid currentColor;
+  border-bottom: 1.75px solid currentColor;
+  transform: rotate(-45deg);
+  margin-left: 0.15rem;
+}
+
+.more[open] > summary::before {
+  transform: rotate(45deg);
 }
 
 .more > summary:focus-visible {
-  outline: 2px solid currentColor;
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
 
 .more-body > * + * {
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
 }
 
-/* The remove control sits with the item rather than under it. */
+/*
+ * One row of a price list. The remove control sits with the item rather than
+ * under it.
+ *
+ * This is the one grouping that keeps a hairline instead of a fill. It was
+ * filled with --sunken, which put sunken fields on a sunken ground: the item
+ * name and the price stopped reading as fields at all and became two hairlines
+ * with text in them. A recess needs something to be recessed into, and inside
+ * an item that something is the slab.
+ */
 fieldset.item {
   position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 0.85rem;
+  margin: 0.85rem 0 0;
+}
+
+fieldset.item legend {
+  padding: 0;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--muted);
 }
 
 fieldset.item > .btn.icon.danger {
@@ -356,15 +669,32 @@ fieldset.item > .btn.icon.danger {
   margin-top: 0;
 }
 
+/* The things you can add. A row of chips, not a row of grey rectangles. */
 .adders {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
+/*
+ * `.ghost` rather than `.btn`, and the same below for the starting points.
+ *
+ * `.adders .btn` scores the same as `.btn.primary` and sits later in the file,
+ * so it won, and "See an example page" shipped as a sunken chip with white text
+ * on it: unreadable, and green in every gate, because none of them look at a
+ * colour a browser computed. Naming the variant keeps the chip styling off the
+ * one button in the row that is not a chip.
+ */
+.adders .btn.ghost {
+  border-radius: var(--r-pill);
+  text-align: center;
+  background: var(--sunken);
+}
+
 .empty {
   color: var(--muted);
   padding: 1.5rem 0;
+  max-width: 34rem;
 }
 
 /* The page switcher */
@@ -394,7 +724,7 @@ fieldset.item > .btn.icon.danger {
 }
 
 .pages > li + li {
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
 }
 
 /* Full width, left aligned: these are rows of a list, not a row of buttons,
@@ -417,6 +747,7 @@ fieldset.item > .btn.icon.danger {
   margin: 0;
   padding: 0.6rem 0.75rem;
   color: var(--muted);
+  font-size: var(--t-sm);
 }
 
 /*
@@ -429,14 +760,15 @@ fieldset.item > .btn.icon.danger {
  */
 .pages > li.confirm {
   display: block;
-  padding: 0.6rem;
+  padding: 0.75rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--r-md);
   background: var(--panel);
+  box-shadow: var(--e2);
 }
 
 .pages > li.confirm .ask {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.6rem;
   font-weight: 600;
 }
 
@@ -457,9 +789,12 @@ fieldset.item > .btn.icon.danger {
   gap: 0.5rem;
 }
 
-.starters li button {
+.starters li button.ghost {
   width: 100%;
   text-align: left;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--r-md);
+  background: var(--panel);
 }
 
 /* Status */
@@ -468,14 +803,16 @@ fieldset.item > .btn.icon.danger {
   padding: 0 1rem;
   min-height: 1.5rem;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--t-sm);
 }
 
 .status.error {
   background: var(--warn-bg);
   color: var(--warn-ink);
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
+  padding: 0.9rem 1rem;
+  font-size: var(--t-md);
+  border-radius: var(--r-md);
+  margin: 0.75rem 1rem 0;
 }
 
 .status.error > * + * {
@@ -484,18 +821,39 @@ fieldset.item > .btn.icon.danger {
 
 /* Preview */
 
+/*
+ * The page as it will look, on a sheet.
+ *
+ * This is the one surface in the app that is a document rather than a control
+ * panel, so it gets document typography: a longer measure, more leading, and
+ * the padding a page has rather than the padding a card has.
+ */
 .rendered {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--r-md);
+  padding: 1.5rem 1.4rem;
   overflow-wrap: break-word;
+  box-shadow: var(--e1);
+  line-height: 1.65;
+}
+
+.rendered > :first-child {
+  margin-top: 0;
+}
+
+.rendered h1,
+.rendered h2,
+.rendered h3 {
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 1.6rem 0 0.6rem;
 }
 
 .rendered img {
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
 }
 
 /* A wide table scrolls inside its wrapper rather than pushing the page
@@ -515,37 +873,47 @@ fieldset.item > .btn.icon.danger {
    than 34rem, so a desktop table lays out exactly as it did before. */
 .rendered .table-scroll {
   overflow-x: auto;
+  border-radius: var(--r-sm);
 }
 
 .rendered table {
   min-width: 34rem;
   border-collapse: collapse;
+  /* Prices in a column line up on their digits rather than drifting, which is
+     the one place in this app where a proportional figure is the wrong one. */
+  font-variant-numeric: tabular-nums;
 }
 
 .rendered th,
 .rendered td {
   border: 1px solid var(--line);
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 0.7rem;
   text-align: left;
   vertical-align: top;
+}
+
+.rendered th {
+  background: var(--sunken);
+  font-size: var(--t-sm);
+  letter-spacing: 0.005em;
 }
 
 .rendered hr {
   border: 0;
   border-top: 1px solid var(--line);
-  margin: 1.5rem 0;
+  margin: 1.75rem 0;
 }
 
 .warnings {
   background: var(--warn-bg);
   color: var(--warn-ink);
-  border-radius: var(--radius);
-  padding: 1rem;
+  border-radius: var(--r-md);
+  padding: 1.1rem;
 }
 
 .warnings h2 {
   margin: 0 0 0.75rem;
-  font-size: 1rem;
+  font-size: var(--t-md);
 }
 
 .warnings ul {
@@ -566,7 +934,7 @@ fieldset.item > .btn.icon.danger {
 
 .caveat {
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--t-sm);
 }
 
 /* Export */
@@ -574,16 +942,19 @@ fieldset.item > .btn.icon.danger {
 #output {
   width: 100%;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.9rem;
-  padding: 0.75rem;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+  padding: 1rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--panel);
+  border-radius: var(--r-md);
+  background: var(--sunken);
   color: var(--ink);
+  tab-size: 2;
 }
 
 .steps {
   padding-left: 1.25rem;
+  max-width: 40rem;
 }
 
 .steps li + li {
@@ -593,8 +964,8 @@ fieldset.item > .btn.icon.danger {
 /* Image address fields */
 
 .img-status {
-  margin: 0.35rem 0 0;
-  font-size: 0.875rem;
+  margin: 0.4rem 0 0;
+  font-size: var(--t-xs);
   color: var(--muted);
 }
 
@@ -603,7 +974,7 @@ fieldset.item > .btn.icon.danger {
   color: var(--warn-ink);
   background: var(--warn-bg);
   padding: 0.5rem 0.6rem;
-  border-radius: var(--radius);
+  border-radius: var(--r-sm);
 }
 
 .img-status.ok {
@@ -613,9 +984,9 @@ fieldset.item > .btn.icon.danger {
 .thumb-frame {
   margin-top: 0.5rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--r-sm);
   overflow: hidden;
-  background: var(--bg);
+  background: var(--sunken);
   /* A tall image must not push the form off the screen. */
   max-height: 9rem;
   display: flex;
@@ -640,23 +1011,45 @@ fieldset.item > .btn.icon.danger {
   margin-top: 0.5rem;
 }
 
-/* Tab bar, within thumb reach on a phone. */
-
+/*
+ * Tab bar, within thumb reach on a phone.
+ *
+ * A segmented control rather than three outlined boxes: one track, and the
+ * surface you are on is the filled pill inside it. Which of three things is
+ * current is a comparison, and three separate boxes made it three unrelated
+ * yes or no questions.
+ *
+ * Nothing slides. The shell rebuilds the whole nav when the surface changes, so
+ * an indicator animating between positions would be a fresh element every time
+ * and would start from wherever it was drawn. Navigation should be instant
+ * anyway; the motion here belongs on the press.
+ */
 .tabs {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 10;
   display: flex;
   gap: 0.25rem;
-  padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom));
-  background: var(--panel);
+  padding: 0.4rem 0.5rem calc(0.4rem + env(safe-area-inset-bottom));
+  background: var(--veil);
   border-top: 1px solid var(--line);
 }
 
 .tabs .btn {
   flex: 1;
   text-align: center;
+  border-color: transparent;
+  background: transparent;
+  border-radius: var(--r-pill);
+  box-shadow: none;
+}
+
+.tabs .btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--e-accent);
 }
 
 /*
@@ -688,14 +1081,26 @@ fieldset.item > .btn.icon.danger {
 
   header.bar {
     order: 1;
+    height: var(--bar-h);
+    padding: 0 1.5rem;
   }
 
+  /*
+   * The track sits under the header rather than across the window, and sticks
+   * to the header's underside. That is why --bar-h is a token: two rules have
+   * to agree on it or the tabs scroll behind the title.
+   */
   .tabs {
     order: 2;
-    position: static;
-    border-top: 0;
-    border-bottom: 1px solid var(--line);
-    padding: 0.5rem 1rem;
+    position: sticky;
+    top: var(--bar-h);
+    align-self: flex-start;
+    margin: 0.85rem 1.5rem 0;
+    padding: 0.3rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: var(--sunken);
+    box-shadow: var(--e1);
   }
 
   /* Sized to their words. Stretched across a desktop window they read as three
@@ -707,6 +1112,7 @@ fieldset.item > .btn.icon.danger {
 
   .status {
     order: 3;
+    padding: 0.75rem 1.5rem 0;
   }
 
   main {
@@ -714,6 +1120,7 @@ fieldset.item > .btn.icon.danger {
     width: 100%;
     max-width: 70rem;
     margin: 0 auto;
+    padding: 1.5rem;
   }
 
   /*
@@ -734,7 +1141,7 @@ fieldset.item > .btn.icon.danger {
   main.split {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 2rem;
+    gap: 2.5rem;
     align-items: start;
     max-width: 96rem;
   }
@@ -751,11 +1158,11 @@ fieldset.item > .btn.icon.danger {
    */
   main.split .beside {
     position: sticky;
-    top: 1rem;
-    max-height: calc(100vh - 3rem);
+    top: calc(var(--bar-h) + 1.5rem);
+    max-height: calc(100vh - var(--bar-h) - 3rem);
     overflow-y: auto;
     border-left: 1px solid var(--line);
-    padding-left: 2rem;
+    padding-left: 2.5rem;
   }
 }
 
@@ -767,23 +1174,26 @@ fieldset.item > .btn.icon.danger {
  * past sixty checkboxes to reach the one that adds them.
  */
 .paste {
-  padding: 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: 0.85rem;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--sunken);
 }
 
 .paste > * + * {
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
 }
 
 .paste-count {
   margin: 0;
   color: var(--muted);
+  font-size: var(--t-sm);
 }
 
 .paste-capped {
   margin: 0;
   color: var(--muted);
+  font-size: var(--t-sm);
 }
 
 .paste-tools {
@@ -799,11 +1209,12 @@ fieldset.item > .btn.icon.danger {
   padding: 0;
   list-style: none;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--r-sm);
+  background: var(--panel);
 }
 
 .paste-lines li {
-  padding: 0.35rem 0.5rem;
+  padding: 0.4rem 0.55rem;
   border-bottom: 1px solid var(--line);
 }
 
@@ -816,6 +1227,7 @@ fieldset.item > .btn.icon.danger {
 .paste-becomes {
   margin: 0 0 0 var(--tap);
   color: var(--muted);
+  font-size: var(--t-sm);
 }
 
 /* A pasted line that cannot be a product: a blank, or a Markdown table rule.
@@ -824,13 +1236,34 @@ fieldset.item > .btn.icon.danger {
 .paste-skipped {
   margin: 0;
   color: var(--muted);
+  font-size: var(--t-sm);
 }
 
-/* Respect a stated preference for less motion. Nothing here animates yet, and
-   this is the guard for when something does. */
+/*
+ * Respect a stated preference for less motion.
+ *
+ * The blanket rule kills the transitions and the one page load sequence. The
+ * transforms have to be named separately: with transitions off they would still
+ * be applied, just instantly, which is exactly the jump somebody asking for
+ * less motion does not want.
+ */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
     transition: none !important;
+  }
+
+  .btn:active:not([disabled]),
+  .btn.primary:hover:not([disabled]) {
+    transform: none;
+  }
+
+  .skip {
+    transform: none;
+    top: -100vh;
+  }
+
+  .skip:focus {
+    top: 0;
   }
 }
