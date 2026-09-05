@@ -4,6 +4,11 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+**Released**: `v0.4.0`, 2026-09-05, from `ce72671`. Tag and 28 commits pushed,
+GitHub Release published with the signed APK, versionCode 7. That is the first
+release in four days and it carried seventy commits, which is too many to sit on
+again. The previous six tags all landed on 2026-09-01.
+
 **Current state**: feature 023 is complete and committed as `fa8eb28`. Feature
 022's missing holistic review has now been run: `b69266a` is the test it added,
 `20d3192` is what it found. On top of that sit two UI fixes asked for directly
@@ -90,10 +95,15 @@ honest record of it.
    review on 2026-09-05 is done and found three defects, all fixed, none of
    which was visible in `docs/media`. That is the standing lesson: the stills
    are not evidence about the states that are broken. See "Traps".
-4. **Consider the test suite's timing fragility** (see "Traps"). One file is
-   fixed, `starters-picker`, and the trap entry now names the general shape of
-   the mistake. The other seven have not been looked at. Not urgent, and nobody
-   has asked for it, so do not start it without saying so first.
+4. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
+   budget in the suite was squeezed and rerun to find which waits were load
+   bearing. None of the seven carried the `starters-picker` defect, which was a
+   deficit rather than a thin margin. `a11y` and `price-list-screen` pass at one
+   tick, so those waits are padding and were left. The other four passed at 5
+   and failed at 3 against budgets of 10 and 12, and now share one quiescence
+   based `settle` in `app/tests/settle.ts`. `price-list-screen` keeps a
+   `setTimeout(r, 30)` loop on purpose: that one is waiting out a real 250ms
+   debounce rather than guessing.
 
 022's holistic review is **done**, so it is no longer on this list. It found no
 defect in the code and two gaps in the evidence, both closed. Details are in the
@@ -182,6 +192,15 @@ during implementation", and the short version is worth carrying:
   them. An edit that dropped a required `label` prop built cleanly and shipped
   six buttons reading "undefined". Only `npm run typecheck` catches it, and only
   a screenshot catches it if you skip that.
+- **An Android release build will happily ship last week's interface.**
+  `assembleRelease` packages whatever is in `android/app/src/main/assets/public`,
+  which only `cap sync` updates, and it reports BUILD SUCCESSFUL either way.
+  Building 0.4.0 with `npm run build:app` and then `assembleRelease` produced a
+  correctly signed APK carrying assets from 2026-09-01, four days and one whole
+  restyle stale. **`npm run android:sync` is the one to run**, and the check that
+  catches it is comparing the CSS filename inside the APK against the one in
+  `app/dist`:
+  `[IO.Compression.ZipFile]::OpenRead($apk).Entries | ? FullName -like '*public/assets/*.css'`.
 
 - **`starters-picker` is FIXED and is no longer on the fragile list**
   (`4d26e5f`, 2026-09-05). Read this before assuming a failure there is
@@ -302,10 +321,11 @@ during implementation", and the short version is worth carrying:
   still needed before a spec can be written is HOW it fell short, which only
   Jakob saw. Unlocks specifying and building the interview wizard, the largest
   remaining idea from 2026-09-02.
-- **Pushing anything.** Policy is commit locally, never push; a remote exists
-  and `master` tracks `origin/master`, so local is ten commits ahead and none
-  behind. That is intended, and the number only grows. Do not read it as
-  something to tidy up.
+- **Pushing anything.** Still the policy, and still asked each time. It was
+  asked and granted once, on 2026-09-05, for the 0.4.0 release: 28 commits and
+  the tag went to `origin` and the GitHub Release was published. Local and
+  origin are level as of `ce72671`. That grant was for that release and does not
+  carry forward.
 - **Whether feature work should use branches at all.** Delivery has gone
   straight to master since `Merge 009-imgur` on 2026-08-25, but
   `.specify/extensions.yml` still runs a mandatory branch-creating hook before
