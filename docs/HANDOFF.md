@@ -12,14 +12,18 @@ rather than through a feature: `e0f345b` is the preview table and the checkbox,
 failure that `npm run verify` caught on 2026-09-05, described under "Traps".
 This file describes the tree at `4d26e5f`, and `npm run verify` is green on it.
 
-**The working tree is NOT clean, and what is in it is not this session's.** A
-full visual restyle of `app/src/styles.css` sits uncommitted, 530 lines added
-and 97 removed, with all twelve files in `docs/media` regenerated to match it.
-Nothing else is touched: no TypeScript, no tests, no specs. It is a coherent
-piece of work rather than a scratch edit. It passes everything, contrast
-included, in both palettes. It was left alone rather than committed or
-reverted, because whose it is and whether it is finished are Jakob's to say.
-See "Blocked on Jakob".
+The restyle that was sitting uncommitted is now `a3998c3`, with the twelve
+regenerated media files as `a9ecb4d`. **Working tree clean, nothing pushed.**
+
+Its provenance, because it is not in any spec and a later session will wonder:
+Jakob commissioned it from a session that was cut off partway when an account
+limit was hit, and it was still in the working tree when the next session
+opened. It was checked for completeness before being committed rather than
+taken on trust, since a session that dies mid restyle leaves screens it never
+reached. Every surface was looked at in both palettes and at both widths, the
+CSS was checked against its own stated intent, and the two fixes from `e0f345b`
+were confirmed carried rather than overwritten. It is finished. It has NOT had
+a design review, which is a different question from whether it is complete.
 
 Every feature through 023 now has a holistic review except the ones
 `specs/README.md` marks `no` for structural reasons, and that column is the
@@ -51,10 +55,16 @@ honest record of it.
    guessed at, and opening it only to guess at the shape instead would waste the
    waiting. That question was put to Jakob on 2026-09-04 and this file will say
    so here once it is answered.
-3. **Consider the test suite's timing fragility** (see "Traps"). Not urgent, and
-   nobody has asked for it, so do not start it without saying so first. With
-   022's review done, this is the largest thing left that needs nothing from
-   Jakob, which is not the same as it being worth doing.
+3. **A design review of the restyle** (`a3998c3`). It was verified complete and
+   internally consistent before it was committed, which is not the same as
+   verified good. Nobody has judged the spacing, the hierarchy or whether the
+   thing Jakob actually complained about, that the interface was tiring to
+   navigate, is fixed. Ask before starting: it may be that using it for a week
+   answers this better than a review does.
+4. **Consider the test suite's timing fragility** (see "Traps"). One file is
+   fixed, `starters-picker`, and the trap entry now names the general shape of
+   the mistake. The other seven have not been looked at. Not urgent, and nobody
+   has asked for it, so do not start it without saying so first.
 
 022's holistic review is **done**, so it is no longer on this list. It found no
 defect in the code and two gaps in the evidence, both closed. Details are in the
@@ -228,17 +238,6 @@ during implementation", and the short version is worth carrying:
 
 ## Blocked on Jakob
 
-- **The uncommitted restyle of `app/src/styles.css`.** It was in the tree
-  already when the 2026-09-05 session opened, and no commit, spec or handoff
-  entry accounts for it. What is needed is whether to commit it, whether it is
-  finished, and whether the twelve regenerated media files go with it. Do not
-  commit it as if it were this project's own work and do not revert it: the
-  rule about never deleting Jakob's work covers a working tree as much as a
-  saved document. A copy was taken to the session scratchpad before a `git
-  stash` round trip and verified identical afterwards, ignoring line endings,
-  which the repo's `.gitattributes` rewrites to CRLF. Unlocks committing it, or
-  a design review of it, and it is the reason `docs/media` cannot be trusted to
-  match any commit right now.
 - **F4's shape**, not its gate. The gate is open: asked and answered on
   2026-09-04, somebody used a starting point and it was not enough. What is
   still needed before a spec can be written is HOW it fell short, which only
