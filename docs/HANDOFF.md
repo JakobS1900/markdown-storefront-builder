@@ -15,6 +15,13 @@ This file describes the tree at `4d26e5f`, and `npm run verify` is green on it.
 The restyle that was sitting uncommitted is now `a3998c3`, with the twelve
 regenerated media files as `a9ecb4d`. **Working tree clean, nothing pushed.**
 
+The design review of it ran on 2026-09-05 and found three defects, all fixed
+and committed one apiece: `b940fd0` the detached tab bar, `6b8bc45` the seven
+solid accent buttons, `e1138d9` the skip link's leaking shadow. `3bc399e` is
+the regenerated media, and it carries a correction: a claim in `e1138d9` that
+the smudge appeared in the committed screenshots is wrong, and the pixels say
+so. The defect was real, the claim about where it showed was not.
+
 Its provenance, because it is not in any spec and a later session will wonder:
 Jakob commissioned it from a session that was cut off partway when an account
 limit was hit, and it was still in the working tree when the next session
@@ -55,12 +62,10 @@ honest record of it.
    guessed at, and opening it only to guess at the shape instead would waste the
    waiting. That question was put to Jakob on 2026-09-04 and this file will say
    so here once it is answered.
-3. **A design review of the restyle** (`a3998c3`). It was verified complete and
-   internally consistent before it was committed, which is not the same as
-   verified good. Nobody has judged the spacing, the hierarchy or whether the
-   thing Jakob actually complained about, that the interface was tiring to
-   navigate, is fixed. Ask before starting: it may be that using it for a week
-   answers this better than a review does.
+3. **Drive the app before believing anything about how it looks.** The design
+   review on 2026-09-05 is done and found three defects, all fixed, none of
+   which was visible in `docs/media`. That is the standing lesson: the stills
+   are not evidence about the states that are broken. See "Traps".
 4. **Consider the test suite's timing fragility** (see "Traps"). One file is
    fixed, `starters-picker`, and the trap entry now names the general shape of
    the mistake. The other seven have not been looked at. Not urgent, and nobody
@@ -127,6 +132,32 @@ during implementation", and the short version is worth carrying:
   gate green. It was 1080 before the table fix added one test.
 
 ## Traps that cost real time in this session
+
+- **`docs/media` is not evidence about a broken state.** The design review found
+  three defects and regenerating all twelve files afterwards changed only
+  `demo.gif` and `demo.mp4`. Ten stills came back byte identical, because none
+  of them scrolls to the add-a-section row, none sits on a page shorter than the
+  viewport, and none catches the skip link's shadow. Three passes were made over
+  that folder on 2026-09-04 and 2026-09-05 reading it as if it showed the app.
+  **Drive the running app.** `npm run shots` is for the README, not for looking.
+- **A transform on `#app` silently re-parents every fixed descendant.** This is
+  the one that shipped. A `position: fixed` element resolves against the nearest
+  ancestor with a transform, not the viewport, so `.tabs` pinned to the bottom of
+  `#app`. `transform: none` in a `to` keyframe does NOT avoid it: animated, it
+  computes to the identity matrix rather than the keyword, and a `both` fill
+  persists that forever. `getComputedStyle` says `matrix(1, 0, 0, 1, 0, 0)`, and
+  that is a containing block. Anything added to `#app` later that transforms,
+  filters, or sets `will-change` on it will do the same thing again.
+- **The service worker serves the previous build to anything driving the app.**
+  After `npm run build:app`, a browser that has already loaded the app keeps the
+  old CSS: seen directly, the page held `index-oiaDO605.css` while the disk held
+  `index-4FeoXsLg.css`, and a CSS fix measured as having done nothing. This is
+  the update behaviour `npm run pwa-update` exists to prove, working correctly.
+  Unregister and clear caches between rebuilds, or reload twice.
+- **`npm run build:app` does not typecheck.** Vite strips types without checking
+  them. An edit that dropped a required `label` prop built cleanly and shipped
+  six buttons reading "undefined". Only `npm run typecheck` catches it, and only
+  a screenshot catches it if you skip that.
 
 - **`starters-picker` is FIXED and is no longer on the fragile list**
   (`4d26e5f`, 2026-09-05). Read this before assuming a failure there is
