@@ -130,20 +130,53 @@ async function evaluate(expression) {
   return r.result?.result?.value;
 }
 
+/**
+ * Waits for something to be true, rather than for a length of time.
+ *
+ * The two waits below were fixed sleeps in front of asynchronous work: a click
+ * that fetches the example document and writes it to IndexedDB before anything
+ * appears. 1500ms was enough on a quiet machine and not enough under the load
+ * of a full `npm run verify`, where this runs straight after the whole test
+ * suite. The light run goes first, so the light run is the cold one, and it was
+ * the one that reported `0 sections` and made the guard refuse a pass. Three
+ * times in one session on 2026-09-05, every time inside `verify` and never once
+ * when re-run alone, which is exactly what made it look like a flake in the
+ * gate rather than a fixed wait that was too short.
+ *
+ * Throwing on the deadline is deliberate. A gate that gives up quietly is the
+ * vacuous pass this file exists to refuse.
+ */
+async function waitFor(expression, what, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if ((await evaluate(expression)) === true) return;
+    if (Date.now() > deadline) throw new Error(`timed out after ${timeoutMs}ms waiting for ${what}`);
+    await sleep(100);
+  }
+}
+
 /** Puts real, coloured content on screen: the bundled example storefront. */
 async function loadRealContent() {
   await evaluate(`(async () => {
     const b = [...document.querySelectorAll('button')].find(x => /example page/i.test(x.textContent || ''));
     if (b) b.click();
   })()`);
-  await sleep(1500);
+  // The same counts the guard below checks, so what is waited for and what is
+  // demanded cannot drift apart.
+  await waitFor(
+    `document.querySelectorAll('#surface .blocks > li').length >= 3`,
+    "the example page to put its sections on screen",
+  );
   // Open the first section too, so form labels, hints and the danger colour
   // are all rendered rather than only the list.
   await evaluate(`(() => {
     const b = [...document.querySelectorAll('#surface button')].find(x => /^Open /.test((x.textContent||'').trim()));
     if (b) b.click();
   })()`);
-  await sleep(900);
+  await waitFor(
+    `document.querySelectorAll('#surface input, #surface textarea, #surface select').length >= 3`,
+    "a section to open its fields",
+  );
 }
 
 async function auditScheme(scheme) {
