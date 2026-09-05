@@ -149,6 +149,10 @@ main {
   width: var(--tap);
   min-width: var(--tap);
   margin: 0;
+  /* Without this the browser paints its own blue, which is the one control on
+     screen that is not in the app's palette. Both palettes define --accent, so
+     the tick follows the theme the way every other control does. */
+  accent-color: var(--accent);
 }
 
 .field.checkbox label {
@@ -494,11 +498,27 @@ fieldset.item > .btn.icon.danger {
   border-radius: 6px;
 }
 
-/* A wide table scrolls inside itself rather than pushing the page sideways. */
-.rendered table {
-  display: block;
-  width: 100%;
+/* A wide table scrolls inside its wrapper rather than pushing the page
+   sideways. The wrapper is what scrolls; the table is what is wide. Asking one
+   element to be both, which is what this rule used to do, produced neither: at
+   390px the price table sized itself to the 316px port and stacked one word per
+   line down cells 590px tall.
+
+   `min-width` is on the table rather than on the cells because a floor per cell
+   makes every column that floor exactly. Once the minimums exceed the port
+   there is no surplus left for auto layout to hand out, so "Price" gets as much
+   room as the description that needs it. A floor on the table leaves the
+   distribution to content: measured at 390px, 34rem gives 103/63/235/142 and
+   drops the cell height from 590 to 206.
+
+   It is inert wherever there is room. The split view's preview pane is wider
+   than 34rem, so a desktop table lays out exactly as it did before. */
+.rendered .table-scroll {
   overflow-x: auto;
+}
+
+.rendered table {
+  min-width: 34rem;
   border-collapse: collapse;
 }
 

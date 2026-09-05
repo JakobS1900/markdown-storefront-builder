@@ -219,7 +219,16 @@ export function renderMarkdown(markdown: string): DocumentFragment {
 
       if (head.hasChildNodes()) table.append(head);
       if (body.hasChildNodes()) table.append(body);
-      out.append(table);
+
+      // The scroll container is a second element on purpose. A table that is
+      // also its own scroll port has to be both no wider than the phone and as
+      // wide as its columns, and it resolves that by staying narrow: every
+      // column squeezed to a fifth of a word, prices wrapped over four lines.
+      // The wrapper takes the page width, the table takes the width it needs.
+      const scroll = document.createElement("div");
+      scroll.className = "table-scroll";
+      scroll.append(table);
+      out.append(scroll);
       continue;
     }
 

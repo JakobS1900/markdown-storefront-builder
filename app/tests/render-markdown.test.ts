@@ -156,6 +156,19 @@ describe("it draws what the compiler emits", () => {
     expect(host.querySelector("tbody td")?.textContent).toBe("Bust");
   });
 
+  it("puts a table in its own scroll container", () => {
+    // The table and the box that scrolls it have to be two elements. One box
+    // cannot be both no wider than the phone and as wide as its own columns,
+    // and when it was asked to be both it chose narrow: a price table came out
+    // 316 pixels wide with cells 590 pixels tall, one word per line. jsdom lays
+    // nothing out, so this asserts the structure the fix depends on, and the
+    // widths are measured in a real browser.
+    const host = render("| Item | Price |\n| --- | --- |\n| Bust | 45 |");
+    const table = host.querySelector("table");
+
+    expect(table?.parentElement?.className).toBe("table-scroll");
+  });
+
   it("renders a list", () => {
     expect(render("- one\n- two").querySelectorAll("li")).toHaveLength(2);
   });
