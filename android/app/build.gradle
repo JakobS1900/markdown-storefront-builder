@@ -27,11 +27,11 @@ android {
         applicationId "com.rade.storefrontbuilder"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
+        versionCode 9
         // Not 1.0. The roadmap has two open items and this has been verified on
         // one handset by the person who wrote it, so calling it 1.0 would be the
         // same kind of claim as a ticked box that was never true.
-        versionName "0.5.0"
+        versionName "0.6.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

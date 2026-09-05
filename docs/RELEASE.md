@@ -72,7 +72,7 @@ not install anywhere; check which file you have before sending one to anybody.
 **must increase on every build anyone else receives**. `versionName` is the
 string a human reads.
 
-Currently `versionCode 8`, `versionName "0.5.0"`, both in
+Currently `versionCode 9`, `versionName "0.6.0"`, both in
 `android/app/build.gradle`. Not 1.0: the roadmap has open items and everything
 has been verified on one handset by the person who wrote it.
 
