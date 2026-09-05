@@ -15,7 +15,7 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { addBlock, getState, init, selectBlock, subscribe } from "../src/store.js";
+import { addBlock, getState, init, selectBlock, subscribe, updateBlock } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -52,6 +52,46 @@ describe("the section row", () => {
     row().click();
 
     expect(row().textContent).toBe("Open Text: Empty");
+  });
+
+  it("says a long summary was cut, rather than stopping mid sentence", () => {
+    live();
+    addBlock(blankBlock("prose"));
+    const id = getState().doc.blocks[0]?.id ?? "";
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "prose") throw new Error("no prose block");
+    const text =
+      "Everything here is made in runs of forty or fewer, finished by hand in the workshop";
+    updateBlock(id, { ...block, text });
+    row().click();
+
+    const label = row().textContent ?? "";
+
+    // The cut used to be a bare `slice(0, 60)`, so the row read "... fewer,
+    // finished" and looked like a sentence that ended there rather than one
+    // that had been shortened.
+    expect(label.endsWith("…")).toBe(true);
+
+    // And the cut lands between words rather than inside one. Asserted against
+    // the source text rather than by pattern: what is kept has to be a prefix
+    // of the original, and the character the original carries on with has to be
+    // a space. A regex looking for a letter before the ellipsis cannot tell a
+    // clean cut from a split word, because both end in a letter.
+    const kept = label.replace(/^Open Text: /, "").replace(/…$/, "");
+    expect(text.startsWith(kept)).toBe(true);
+    expect(text[kept.length]).toBe(" ");
+  });
+
+  it("leaves a summary that fits completely alone", () => {
+    live();
+    addBlock(blankBlock("prose"));
+    const id = getState().doc.blocks[0]?.id ?? "";
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "prose") throw new Error("no prose block");
+    updateBlock(id, { ...block, text: "Short enough" });
+    row().click();
+
+    expect(row().textContent).toBe("Open Text: Short enough");
   });
 
   it("offers to close it once it is open, rather than still offering to edit", () => {

@@ -38,17 +38,36 @@ const ADDABLE: Block["kind"][] = [
   "divider",
 ];
 
+/**
+ * Cuts a summary to length and says that it did.
+ *
+ * A bare slice reads as text that stopped rather than text that was shortened.
+ * The section list showed "Open Text: Everything here is made in runs of forty
+ * or fewer, finished" for a sentence that carries on, and there was nothing on
+ * the row to say so: no ellipsis, and `text-overflow` is `clip` because the cut
+ * happens here rather than in the stylesheet.
+ *
+ * It backs up to a word boundary when there is one in the last part of the
+ * budget, so the cut does not land inside a word either. When there is not one,
+ * a long unbroken string still gets cut at the limit, because a row that grows
+ * to fit one is worse than a word split across the ellipsis.
+ */
+function shorten(text: string, max = 60): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}
+
 /** A short description of a section, so the list is scannable. */
 function summarise(block: Block): string {
   switch (block.kind) {
     case "heading":
-      return block.text === "" ? "Empty heading" : block.text;
+      return block.text === "" ? "Empty heading" : shorten(block.text);
     case "divider":
       return "A line across the page";
     case "prose":
-      return (
-        block.heading ?? (block.text === "" ? "Empty" : block.text.slice(0, 60))
-      );
+      return shorten(block.heading ?? (block.text === "" ? "Empty" : block.text));
     case "menu":
       // "item", matching the form. The section used to call these options in
       // one place and items in another, which is one word too many for a
