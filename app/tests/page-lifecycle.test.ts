@@ -21,6 +21,7 @@ import { emptyDocument } from "@mdsb/engine";
 import { listPages, writePage } from "../src/db.js";
 import { getState, init, refreshPages, removePage, setSurface, subscribe } from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
+import { settle } from "./settle.js";
 
 let stop: (() => void) | undefined;
 
@@ -31,10 +32,6 @@ async function stored(id: string, over: { title?: string; updatedAt?: number; js
     title: over.title ?? "Untitled page",
     updatedAt: over.updatedAt ?? 1000,
   });
-}
-
-async function settle(): Promise<void> {
-  for (let i = 0; i < 10; i += 1) await new Promise((r) => setTimeout(r, 0));
 }
 
 async function live(pageId: string, title?: string): Promise<void> {

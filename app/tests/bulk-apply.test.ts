@@ -24,6 +24,7 @@ import { addBlock, getState, init, selectBlock, selectTiers, subscribe, updateBl
 import { BLANK_BULK_PRICING_INPUTS, computeBulkPreview } from "../src/ui/bulk-pricing.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
+import { settle } from "./settle.js";
 
 let stop: (() => void) | undefined;
 
@@ -52,10 +53,6 @@ beforeEach(() => {
   stop = undefined;
   globalThis.indexedDB = new IDBFactory();
 });
-
-async function settle(): Promise<void> {
-  for (let i = 0; i < 10; i += 1) await new Promise((r) => setTimeout(r, 0));
-}
 
 function menuBlock(): Extract<ReturnType<typeof getState>["doc"]["blocks"][number], { kind: "menu" }> {
   const block = getState().doc.blocks[0];

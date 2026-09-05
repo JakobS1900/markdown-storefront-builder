@@ -28,6 +28,7 @@ import { listPages, writePage } from "../src/db.js";
 import { addBlock, getState, init, refreshPages, selectBlock, subscribe, update } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
+import { settle } from "./settle.js";
 
 let stop: (() => void) | undefined;
 
@@ -48,10 +49,6 @@ async function stored(id: string, over: { title?: string; updatedAt?: number; js
  * real thing does. One flush is not enough and a test that asserts too early
  * fails for a reason that has nothing to do with what it is testing.
  */
-async function settle(): Promise<void> {
-  for (let i = 0; i < 10; i += 1) await new Promise((r) => setTimeout(r, 0));
-}
-
 /**
  * Boots the app on a given page id, with storage working.
  *

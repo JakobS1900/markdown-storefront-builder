@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addBlock, getState, init, subscribe } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
+import { settle } from "./settle.js";
 
 let stop: (() => void) | undefined;
 const realFetch = globalThis.fetch;
@@ -49,10 +50,6 @@ function example(): HTMLButtonElement | null {
   return [...document.querySelectorAll<HTMLButtonElement>("#app button")].find(
     (b) => (b.textContent ?? "").includes("example"),
   ) ?? null;
-}
-
-async function settle(): Promise<void> {
-  for (let i = 0; i < 12; i += 1) await new Promise((r) => setTimeout(r, 0));
 }
 
 beforeEach(() => {
