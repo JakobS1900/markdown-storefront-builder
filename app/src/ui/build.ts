@@ -509,7 +509,13 @@ export function buildSurface(container: HTMLElement): void {
     ADDABLE.map((kind) =>
       button({
         label: KIND_LABEL[kind],
-        variant: "primary",
+        // Chips, which is what `.adders .btn.ghost` in the stylesheet was
+        // written for and what it never got applied to. Six of these were
+        // `primary`, so the empty state painted the solid accent seven times:
+        // once on "See an example page", which is the thing a new person
+        // should press, and six times on the row below it, which is not.
+        // Seven primaries is no primary.
+        variant: "ghost",
         onClick: () => {
           const block = blankBlock(kind);
           addBlock(block);
