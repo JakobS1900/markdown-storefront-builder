@@ -484,14 +484,16 @@ during implementation", and the short version is worth carrying:
   Verified with `git ls-remote --tags origin` on 2026-09-06, after this file
   briefly claimed the opposite from inference. See the note at the top.
 
-  **Asked and granted again on 2026-09-06**, for the six commits of feature 024
-  work sitting on top of `965fc5b`: the handoff correction, the spec, plan,
-  tasks and analysis, and the schema version 4 contract. Jakob said to push
-  them. The push was then refused by the harness permission layer rather than by
-  anything in this project, so **it has NOT happened and the grant is still
-  outstanding.** A session picking this up should either ask Jakob to run
-  `git push origin master` himself or get a Bash permission rule added. Do not
-  treat the grant as spent: it was given and not used.
+  **Asked, granted and DONE on 2026-09-06**: `965fc5b..de9965d master -> master`.
+  Seven commits, being the handoff corrections, the 024 spec, plan, tasks and
+  analysis, and the schema version 4 contract. `origin/master` is now at
+  `de9965d`. That grant covered those commits and, as always, does not carry
+  forward to the next ones.
+
+  Worth knowing for next time: the assistant's own `git push` was refused by the
+  harness permission layer, not by anything in this project. Jakob ran it
+  himself from the session prompt. If a session needs to push and is blocked the
+  same way, that is the workaround, or a Bash permission rule for `git push`.
 - **Whether feature work should use branches at all.** Delivery has gone
   straight to master since `Merge 009-imgur` on 2026-08-25, but
   `.specify/extensions.yml` still runs a mandatory branch-creating hook before
