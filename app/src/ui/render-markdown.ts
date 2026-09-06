@@ -46,7 +46,27 @@ function safeAddress(url: string): string | undefined {
   // same cleaning the engine's own address check does, for the same reason.
   // eslint-disable-next-line no-control-regex
   const cleaned = url.replace(/[\s\u0000-\u001f\u007f]/g, "");
-  return /^https?:\/\//i.test(cleaned) ? url : undefined;
+  if (/^https?:\/\//i.test(cleaned)) return url;
+
+  // A picture held on the seller's own device, named rather than addressed.
+  // T047. No browser implements this scheme, so one that somehow reached a
+  // reader is an image that fails to load: it cannot navigate and it cannot
+  // execute. The menu file exporter replaces every one with real bytes, or
+  // removes the element, before the file is written.
+  //
+  // It is allowed here so the address survives into an ELEMENT. Without that,
+  // the renderer degrades it to the seller's literal words and the exporter's
+  // only option is to find the token in the compiled Markdown by pattern. That
+  // was the first design and it was forgeable: an item named
+  // `X](mdsb-asset:evil)` compiles to an alt containing exactly that text, and
+  // a pattern cannot tell the seller's words from the compiler's structure
+  // because by then they are the same characters. Removing the supposed token
+  // destroyed the real picture beside it.
+  //
+  // A node carries that distinction in the tree, and seller text can never
+  // become a node. That is what research D3 meant by resolving on the DOM, and
+  // it only works now that the label pattern above is correct.
+  return /^mdsb-asset:[^\s]*$/i.test(cleaned) ? url : undefined;
 }
 
 /**

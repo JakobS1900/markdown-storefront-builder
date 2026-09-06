@@ -154,21 +154,28 @@ function pictureName(alt: string): string {
  * reason for the identifier form. Until T047 lands, every caller passes
  * `NO_ASSETS`, so nothing takes that branch.
  */
-function withoutMissingPictures(
-  markdown: string,
-  resolve: AssetResolver,
-  notes: string[],
-): string {
-  return markdown.replace(
-    new RegExp(String.raw`!\[(${ALT})\]\(mdsb-asset:([^)\s]*)\)`, "g"),
-    (whole: string, alt: string, address: string) => {
-      if (resolve(decodeAddress(address)) !== undefined) return whole;
-      notes.push(
-        `${pictureName(alt)}: your own picture is not in this file, because it is not stored on this device.`,
-      );
-      return "";
-    },
-  );
+function resolveLocalPictures(body: HTMLElement, resolve: AssetResolver, notes: string[]): void {
+  const SCHEME = "mdsb-asset:";
+
+  for (const img of [...body.querySelectorAll("img")]) {
+    // `getAttribute`, not `.src`. The property resolves against the document's
+    // base address and would hand back something else entirely.
+    const src = img.getAttribute("src") ?? "";
+    if (!src.startsWith(SCHEME)) continue;
+
+    const bytes = resolve(decodeAddress(src.slice(SCHEME.length)));
+    if (bytes !== undefined) {
+      img.src = bytes;
+      continue;
+    }
+
+    // `img.alt` is already the seller's own words: the renderer unescapes alt
+    // text on the way in, so nothing here has to undo the compiler a second
+    // time.
+    const named = img.alt.trim() === "" ? "One of your pictures" : img.alt.trim();
+    notes.push(`${named}: your own picture is not in this file, because it is not stored on this device.`);
+    img.remove();
+  }
 }
 
 /** Every web picture the compiled output actually shows, still encoded. */
@@ -274,11 +281,11 @@ export function menuFileBody(
   pictures: PictureBytes = new Map(),
 ): { body: HTMLElement; notes: string[] } {
   const notes: string[] = [];
-  const markdown = withoutMissingPictures(compile(doc, MENU_FILE).markdown, resolve, notes);
 
   const body = document.createElement("div");
   body.className = "rendered";
-  body.append(renderMarkdown(markdown));
+  body.append(renderMarkdown(compile(doc, MENU_FILE).markdown));
+  resolveLocalPictures(body, resolve, notes);
   embedPictures(body, pictures, notes);
 
   return { body, notes };

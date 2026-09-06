@@ -35,6 +35,59 @@ function menuPage(): Document {
   );
 }
 
+/**
+ * A seller's own words cannot be mistaken for a picture token.
+ *
+ * The exporter used to find pictures held on the device by matching
+ * `![alt](mdsb-asset:id)` in the compiled Markdown and cutting the match out.
+ * An item named `X](mdsb-asset:evil)` compiles to an image whose ALT TEXT
+ * contains exactly that string, so the pattern matched the seller's own words
+ * as though they were the compiler's structure. Removing the supposed token
+ * deleted the real picture beside it, left `](https://...)` as visible text in
+ * the price table, and added a note telling the seller their picture was not
+ * stored on this device. All three wrong, none of them an error.
+ *
+ * Nothing executed, so it was never a security hole. It quietly mangled the one
+ * artifact a seller hands to a customer, which is worse in the way that
+ * matters.
+ *
+ * Resolution now happens on elements, where the seller's text cannot become a
+ * node, so the class is gone rather than patched. That only became possible
+ * once `render-markdown.ts`'s label pattern was fixed: the same forgery worked
+ * against the renderer, and the DOM was not trustworthy until it did not.
+ */
+describe("a seller's own words cannot be mistaken for a picture token", () => {
+  const forged = "X](mdsb-asset:evil)";
+
+  function forgedPage(): Document {
+    return page({
+      id: "m",
+      kind: "menu",
+      heading: "Prices",
+      tiers: [
+        { id: "t1", name: forged, price: "3", imageUrls: ["https://real.test/picture.png"] },
+      ],
+    });
+  }
+
+  it("keeps the real picture the seller actually has", () => {
+    expect(buildMenuFile(forgedPage(), NO_ASSETS).html).toContain("https://real.test/picture.png");
+  });
+
+  it("says nothing about a missing picture, because none is missing", () => {
+    expect(buildMenuFile(forgedPage(), NO_ASSETS).notes).toEqual([]);
+  });
+
+  it("puts no asset address in the file", () => {
+    expect(buildMenuFile(forgedPage(), NO_ASSETS).html).not.toContain('src="mdsb-asset:');
+  });
+
+  it("still shows the seller the name they typed", () => {
+    const { html } = buildMenuFile(forgedPage(), NO_ASSETS);
+    expect(new DOMParser().parseFromString(html, "text/html").body.textContent).toContain(forged);
+  });
+});
+
 describe("the file shows the seller's page", () => {
   it("carries the headings the page has", () => {
     const { html } = buildMenuFile(menuPage(), NO_ASSETS);
