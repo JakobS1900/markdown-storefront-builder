@@ -4,8 +4,11 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-**Released**: `v0.4.0`, 2026-09-05, from `ce72671`. Tag and 28 commits pushed,
-GitHub Release published with the signed APK, versionCode 7.
+**Released**: `v0.6.0`, from `965fc5b`, versionCode 9. **Tagged locally and NOT
+pushed.** `v0.5.0` (`9f1ab0c`, versionCode 8) is in the same position. The only
+push this project has ever made was 0.4.0 on 2026-09-05, granted once for that
+release, and that grant did not carry forward. So `origin` is level at `ce72671`
+and five commits behind, and two tags exist only here.
 
 **Tag often from here.** Jakob's instruction on 2026-09-05, after 0.4.0 went out
 carrying seventy commits and four days. A tag per feature or per handful of
@@ -14,13 +17,25 @@ fixes, not a fortnight in one. The policy and the reasoning are in
 only the handoff still knows. Note it does NOT grant the push: that is still
 asked for every time.
 
-**Current state**: feature 023 is complete and committed as `fa8eb28`. Feature
-022's missing holistic review has now been run: `b69266a` is the test it added,
-`20d3192` is what it found. On top of that sit two UI fixes asked for directly
-rather than through a feature: `e0f345b` is the preview table and the checkbox,
-`053bdae` is the regenerated screenshots. `4d26e5f` then fixed a real test
-failure that `npm run verify` caught on 2026-09-05, described under "Traps".
-This file describes the tree at `4d26e5f`, and `npm run verify` is green on it.
+**Current state**: this file describes the tree at `965fc5b`, and
+`npm run verify` is green on it, run alone from PowerShell on 2026-09-06:
+**64 test files, 1092 tests, a11y 34, contrast 164 elements and 12 sections with
+0 failures in both light and dark, pwa update gate clean, exit code 0.**
+
+Note the test count. This file said to expect 1081 and it is 1092, because two
+feature commits landed after the last handoff update and this file was not
+touched for either: `45edecb`, a blank price row asks for two things rather than
+five, and `4404756`, no bulk pricing controls until there are at least two rows
+to choose between. Both shipped, both tagged, neither recorded here until now.
+That is exactly the drift this project has already paid for twice, and it is
+worth one line of warning: **update this file when a feature lands, not when
+somebody remembers.**
+
+Before those, feature 023 completed as `fa8eb28`, feature 022's missing holistic
+review ran (`b69266a` the test, `20d3192` the findings), two directly requested
+UI fixes landed (`e0f345b` the preview table and the checkbox, `053bdae` the
+regenerated screenshots), and `4d26e5f` fixed a real test failure that
+`npm run verify` caught on 2026-09-05, described under "Traps".
 
 The restyle that was sitting uncommitted is now `a3998c3`, with the twelve
 regenerated media files as `a9ecb4d`. **Working tree clean, nothing pushed.**
@@ -79,7 +94,56 @@ honest record of it.
    are environmental rather than real. It earned its place on 2026-09-05, when
    it caught a real failure that had been latent for days and was NOT one of
    the environmental ones. See the starters-picker entry under "Traps".
-2. **F4, the interview wizard, is UNGATED and is the next feature.**
+
+   Done on 2026-09-06 at `965fc5b`, green, numbers quoted under "Current state".
+
+2. **F5, the menu file, is the next feature, and it goes AHEAD of F4.**
+   Jakob decided this on 2026-09-06 in the session that writes it down, which is
+   the rule item 3 below exists to enforce.
+
+   **Where it came from, first hand.** People are testing the app and one of
+   them asked for three things: a menu they can save as a file and send to
+   somebody that still looks good, because a `.md` file loses the styling and
+   the paste hosts are unreliable for them; prices laid out as an item and a
+   price with the amounts underneath; and their own pictures rather than hunting
+   for a web address for every photo.
+
+   **Two of those three are already built and merely unfindable, which is the
+   finding that shaped the feature.** The per item price breakdown exists:
+   `engine/src/compile/emit/menu.ts:80` switches the whole section to a per item
+   layout the moment any row has quantity breaks, giving a heading carrying the
+   name and price followed by its own `| Quantity | Price |` table. Nobody finds
+   it because it lives in the `More details` fold labelled `Bulk pricing`
+   (`app/src/ui/forms.ts:493-519`). Headings exist too: `heading` is one of the
+   six block kinds with levels 1 to 6. So the new work is the saved menu file
+   and pictures held on the device, plus a relabel.
+
+   **The load bearing design idea: the menu file is a host.** Principle II says
+   hosts are data, so add a `MENU_FILE` target carrying two new capability
+   flags, `localImages` and `dataImages`, that every paste host has as `false`.
+   The engine then stays pure and knows nothing about "offline": it reads a flag
+   exactly as it already reads `tables`. The fallback for `localImages: false`
+   is that the picture is dropped and a `local_image_unsupported` warning names
+   it, the same shape as the existing `table_unsupported`.
+
+   **Jakob's constraint, in his words: lock it as an offline feature**, so
+   nobody adds their own pictures and then rage quits when they do not appear in
+   the pasted page. The target design is what makes that structural rather than
+   a warning nobody reads: Preview renders the compiled output for the selected
+   paste host (Principle VII), so a seller who adds a picture and selects
+   `rentry` sees it absent AND sees a warning saying where it does appear.
+
+   `text.is` carries `maxBytes: 200000` and that is the hard evidence for the
+   lock: one 1600px JPEG as base64 exceeds the entire published page budget by
+   itself, and the only feedback would be one non blocking `size_limit_exceeded`
+   warning after the fact.
+
+   The plan is at
+   `C:/Users/Emu/.claude-personal/plans/some-of-my-friends-breezy-rocket.md`.
+   Seven chunks, contract first and alone, holistic review mandatory. Route it
+   through Spec Kit as `CLAUDE.md` says.
+
+3. **F4, the interview wizard, is UNGATED but is now second.**
    `specs/021-starting-points/spec.md` gated it on whether a starting point
    turned out to be enough, because building a question by question interview
    before knowing that would be guessing.
@@ -117,11 +181,15 @@ honest record of it.
    is the largest of the three answers to this, not the only one, and the spec
    should say why it is the right one rather than assume it. Ask Jakob before
    ruling the cheap ones out.
-3. **Drive the app before believing anything about how it looks.** The design
-   review on 2026-09-05 is done and found three defects, all fixed, none of
-   which was visible in `docs/media`. That is the standing lesson: the stills
-   are not evidence about the states that are broken. See "Traps".
-4. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
+4. **Drive the app before believing anything about how it looks.** The design
+   review on 2026-09-05 is done and found four defects plus the docked
+   add-a-section row, all fixed, none of which was visible in `docs/media`.
+   (This item used to say three, while the top of this file enumerated four and
+   the dock. Corrected 2026-09-06 by counting the commits: `b940fd0`, `6b8bc45`,
+   `e1138d9`, `b8efe30`, and `dc68870` for the dock.) That is the standing
+   lesson: the stills are not evidence about the states that are broken. See
+   "Traps".
+5. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
    budget in the suite was squeezed and rerun to find which waits were load
    bearing. None of the seven carried the `starters-picker` defect, which was a
    deficit rather than a thin margin. `a11y` and `price-list-screen` pass at one
@@ -147,6 +215,29 @@ during implementation", and the short version is worth carrying:
 
 ## Verified live, do not re-probe
 
+- **`npm run verify` passes on `965fc5b`**, run alone from PowerShell on
+  2026-09-06, nothing else running. 64 test files, 1092 tests, a11y 34,
+  `light: 164 elements, 12 sections, 3 fields, 2 hints, 0 contrast failure(s)`
+  and the identical line for `dark`, `PWA update gate clean. A returning visitor
+  gets the new build.`, exit code 0. This is the current baseline.
+- **The per item price table already exists and needs no emitter work.**
+  `engine/src/compile/emit/menu.ts:80` sets `perItem` when any tier has real
+  quantity breaks or more than one picture, and `tierBlock` at `:268` then
+  emits a heading carrying the name and price followed by that item's own
+  `| Quantity | Price |` table. Read directly on 2026-09-06. The request that
+  prompted F5 was for a layout the compiler has emitted since feature 017.
+- **Headings already exist.** `heading` is one of the six `BLOCK_KINDS` with
+  `level` constrained 1 to 6 in `descriptor.ts`, and Prices, Text and Gallery
+  blocks each carry their own optional `heading` field. Nothing to build.
+- **Nothing in the app stores image bytes today.** Every image is a remote URL
+  string in `imageUrls`, `imageUrl` or `avatarUrl`. The one Blob the app ever
+  makes is in `upload.ts` `normalise()`, immediately POSTed to Imgur and
+  discarded. `app/src/db.ts` has one object store, `pages`, holding text.
+- **There is no quota handling anywhere.** No `navigator.storage.estimate()`,
+  no `persist()`, no `QuotaExceededError` branch. A quota failure today reaches
+  the seller as a raw DOMException string through the generic catch at
+  `store.ts:836-843`, which Principle V defines as a defect. F5 chunk 1 owns
+  fixing that, and it is not optional polish.
 - **`npm run verify` passes end to end**, run alone on a quiet machine, both
   before and after 022's review. 1080 tests in 63 files, a11y 34, contrast 164
   elements and 12 sections in both light and dark with 0 failures, pwa update
@@ -320,8 +411,28 @@ during implementation", and the short version is worth carrying:
 
 ## Deferred deliberately, do not "fix" without asking
 
-- **F4, the interview wizard.** No longer deferred. The gate opened on
-  2026-09-04. See Next up.
+- **F4, the interview wizard.** No longer deferred, but no longer next either.
+  The gate opened on **2026-09-05**, not 2026-09-04. This line said 2026-09-04,
+  which was the date of the quote that was investigated and withdrawn as
+  unsourceable, so the entry was carrying the withdrawn claim's date after the
+  claim itself had been retracted three sections above. Corrected 2026-09-06.
+  See Next up item 3.
+- **No PDF export.** Considered on 2026-09-06 and not taken. The self contained
+  HTML menu file reflows on a phone, needs no library and no print stylesheet,
+  and a PDF's fixed page size fights a price list of unknown length. Revisit
+  only if somebody asks for print.
+- **No automatic cleanup of unreferenced pictures**, once F5 lands. Refcounting
+  across saved pages to delete orphaned bytes is precisely the shape of change
+  Principle V forbids, deleting a seller's work to recover space. The plan ships
+  a manual "pictures using space" view instead and defers collection. Ask before
+  building it.
+- **No change to `tierTable`'s shape.** The per item layout already answers what
+  was asked for. Changing the emitter would churn golden fixtures across three
+  hosts and trigger the manual host verification pass for nothing.
+- **`Bulk pricing` stays inside the `More details` fold.** It gets a better
+  label and hint, not a promotion. Lifting it out reverses `45edecb`, which cut
+  a blank row from five fields to two on purpose, and would trade a known win
+  for a guess to surface a control most sellers never touch.
 - **No cost range filter, no target margin mode, no bulk change to existing
   prices.** All three declined in `specs/022-bulk-pricing/spec.md` with reasons.
 - **No fetching a price list from a URL, no image import, no second pass
@@ -342,6 +453,11 @@ during implementation", and the short version is worth carrying:
 
 ## Blocked on Jakob
 
+- **Nothing blocks F5.** All four of its open questions were put to Jakob on
+  2026-09-06 and answered in that session: build all three parts and route them
+  through Spec Kit, lock the pictures as an offline feature, relabel the buried
+  `Bulk pricing` control rather than moving or reshaping it, and put the whole
+  thing ahead of F4.
 - **Whether F4 is the right answer**, not whether the problem is real. The
   problem is confirmed first hand on 2026-09-05: somebody could not figure out
   what to write and got overwhelmed. What is not settled is that a wizard is the
@@ -351,9 +467,11 @@ during implementation", and the short version is worth carrying:
   specifying whatever wins.
 - **Pushing anything.** Still the policy, and still asked each time. It was
   asked and granted once, on 2026-09-05, for the 0.4.0 release: 28 commits and
-  the tag went to `origin` and the GitHub Release was published. Local and
-  origin are level as of `ce72671`. That grant was for that release and does not
-  carry forward.
+  the tag went to `origin` and the GitHub Release was published. That grant was
+  for that release and does not carry forward. **Since then 0.5.0 and 0.6.0 have
+  been tagged locally and not pushed**, so `origin` sits at `ce72671`, five
+  commits and two tags behind. Nobody outside this machine has 0.5.0 or 0.6.0.
+  Worth raising with Jakob as its own question rather than assuming he knows.
 - **Whether feature work should use branches at all.** Delivery has gone
   straight to master since `Merge 009-imgur` on 2026-08-25, but
   `.specify/extensions.yml` still runs a mandatory branch-creating hook before
