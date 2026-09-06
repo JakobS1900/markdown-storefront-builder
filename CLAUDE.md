@@ -4,11 +4,22 @@ each one actually has, and is honest about which were written after the code
 shipped. For technologies, project structure, and shell commands, read
 `docs/ROADMAP.md` and `docs/WORKFLOW.md`.
 
-This block used to name `specs/002-compile-skeleton/plan.md` as "the current
-plan". It had been finished for a month, so every session began by reading a
-description of work already done. Specs 004 to 010 were backfilled on
-2026-08-31 and say so in their own headers; there are no plan or task
-documents after 001, and no architecture or holistic review after 003.
+**Read `docs/HANDOFF.md` for what is actually happening right now.** It is the
+live document and it outranks this block, which is edited by tooling rather than
+by whoever last did the work.
+
+In progress: `specs/024-menu-file/`, the saved menu file and pictures held on
+the device. **That is a claim with an expiry date.** It is true only while
+`docs/HANDOFF.md` still says so. If the handoff names something else, or names
+024 as finished, believe the handoff and correct this line.
+
+That warning is not boilerplate. This block used to name
+`specs/002-compile-skeleton/plan.md` as "the current plan". It had been finished
+for a month, so every session began by reading a description of work already
+done. Specs 004 to 010 were backfilled on 2026-08-31 and say so in their own
+headers. Plan documents exist for 001, 021, 022, 023 and 024; this block claimed
+there were none after 001, which stopped being true at 021 and is corrected
+here.
 <!-- SPECKIT END -->
 
 # Project Rules

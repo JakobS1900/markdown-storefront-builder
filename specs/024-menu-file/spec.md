@@ -299,7 +299,15 @@ that they open the right fold and find the right field.
 - **SC-007**: A menu file renders without sideways page scrolling at 390 CSS
   pixels wide, the width the project already measures against.
 - **SC-008**: Every page that opened before this feature still opens after it,
-  byte for byte identical when saved back unchanged.
+  with every field it carried preserved and no field it did not carry created,
+  and produces the same output for every paste host as it did before.
+
+  This criterion originally demanded the saved bytes be identical. That is not
+  achievable and asking for it would have been a requirement nobody could meet:
+  a page's stored version stamp changes when it is opened by this version, so
+  its bytes necessarily change the next time it is saved. What actually matters
+  is that nothing is lost, nothing is invented, and no seller's published page
+  changes under them, which is what this now says.
 
 ## Assumptions
 
