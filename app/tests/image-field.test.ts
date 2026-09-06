@@ -20,6 +20,9 @@ const mocks = vi.hoisted(() => ({ configured: false }));
 vi.mock("../src/upload.js", () => ({
   uploadConfigured: () => mocks.configured,
   uploadImage: vi.fn(),
+  // `assets.ts` imports this from the same module, and a mock missing a named
+  // export fails at link time rather than when something calls it.
+  normalise: vi.fn(),
 }));
 
 const { imageField } = await import("../src/ui/image-field.js");

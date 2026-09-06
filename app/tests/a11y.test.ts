@@ -33,6 +33,9 @@ const mocks = vi.hoisted(() => ({ uploads: true }));
 vi.mock("../src/upload.js", () => ({
   uploadConfigured: () => mocks.uploads,
   uploadImage: vi.fn(),
+  // `assets.ts` imports this from the same module, and a mock missing a named
+  // export fails at link time rather than when something calls it.
+  normalise: vi.fn(),
 }));
 
 import { writePage } from "../src/db.js";
@@ -179,7 +182,11 @@ describe("the shell is accessible", () => {
       selectBlock(getState().doc.blocks[0]?.id);
       renderShell(root);
       expect((await violations()).map((v) => v.id)).toEqual([]);
-      expect(document.querySelector("input[type=file]")).toBeNull();
+      // The Imgur picker, and only that one. The device picture control below
+      // it has its own picker and is present in every build, deliberately: it
+      // needs no key and no service, which is the whole point of it.
+      expect(document.querySelector("input[type=file]:not([id$='-device-file'])")).toBeNull();
+      expect(document.querySelector("input[type=file][id$='-device-file']")).not.toBeNull();
     } finally {
       mocks.uploads = true;
     }
@@ -410,6 +417,230 @@ describe("the preview and export surfaces are accessible", () => {
     renderShell(root);
     expect(document.getElementById("output")).not.toBeNull();
     expect(document.querySelector('label[for="output"]')).not.toBeNull();
+  });
+});
+
+/**
+ * Pictures held on this device, feature 024 Phase 4.
+ *
+ * Rendered through the real path in every case below, for the reason this
+ * file's own docstring gives: an unlabelled file input shipped for weeks
+ * because the gate was green on a control it had never built. Two of these
+ * controls only exist once something has been stored, and one of them only
+ * exists while a question is being asked, so all three states are drawn here
+ * rather than assumed.
+ */
+describe("the device picture controls are accessible", () => {
+  /** A stored picture, written straight to the store, as an earlier session left. */
+  async function storePicture(id: string, bytes: number): Promise<void> {
+    const { writeAsset } = await import("../src/db.js");
+    await writeAsset({
+      id,
+      data: new Uint8Array(bytes).buffer,
+      mime: "image/jpeg",
+      bytes,
+      createdAt: bytes,
+    });
+  }
+
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+    init(true);
+  });
+
+  /** The build surface with a price list open, which is where the field lives. */
+  function fieldOpen(): HTMLElement {
+    const root = mount();
+    addBlock({ id: "m", kind: "menu", heading: "Prices", tiers: [{ id: "t", name: "Bust", price: "45" }] });
+    selectBlock("m");
+    renderShell(root);
+    return root;
+  }
+
+  /**
+   * Found by structure, not by wording.
+   *
+   * "Upload a picture from this device" is the Imgur control and sits in the
+   * same field, so matching on the words alone picks that one up and every
+   * assertion below quietly moves to it. The two are different controls doing
+   * different things: one puts a picture on the web, this one keeps it here.
+   */
+  function deviceButton(): HTMLButtonElement {
+    const found = document.querySelector<HTMLButtonElement>(".device-picture .uploader button");
+    if (found === null) throw new Error("the device picture control did not render");
+    return found;
+  }
+
+  it("offers the control on the price list, the gallery and the profile alike", () => {
+    // FR-078: every place that accepts a picture behaves the same way as every
+    // other. One control built in one place is what keeps that true, and this
+    // is the assertion that it really is reaching all three.
+    for (const kind of ["menu", "gallery", "profile"] as const) {
+      const root = mount();
+      init(true);
+      addBlock(blankBlock(kind));
+      selectBlock(getState().doc.blocks[0]?.id);
+      renderShell(root);
+
+      expect(document.querySelectorAll(".device-picture").length, kind).toBeGreaterThan(0);
+      expect(deviceButton().textContent ?? "", kind).toMatch(/picture from this device/i);
+    }
+  });
+
+  it("tells the seller where the picture will and will not appear before they choose one", () => {
+    // FR-082. Not only that the words are on the page, but that they are ahead
+    // of the control, because a caveat under the button is a caveat read after
+    // the file dialog has already been through.
+    fieldOpen();
+    const caveat = [...document.querySelectorAll(".device-picture .hint")].find((p) =>
+      /menu file/i.test(p.textContent ?? ""),
+    );
+    if (caveat === undefined) throw new Error("the caveat did not render");
+
+    expect(caveat.textContent ?? "").toMatch(/rentry/i);
+    expect(caveat.compareDocumentPosition(deviceButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("gives the control a real name, the touch target, and the keyboard", async () => {
+    fieldOpen();
+    const control = deviceButton();
+
+    expect((control.textContent ?? "").trim().length).toBeGreaterThan(8);
+    expect(control.tagName).toBe("BUTTON");
+    expect(control.getAttribute("type")).toBe("button");
+    expect(control.getAttribute("tabindex")).toBeNull();
+    expect(control.getAttribute("aria-hidden")).toBeNull();
+    // jsdom lays nothing out, so this asserts the pair that produces the size.
+    expect(control.classList.contains("btn")).toBe(true);
+    const css = await stylesheet();
+    expect(css).toMatch(/\.btn\s*\{[^}]*min-height: var\(--tap\)/);
+  });
+
+  it("keeps its file picker out of the tab order and out of the a11y tree", () => {
+    fieldOpen();
+    const picker = document.querySelector<HTMLInputElement>("input[type=file][id$='-device-file']");
+    if (picker === null) throw new Error("the device picker did not render");
+
+    expect(picker.getAttribute("aria-hidden")).toBe("true");
+    expect(picker.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("has no axe violations with the field on screen", async () => {
+    fieldOpen();
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations with a picture chosen", async () => {
+    await storePicture("held", 4096);
+    const root = mount();
+    addBlock({
+      id: "m",
+      kind: "menu",
+      heading: "Prices",
+      tiers: [{ id: "t", name: "Bust", price: "45", localImageIds: ["held"] }],
+    });
+    selectBlock("m");
+    const { holdAssets } = await import("../src/assets.js");
+    await holdAssets(["held"]);
+    renderShell(root);
+
+    expect(document.querySelector(".device-picture .thumb")).not.toBeNull();
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("says so rather than rendering a broken picture when one is gone", async () => {
+    // FR-088. The editor half: a page pointing at a picture that is no longer
+    // stored still opens, and shows a sentence instead of an image element with
+    // nothing behind it.
+    const root = mount();
+    addBlock({
+      id: "m",
+      kind: "menu",
+      heading: "Prices",
+      tiers: [{ id: "t", name: "Bust", price: "45", localImageIds: ["cleared-long-ago"] }],
+    });
+    selectBlock("m");
+    renderShell(root);
+
+    expect(document.querySelector(".device-picture .thumb")).toBeNull();
+    expect(document.querySelector(".device-picture .img-status")?.textContent ?? "").toMatch(
+      /no longer stored/i,
+    );
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+});
+
+describe("the storage view is accessible", () => {
+  async function storePicture(id: string, bytes: number): Promise<void> {
+    const { writeAsset } = await import("../src/db.js");
+    await writeAsset({ id, data: new Uint8Array(bytes).buffer, mime: "image/jpeg", bytes, createdAt: bytes });
+  }
+
+  /** Opens the panel and waits for it to read the store. */
+  async function openPanel(): Promise<void> {
+    const root = mount();
+    addBlock(blankBlock("heading"));
+    setSurface("export");
+    renderShell(root);
+
+    const panel = document.querySelector<HTMLDetailsElement>("#device-pictures");
+    if (panel === null) throw new Error("the storage panel did not render");
+    panel.open = true;
+    // Dispatched as well as set, because jsdom's `toggle` is not guaranteed to
+    // fire for a programmatic change and a panel that never filled would make
+    // every assertion below vacuous, which is this file's oldest failure.
+    panel.dispatchEvent(new Event("toggle"));
+    for (let i = 0; i < 20; i += 1) await new Promise((r) => setTimeout(r, 0));
+  }
+
+  beforeEach(async () => {
+    globalThis.indexedDB = new IDBFactory();
+    init(true);
+    await storePicture("one", 240_000);
+    await storePicture("two", 12_000);
+  });
+
+  it("lists what each picture costs", async () => {
+    await openPanel();
+    const rows = [...document.querySelectorAll(".stored-pictures li")];
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.textContent ?? "").join(" ")).toMatch(/KB/);
+  });
+
+  it("names each remove control after the picture it removes", async () => {
+    // "Remove" repeated down a list is not an answerable question read aloud.
+    await openPanel();
+    const names = [...document.querySelectorAll(".stored-pictures button")].map(
+      (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
+    );
+    expect(names).toHaveLength(2);
+    for (const name of names) expect(name).toMatch(/^Remove picture \d+ of \d+$/);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("has no axe violations with the panel open", async () => {
+    await openPanel();
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations while it is asking whether to remove a picture", async () => {
+    await openPanel();
+    const remove = document.querySelector<HTMLButtonElement>(".stored-pictures button");
+    if (remove === null) throw new Error("no remove control to press");
+    remove.click();
+
+    expect(document.querySelector(".stored-pictures p")?.textContent ?? "").toMatch(/cannot be brought back/i);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("keeps every control in the panel reachable and named", async () => {
+    await openPanel();
+    for (const control of document.querySelectorAll(".device-pictures button")) {
+      const name = control.getAttribute("aria-label") ?? control.textContent ?? "";
+      expect(name.trim()).not.toBe("");
+      expect(control.getAttribute("tabindex")).toBeNull();
+      expect(control.classList.contains("btn")).toBe(true);
+    }
   });
 });
 

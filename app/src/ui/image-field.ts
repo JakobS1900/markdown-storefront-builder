@@ -16,10 +16,27 @@
  */
 import { isSafeUrl } from "@mdsb/engine";
 
+import { addAsset, heldAsset } from "../assets.js";
 import { uploadConfigured, uploadImage } from "../upload.js";
 import { announce, button, el, nextFieldId } from "./dom.js";
 
 type Status = "empty" | "unsafe" | "checking" | "ok" | "broken";
+
+/**
+ * What a picture from this device does and does not do, said BEFORE one is
+ * chosen. FR-082.
+ *
+ * The order of the two sentences is the whole point. A seller who reads "it
+ * goes in the file you send" and stops there has still learned the thing that
+ * would otherwise surprise them later, which is that it is not on their posted
+ * page. Saying it afterwards, in a warning on the Preview tab, is telling
+ * somebody what they have already done.
+ *
+ * The paste sites are named rather than described. "Paste hosts" is our word
+ * for them; rentry is the seller's.
+ */
+const DEVICE_CAVEAT =
+  "A picture from this device goes into the menu file you save and send, and nowhere else. It cannot be put on rentry, text.is, or any other site you paste your page into, because those show pictures from the web. Paste an address above as well if you want one on your posted page.";
 
 const MESSAGE: Record<Status, string> = {
   empty: "",
@@ -72,6 +89,24 @@ export function imageField(opts: {
   value: string;
   hint?: string;
   onInput: (value: string) => void;
+  /**
+   * The picture on this device this field currently carries, if any.
+   *
+   * An identifier, never an address. FR-089: `imageUrls` is a field every code
+   * path reads as "addresses that can be published", and putting something
+   * unpublishable in it would make all of them wrong by default.
+   */
+  localValue?: string | undefined;
+  /**
+   * Called with a new identifier, or with nothing when the seller takes the
+   * picture off this field.
+   *
+   * Its absence is what decides whether the device control exists at all, so a
+   * call site that has nowhere to put an identifier cannot offer one. Written
+   * as explicitly optional-or-undefined so a call site can pass `undefined`
+   * from a conditional without building the property list by hand.
+   */
+  onLocal?: ((id: string | undefined) => void) | undefined;
 }): HTMLElement {
   const id = nextFieldId();
   const statusId = `${id}-status`;
@@ -231,5 +266,121 @@ export function imageField(opts: {
     ...uploader,
     status,
     frame,
+    ...devicePicture(id, opts),
   ]);
+}
+
+/**
+ * The picture held on this device, beside the address field.
+ *
+ * One function, called from `imageField`, so all three of its call sites behave
+ * identically. FR-078 says the places that accept a picture must all work the
+ * same way as each other, and the way to keep that true is for there to be one
+ * of them.
+ *
+ * The two kinds of picture are deliberately not exclusive. An item can carry a
+ * web address for the posted page and a device picture for the menu file, and
+ * the emitters already prefer the device one where both exist and warn about
+ * the other rather than dropping it silently.
+ */
+function devicePicture(
+  id: string,
+  opts: { localValue?: string | undefined; onLocal?: ((next: string | undefined) => void) | undefined },
+): Node[] {
+  const onLocal = opts.onLocal;
+  if (onLocal === undefined) return [];
+
+  const chosen = opts.localValue?.trim() ?? "";
+  const held = chosen === "" ? undefined : heldAsset(chosen);
+
+  const status = el("p", { class: "img-status", id: `${id}-device-status` });
+
+  // Hidden from assistive technology and from the tab order, as a pair, for the
+  // reason spelled out on the upload picker above: the button is the real
+  // control, and a focusable element a screen reader refuses to describe is a
+  // dead end. The a11y gate enforces the pairing.
+  const picker = el("input", {
+    id: `${id}-device-file`,
+    type: "file",
+    accept: "image/png,image/jpeg,image/gif,image/webp",
+    class: "sr-only",
+    "aria-hidden": "true",
+    tabindex: "-1",
+  }) as HTMLInputElement;
+
+  const pick = button({
+    label: chosen === "" ? "Add a picture from this device" : "Choose a different picture from this device",
+    onClick: () => picker.click(),
+  });
+
+  picker.addEventListener("change", () => {
+    const file = picker.files?.[0];
+    if (file === undefined) return;
+
+    pick.disabled = true;
+    status.textContent = "Adding the picture.";
+
+    void addAsset(file)
+      .then((outcome) => {
+        if (outcome.ok && outcome.id !== undefined) {
+          announce("That picture is now in your menu file.");
+          onLocal(outcome.id);
+          return;
+        }
+        // Refused. Every refusal from the store carries a sentence naming what
+        // happened and what to do, so there is nothing to invent here.
+        status.textContent = outcome.message ?? "That picture could not be added.";
+        status.className = "img-status broken";
+        announce(status.textContent);
+      })
+      .finally(() => {
+        pick.disabled = false;
+        // Cleared so choosing the same file again still fires a change event.
+        picker.value = "";
+      });
+  });
+
+  const controls: Node[] = [pick, picker];
+
+  if (chosen !== "") {
+    controls.push(
+      button({
+        label: "Take this device picture off this field",
+        variant: "ghost",
+        // Takes it off the page, and deliberately does NOT delete it. Research
+        // D6: the only thing that removes a picture from this device is the
+        // control that says so, on the Copy tab, about one picture.
+        onClick: () => {
+          announce("That picture is no longer on this field. It is still on this device.");
+          onLocal(undefined);
+        },
+      }),
+    );
+  }
+
+  const shown: Node[] = [];
+  if (chosen !== "") {
+    if (held === undefined) {
+      // FR-088. A picture that is gone must not render as a broken image, and
+      // the page still opens: nothing here throws and nothing is repaired.
+      status.textContent =
+        "The picture you chose is no longer stored on this device, so it will not be in your menu file. Add it again if you still have it.";
+      status.className = "img-status broken";
+    } else {
+      const thumb = el("img", { class: "thumb", alt: "" }) as HTMLImageElement;
+      thumb.src = held;
+      shown.push(el("div", { class: "thumb-frame" }, [thumb]));
+      status.textContent = "This picture is in your menu file.";
+      status.className = "img-status ok";
+    }
+  }
+
+  return [
+    el("div", { class: "device-picture" }, [
+      el("p", { class: "hint" }, [DEVICE_CAVEAT]),
+      el("div", { class: "uploader" }, controls),
+      status,
+      ...shown,
+    ]),
+  ];
 }

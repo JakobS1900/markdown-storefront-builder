@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { TARGETS, compile, parseDocument, validateDocument } from "@mdsb/engine";
+import { ALL_TARGETS, TARGETS, compile, parseDocument, validateDocument } from "@mdsb/engine";
 
 import { STARTERS } from "../src/starters/index.js";
 
@@ -102,6 +102,13 @@ describe("a planted cost", () => {
     // against every host. This lives in app/tests rather than engine/tests
     // because the pages are app content: the dependency direction is app
     // depends on engine, never the reverse.
+    //
+    // `ALL_TARGETS`, not `TARGETS`. This makes the same claim as
+    // `engine/tests/compile/cost-never-published.test.ts`, which moved in Phase
+    // 2B, and while this one still said `TARGETS` the two disagreed about
+    // whether the menu file counts. It does: a cost must never appear anywhere,
+    // including in the one output that carries embedded pictures and is sent
+    // straight to a customer.
     for (const starter of STARTERS) {
       const doc = await starter.load();
       const planted = {
@@ -110,7 +117,7 @@ describe("a planted cost", () => {
           b.kind === "menu" ? { ...b, tiers: b.tiers.map((t) => ({ ...t, cost: COST })) } : b,
         ),
       };
-      for (const target of TARGETS) {
+      for (const target of ALL_TARGETS) {
         expect([starter.id, target.id, compile(planted, target).markdown.includes(COST)])
           .toEqual([starter.id, target.id, false]);
       }

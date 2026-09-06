@@ -14,8 +14,10 @@ import { PORTABLE, TARGETS, compile, findTarget, serializeDocument } from "@mdsb
 import { getState, setTarget } from "../store.js";
 import { handOff } from "../files.js";
 import { openBackup } from "../import.js";
-import { MENU_FILE_NAME, NO_ASSETS, buildMenuFile, fetchPictures } from "../menu-file.js";
+import { describeBytes } from "../assets.js";
+import { MENU_FILE_NAME, buildMenuFile, fetchAssets, fetchPictures } from "../menu-file.js";
 import { announce, button, el, render, select } from "./dom.js";
+import { storagePanel } from "./storage.js";
 
 /** Where to paste, per host. Kept beside the target ids it describes. */
 const WALKTHROUGH: Record<string, string[]> = {
@@ -55,10 +57,7 @@ function save(name: string, text: string, type: string): void {
  * rather than in characters.
  */
 function sizeOf(html: string): string {
-  const bytes = new TextEncoder().encode(html).length;
-  if (bytes < 1024) return `${bytes} bytes`;
-  const kb = bytes / 1024;
-  return kb < 1024 ? `${Math.round(kb)} KB` : `${(kb / 1024).toFixed(1)} MB`;
+  return describeBytes(new TextEncoder().encode(html).length);
 }
 
 /**
@@ -80,9 +79,12 @@ function menuFileControl(): HTMLButtonElement {
       control.disabled = true;
       announce("Preparing your menu file.");
 
-      void fetchPictures(doc)
-        .then((pictures) => {
-          const file = buildMenuFile(doc, NO_ASSETS, pictures);
+      // Both kinds of picture are gathered before anything is built, because
+      // the build is synchronous. Web pictures need the network and pictures on
+      // this device need IndexedDB; neither may be reached from inside a render.
+      void Promise.all([fetchPictures(doc), fetchAssets(doc)])
+        .then(([pictures, resolve]) => {
+          const file = buildMenuFile(doc, resolve, pictures);
           const handed = handOff(MENU_FILE_NAME, file.html, "text/html");
           announce(
             [handed.ok ? `${handed.message} It is ${sizeOf(file.html)}.` : handed.message, ...file.notes].join(" "),
@@ -237,6 +239,11 @@ export function exportSurface(container: HTMLElement): void {
         }),
         ...openBackupControl(),
       ]),
+
+      // Beside the save controls, because this is the surface where the size of
+      // what is being sent is already on screen, and because the menu file is
+      // the only thing a device picture ever appears in. FR-087.
+      storagePanel(),
 
       el("section", { "aria-labelledby": "steps-heading" }, [
         el("h2", { id: "steps-heading" }, ["What to do next"]),

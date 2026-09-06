@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MENU_FILE, compile } from "@mdsb/engine";
 import type { Block, Document } from "@mdsb/engine";
 
+import { assetIds } from "../src/assets.js";
 import { NO_ASSETS, buildMenuFile, fetchPictures } from "../src/menu-file.js";
 
 function page(...blocks: Block[]): Document {
@@ -301,5 +302,76 @@ describe("a picture held on the device that cannot be resolved", () => {
     });
 
     expect(asked).toEqual(["a%41b (one) 100%"]);
+  });
+});
+
+describe("a picture held on the device that the resolver can supply", () => {
+  const BYTES = "data:image/jpeg;base64,/9j/AAA=";
+
+  function withPictures(): Document {
+    return page(
+      { id: "p", kind: "profile", displayName: "Ada", localAvatarId: "avatar-1" },
+      {
+        id: "m",
+        kind: "menu",
+        heading: "Fruit",
+        tiers: [{ id: "t1", name: "Oranges", price: "4", localImageIds: ["tier-1"] }],
+      },
+      { id: "g", kind: "gallery", layout: "grid", items: [{ imageUrl: "", localImageId: "item-1" }] },
+    );
+  }
+
+  it("puts the picture data on the node, and leaves no token behind", () => {
+    const { html, notes } = buildMenuFile(withPictures(), () => BYTES);
+
+    expect(html).not.toContain("mdsb-asset:");
+    expect(html).toContain(BYTES);
+    // Three pictures, three embeds, and nothing to tell the seller about.
+    expect(html.split(BYTES)).toHaveLength(4);
+    expect(notes).toEqual([]);
+  });
+
+  it("finds every kind of device picture a document can carry", () => {
+    // The walk `holdAssets` is driven by. A kind it misses is a picture that is
+    // never read, so the file is built without it and the seller is told it is
+    // not stored, which is a lie about a picture sitting right there.
+    expect(assetIds(withPictures()).sort()).toEqual(["avatar-1", "item-1", "tier-1"]);
+  });
+
+  it("reads the identifiers off the document, not out of the compiled text", () => {
+    // A seller can type the token into their own item name. In the compiled
+    // Markdown those characters are indistinguishable from the compiler's, and
+    // in the document they are plainly a name. FR-089 is why this is possible.
+    const forged = page({
+      id: "m",
+      kind: "menu",
+      tiers: [{ id: "t1", name: "X](mdsb-asset:forged)", price: "1" }],
+    });
+
+    expect(assetIds(forged)).toEqual([]);
+  });
+
+  it("takes an identifier that is only whitespace as no picture at all", () => {
+    // Matching the three emitters, which each treat a blank as no picture.
+    const blank = page({
+      id: "m",
+      kind: "menu",
+      tiers: [{ id: "t1", name: "Oranges", price: "4", localImageIds: ["", "  "] }],
+    });
+
+    expect(assetIds(blank)).toEqual([]);
+  });
+
+  it("still produces the file when only some of the pictures are there", () => {
+    // FR-088, the mixed case: one picture present, one gone. The file is
+    // produced, the one that is there is embedded, and the missing one is named
+    // by its item rather than by its identifier.
+    const { html, notes } = buildMenuFile(withPictures(), (id) => (id === "tier-1" ? BYTES : undefined));
+
+    expect(html).toContain(BYTES);
+    expect(html).not.toContain("mdsb-asset:");
+    expect(notes).toHaveLength(2);
+    expect(notes.join(" ")).not.toContain("avatar-1");
+    expect(notes.join(" ")).not.toContain("item-1");
   });
 });

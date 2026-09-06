@@ -58,8 +58,14 @@ export interface UploadOutcome {
  * including any GPS coordinates a phone camera wrote into it. An artist
  * uploading a photo of their own work should not be publishing their home
  * address alongside it, and almost none of them would think to check.
+ *
+ * Exported for `app/src/assets.ts`, which stores pictures on the device and
+ * needs exactly this and nothing else. Research D5: a second downscaler would
+ * be a second size policy for the same product, and a hand written EXIF
+ * stripper would be strictly worse than the side effect above. FR-083 is
+ * satisfied here, for both callers, or not at all.
  */
-async function normalise(file: File): Promise<Blob> {
+export async function normalise(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   try {
     const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));

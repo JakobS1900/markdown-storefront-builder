@@ -98,9 +98,22 @@ output for every paste host, because the emitters see nothing new.
 | Field | Type | Meaning |
 |---|---|---|
 | `id` | `string` | The identifier a document refers to. Minted in the app, never in the engine. |
-| `blob` | `Blob` | The picture, after `normalise()`. |
+| `data` | `ArrayBuffer` | The picture, after `normalise()`. |
 | `mime` | `string` | One of a fixed set. See below. |
-| `bytes` | `number` | `blob.size`, denormalised so the storage view can total without reading every blob. |
+| `bytes` | `number` | `data.byteLength`, denormalised so the storage view can total without reading every picture. |
+
+**This field said `blob: Blob` until it was built.** Corrected on 2026-09-06 to
+record what shipped, rather than leaving a document describing an intention as
+though it were the code.
+
+Two reasons, and the second is the one that would have forced it anyway.
+`fake-indexeddb`, which every persistence test in this project runs against,
+does not round trip a `Blob`: a record written with one comes back as an object
+with no `size` and no `arrayBuffer`, so no test could assert anything about what
+was actually stored, the EXIF check included. And Safari has shipped IndexedDB
+versions that accepted a `Blob` and handed back something unreadable, which for
+a picture that is the seller's only copy is the failure Principle V exists to
+prevent.
 | `createdAt` | `number` | For ordering the storage view only. Never reaches the engine, which Principle I forbids from reading a clock. |
 
 `pages` is untouched, including its deliberate decision to hold `json` as text so

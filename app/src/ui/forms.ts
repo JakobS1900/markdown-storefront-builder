@@ -140,6 +140,32 @@ function pictureFields(
     return { ...now, tiers: now.tiers.map((t, j) => (j === at ? setUrls(t, next) : t)) };
   };
 
+  /**
+   * The picture on this device this row carries, of which there is at most one.
+   *
+   * A deliberate limit, and the reason is the shape of the data rather than the
+   * feature. Web addresses here are a reorderable list with its own row tools,
+   * and a second list running alongside it by index would drift the first time
+   * somebody moved or removed an address: the two are edited by different
+   * controls and nothing could keep them in step. One device picture per row
+   * has no index to be wrong about.
+   *
+   * The schema takes `localImageIds` as an array because the engine emits every
+   * entry, so lifting this later costs a control and no migration.
+   */
+  const setLocal = (
+    t: Extract<Block, { kind: "menu" }>["tiers"][number],
+    next: string | undefined,
+  ): Extract<Block, { kind: "menu" }>["tiers"][number] => {
+    const out = { ...t } as Record<string, unknown>;
+    // Deleted rather than emptied. An absent optional field and one holding an
+    // empty array must not both be able to mean the same thing, which is the
+    // rule the version 3 to 4 migration is written around.
+    if (next === undefined) delete out["localImageIds"];
+    else out["localImageIds"] = [next];
+    return out as typeof t;
+  };
+
   return shown.flatMap((url, k) => [
     imageField({
       label: shown.length > 2 ? `Picture ${k + 1} (optional)` : "Picture (optional)",
@@ -155,6 +181,8 @@ function pictureFields(
           else if (v !== "") now.push(v);
           return setUrls(t, now);
         }),
+      localValue: k === 0 ? (tier.localImageIds ?? [])[0] : undefined,
+      onLocal: k === 0 ? (next) => editTier(at, (t) => setLocal(t, next)) : undefined,
     }),
     ...rowTools({
       blockId: block.id,
@@ -659,6 +687,11 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
         label: "Image address",
         value: item.imageUrl,
         onInput: (imageUrl) => editItem(i, (it) => ({ ...it, imageUrl })),
+        localValue: item.localImageId,
+        // `imageUrl` stays required and may be the empty string, which is what
+        // an item carrying only a device picture holds. The data model says so
+        // explicitly, so nothing here has to invent a placeholder address.
+        onLocal: (next) => editItem(i, (it) => withOptional(it, "localImageId", next ?? "")),
       }),
       field({
         label: "Caption (optional)",
@@ -762,6 +795,8 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
       value: block.avatarUrl ?? "",
       hint: "Paste the address of a picture already online. Leave it blank if you would rather not have one.",
       onInput: (v) => onChange(withOptional(nowBlock(block), "avatarUrl", v)),
+      localValue: block.localAvatarId,
+      onLocal: (next) => onChange(withOptional(nowBlock(block), "localAvatarId", next ?? "")),
     }),
     select({
       label: "Are you taking work",

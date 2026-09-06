@@ -15,6 +15,7 @@ import {
   type Issue,
 } from "@mdsb/engine";
 
+import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
 import { canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
@@ -225,7 +226,32 @@ export function init(storageOk: boolean, doc?: Document, pageId?: string): State
     storageOk,
     pages: [],
   };
+
+  // FR-086, and not awaited on purpose. Asking the browser to stop evicting us
+  // under pressure is worth doing and worth nothing to wait for: it changes no
+  // behaviour, it has no answer the seller needs, and a browser that refuses or
+  // does not know the question must not be able to hold up the first paint.
+  if (storageOk) void askToKeepStorage();
+
   return state;
+}
+
+/**
+ * Reads the document's pictures into memory, then repaints.
+ *
+ * The menu file is built synchronously, by the preview on every repaint and by
+ * the save control once. So the pictures a document needs are gathered here,
+ * where a document arrives, rather than at each render. A page opened with a
+ * picture on the device therefore draws once without it and once with it, which
+ * is the honest order: nothing pretends to have bytes it has not read yet.
+ */
+async function holdDocumentPictures(): Promise<void> {
+  const ids = assetIds(state.doc);
+  if (ids.length === 0) return;
+  await holdAssets(ids);
+  // An empty patch, because nothing in the state changed: what changed is what
+  // a synchronous render can now find.
+  set({});
 }
 
 /**
@@ -834,6 +860,23 @@ async function save(): Promise<void> {
     if (!state.pages.some((page) => page.id === state.pageId)) await refreshPages();
 
   } catch (error) {
+    // FR-085. Storage filling up is the one failure here a seller can do
+    // something about, and it is the one the generic branch below handled
+    // worst: a raw `QuotaExceededError` reached them as plumbing, which
+    // Principle V defines as a defect. It became reachable in this feature,
+    // because pictures on the device are the first thing this app stores that
+    // is large enough to fill anything.
+    if (isStorageFull(error)) {
+      set({
+        status: {
+          kind: "error",
+          message:
+            "This page could not be saved because this browser's storage is full. Your page has not been lost: it is still on screen, and nothing you had already saved has been changed. Remove a picture you no longer need under \"Pictures on this device\" on the Copy tab, or use Export to keep a copy, then try again.",
+        },
+      });
+      return;
+    }
+
     set({
       status: {
         kind: "error",
@@ -841,6 +884,21 @@ async function save(): Promise<void> {
       },
     });
   }
+}
+
+/**
+ * Whether a failure is the browser being out of room.
+ *
+ * Both spellings, deliberately. Modern browsers throw a `DOMException` named
+ * `QuotaExceededError`; older ones carry only the legacy numeric `code` 22, and
+ * Safari has shipped both at different times. Missing the old spelling would
+ * send exactly the seller on the oldest device back to the raw message.
+ */
+function isStorageFull(error: unknown): boolean {
+  return (
+    error instanceof DOMException &&
+    (error.name === "QuotaExceededError" || error.code === 22)
+  );
 }
 
 /**
@@ -896,6 +954,8 @@ export async function openPage(id: string): Promise<void> {
     bulkPricingInputs: undefined,
     pasting: undefined,
   });
+
+  await holdDocumentPictures();
 }
 
 /**
@@ -919,6 +979,11 @@ export function adopt(pageId: string, doc: Document): void {
     bulkPricingInputs: undefined,
     pasting: undefined,
   });
+
+  // Not awaited: this stays synchronous because its caller has already saved
+  // and is not allowed to fail on account of a picture. The repaint inside it
+  // is what brings the pictures onto the screen a moment later.
+  void holdDocumentPictures();
 }
 
 /**

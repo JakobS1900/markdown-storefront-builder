@@ -14,7 +14,8 @@
 import { compile, findTarget, type CompileDiagnostic } from "@mdsb/engine";
 
 import { getState, selectBlock, setSurface } from "../store.js";
-import { NO_ASSETS, menuFileBody } from "../menu-file.js";
+import { heldAsset } from "../assets.js";
+import { menuFileBody } from "../menu-file.js";
 import { button, disclosure, el, render } from "./dom.js";
 import { KIND_LABEL } from "./forms.js";
 import { renderMarkdown } from "./render-markdown.js";
@@ -107,7 +108,15 @@ export function previewSurface(container: HTMLElement): void {
     // here to look at the first one. Web pictures are not read in here: that
     // needs the network, it happens at the point of saving, and doing it on
     // every repaint would fetch a photograph per keystroke.
-    const { body, notes } = menuFileBody(getState().doc, NO_ASSETS);
+    //
+    // Pictures on the device are different, and that is why this reads the held
+    // ones rather than refusing them all. They were gathered when the page was
+    // opened and when the seller chose them, so they are already in memory and
+    // this lookup is synchronous. Showing them here is Principle VII doing its
+    // job: the seller is looking at the file they are about to send, and a
+    // preview that dropped every device picture with a note would be describing
+    // a file that does not exist.
+    const { body, notes } = menuFileBody(getState().doc, heldAsset);
     parts.push(
       disclosure({
         id: "menu-file-preview",

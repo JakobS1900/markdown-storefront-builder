@@ -1074,6 +1074,56 @@ fieldset.item > .btn.icon.danger {
 
 .uploader {
   margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/*
+ * A picture held on this device, beside the address field.
+ *
+ * Set apart with a rule and a tint rather than a border, because it is a
+ * continuation of the field above it and not a second field. What it says
+ * before the button is the part that matters, so it reads as a paragraph with
+ * a control under it.
+ */
+
+.device-picture {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.device-picture .hint {
+  margin-top: 0;
+}
+
+/*
+ * What the pictures on this device cost.
+ *
+ * A list of rows, each of which becomes a question when its remove control is
+ * pressed. The question replaces the row rather than appearing beside it, so
+ * there is never a Remove and a Remove permanently on screen at once.
+ */
+
+.stored-pictures {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.stored-picture {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.stored-picture-name {
+  font-variant-numeric: tabular-nums;
 }
 
 /*

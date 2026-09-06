@@ -23,6 +23,7 @@
 import { MENU_FILE, compile } from "@mdsb/engine";
 import type { Document } from "@mdsb/engine";
 
+import { assetIds, dataUrl, heldAsset, holdAssets } from "./assets.js";
 import { renderMarkdown } from "./ui/render-markdown.js";
 
 /** What the file is called when it is handed to the device. */
@@ -34,10 +35,13 @@ export interface AssetResolver {
 }
 
 /**
- * A resolver that has nothing to offer, which is every caller until the asset
- * store exists (Phase 4, T036). A picture it refuses is removed from the file
- * and reported by name, which is FR-088's behaviour arriving early rather than
- * a placeholder.
+ * A resolver that has nothing to offer.
+ *
+ * Not a placeholder any more: it is the honest answer for a caller with no
+ * store behind it, and it is what the hostile text corpus and the contract
+ * tests use so that they measure the file's shape rather than the device's
+ * contents. A picture it refuses is removed from the file and reported by name,
+ * which is FR-088.
  */
 export const NO_ASSETS: AssetResolver = () => undefined;
 
@@ -147,12 +151,12 @@ function pictureName(alt: string): string {
  * Removed, not left as text and not left as a broken image. FR-088: the file is
  * still produced and the item is named.
  *
- * CHUNK 3: an address the resolver DOES supply is deliberately left alone here.
- * Phase 4 lets `safeAddress` through for this one scheme (T047) so it becomes a
- * real `img`, and then sets the bytes on that node (T046). Doing it that way
- * keeps the bytes out of both address checks, which is research D3's whole
- * reason for the identifier form. Until T047 lands, every caller passes
- * `NO_ASSETS`, so nothing takes that branch.
+ * An address the resolver DOES supply has its bytes set on the node instead.
+ * `safeAddress` lets this one scheme through so the address survives into an
+ * ELEMENT, and only then does the picture data go on it, so the bytes never
+ * pass through either address check. That is research D3's whole reason for the
+ * identifier form, and it is why a seller's own words cannot forge one: text
+ * can look like the token, but text can never become a node.
  */
 function resolveLocalPictures(body: HTMLElement, resolve: AssetResolver, notes: string[]): void {
   const SCHEME = "mdsb-asset:";
@@ -190,27 +194,6 @@ function pictureAddresses(doc: Document): string[] {
   return [...found];
 }
 
-/**
- * Bytes as base64.
- *
- * `FileReader` would do this in one call and was the first attempt. It reads
- * nothing under jsdom, because the blob a fetch produces there comes from a
- * different realm than the reader, so the embedding test failed with the
- * picture still a web address and no error anywhere. Going through the bytes
- * has no realm to be wrong about.
- *
- * In chunks because `fromCharCode` is applied to the whole array at once and a
- * photograph is a few hundred thousand bytes, which is enough arguments to
- * overflow the call stack.
- */
-function base64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let at = 0; at < bytes.length; at += 8192) {
-    binary += String.fromCharCode(...bytes.subarray(at, at + 8192));
-  }
-  return btoa(binary);
-}
-
 /** Reads one web picture as image data, or gives up on it. */
 async function readPicture(address: string): Promise<string | undefined> {
   const controller = new AbortController();
@@ -225,7 +208,9 @@ async function readPicture(address: string): Promise<string | undefined> {
     // through `img`, because the type is a document format and the rest are
     // not, and Phase 4 refuses to store one for the same reason.
     if (!blob.type.startsWith("image/") || blob.type === "image/svg+xml") return undefined;
-    return `data:${blob.type};base64,${base64(new Uint8Array(await blob.arrayBuffer()))}`;
+    // The same conversion the device pictures use, from the same place, so the
+    // two kinds of picture cannot end up encoded differently.
+    return dataUrl(blob);
   } catch {
     // A refusal, a timeout, a dead host, or a site that will not be read across
     // origins. FR-076: the file is still produced and the picture stays a web
@@ -250,6 +235,25 @@ export async function fetchPictures(doc: Document): Promise<PictureBytes> {
     read.set(address, await readPicture(address));
   }
   return read;
+}
+
+/**
+ * Reads the page's pictures from this device so they can be embedded.
+ *
+ * The counterpart of `fetchPictures`, and here for the same reason: IndexedDB
+ * is asynchronous and `buildMenuFile` is not. `buildMenuFile` must stay
+ * synchronous, because `menuFileBody` is also what the preview draws on every
+ * repaint, and a render that awaited anything would either stutter while
+ * somebody types or show them a file that is one keystroke out of date.
+ *
+ * So the reading happens here, before the build, and the resolver handed to the
+ * build is a lookup into what was read. A picture that is no longer stored is
+ * simply absent from it, and `resolveLocalPictures` removes it and names the
+ * item, which is FR-088.
+ */
+export async function fetchAssets(doc: Document): Promise<AssetResolver> {
+  await holdAssets(assetIds(doc));
+  return heldAsset;
 }
 
 /** Puts the picture data on the nodes, and names what could not be put there. */
