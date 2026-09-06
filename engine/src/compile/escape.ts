@@ -35,6 +35,32 @@
  * What is left is the set that works wherever it lands: emphasis, code, link
  * brackets, rentry's image-sizing braces, and the pipe that ends a table cell.
  * Position-sensitive characters are handled per line below. See FR-023.
+ *
+ * ROUND BRACKETS ARE DELIBERATELY ABSENT, and the reason was tested on
+ * 2026-09-06 rather than assumed.
+ *
+ * Feature 013 removed them, on the grounds that they mean something only inside
+ * a link destination and the compiler writes those itself. A reviewer found what
+ * looked like a counterexample: a product named
+ * `Keyring](https://tracker.example/pixel.png)` made the app's PREVIEW build an
+ * image pointing at that address, and drop the seller's real one. Adding `()`
+ * here does stop it, and that change was made and then reverted, because it
+ * fixes the wrong module.
+ *
+ * A real Markdown parser was never fooled. CommonMark treats `\]` in a link
+ * label as a literal bracket, so rentry and text.is resolve that image to the
+ * address the seller actually chose. The fault was entirely in
+ * `app/src/ui/render-markdown.ts`, whose label pattern was `[^\]]*` and so
+ * stopped INSIDE the `\]` escape rather than at the end of the label. That
+ * pattern is fixed, and the fix is what closes this.
+ *
+ * So 013's reasoning stands, and the cost of overturning it was real: escaping
+ * these would put `Laser engraving \(up to 20 characters\)` on the Copy screen,
+ * which is the seller-visible noise 013 existed to remove.
+ *
+ * The lesson worth keeping is about where a defect lives. Ours parsed Markdown
+ * with a regular expression; the hosts do not. When our renderer and a real
+ * parser disagree, the bug is ours by default.
  */
 const ESCAPABLE = /[\\`*_{}[\]|]/g;
 

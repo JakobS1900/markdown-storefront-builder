@@ -48,6 +48,100 @@ function urls(host: HTMLElement): string[] {
   ];
 }
 
+/**
+ * A seller's own words cannot become an address.
+ *
+ * The header of this file states the design as: the renderer's link pattern
+ * needs `](` adjacent, and the compiler escapes an artist's parentheses as well
+ * as their brackets, so a refused link arrives as `\[click\]\(javascript:...\)`
+ * with a backslash between `]` and `(` that stops the pattern matching.
+ *
+ * **That was documentation of a defence that did not exist.** `ESCAPABLE` did
+ * not contain parentheses. Everything the corpus above covers was safe anyway,
+ * but only because `safeAddress` refuses `javascript:` and its friends, which
+ * is the second line and not the one the comment describes. An address the
+ * checker ALLOWS had nothing standing in front of it at all.
+ *
+ * So a product named `Keyring](https://tracker.example/pixel.png)` compiled to
+ * `![Keyring\](https://tracker.example/pixel.png)](https://real.png)`, the
+ * pattern's `[^\]]*` alt stopped inside the `\]` escape, and the renderer built
+ * an image pointing at an address the seller never entered in any image field.
+ * A tracking pixel in a product name, reaching the preview, the saved menu file
+ * and the published page on every host.
+ *
+ * It arrives by hand or through an imported backup, which is somebody else's
+ * file. Found 2026-09-06 while reviewing the menu file exporter, which had the
+ * same hole one layer up.
+ *
+ * **The bug was ours alone, and that is the part worth keeping.** A real
+ * Markdown parser treats `\]` in a label as a literal bracket, so rentry and
+ * text.is always resolved that image to the address the seller actually chose.
+ * Only this renderer was fooled, because it finds a label with a regular
+ * expression and the expression stopped inside the escape sequence.
+ *
+ * So the fix is here rather than in the escaper. Making the compiler escape
+ * parentheses also stops it, and was tried and reverted: it overturns feature
+ * 013 for every seller and puts `Laser engraving \(up to 20 characters\)` on
+ * the Copy screen, to work around a defect in one regular expression.
+ *
+ * The header above still describes paren escaping as the defence. It is left
+ * standing as a warning: that comment was wrong for as long as it existed, and
+ * nothing failed, because every payload in the corpus below uses a scheme
+ * `safeAddress` refuses anyway. An address it ALLOWS had nothing in front of it
+ * but the pattern, and the pattern was the thing that was broken.
+ */
+describe("a seller's own words cannot forge an address", () => {
+  const forged = "Keyring](https://tracker.example/pixel.png)";
+
+  it("builds no image from an address hidden in an item name", () => {
+    const host = renderCompiled({
+      id: "m",
+      kind: "menu",
+      heading: "Prices",
+      tiers: [{ id: "t1", name: forged, price: "18", imageUrls: ["https://real.test/a.png"] }],
+    });
+
+    expect(urls(host)).not.toContain("https://tracker.example/pixel.png");
+  });
+
+  it("still shows the picture the seller actually chose", () => {
+    // The half that stops the fix being "delete the image". The real address is
+    // in an image field and must survive.
+    const host = renderCompiled({
+      id: "m",
+      kind: "menu",
+      heading: "Prices",
+      tiers: [{ id: "t1", name: forged, price: "18", imageUrls: ["https://real.test/a.png"] }],
+    });
+
+    expect(urls(host)).toContain("https://real.test/a.png");
+  });
+
+  it("still shows the seller the name they typed", () => {
+    const host = renderCompiled({
+      id: "m",
+      kind: "menu",
+      heading: "Prices",
+      tiers: [{ id: "t1", name: forged, price: "18" }],
+    });
+
+    expect(host.textContent).toContain(forged);
+  });
+
+  it("forges nothing from a caption either", () => {
+    const host = renderCompiled({
+      id: "g",
+      kind: "gallery",
+      heading: "Work",
+      layout: "list",
+      items: [{ imageUrl: "https://real.test/b.png", caption: forged }],
+    });
+
+    expect(urls(host)).not.toContain("https://tracker.example/pixel.png");
+    expect(urls(host)).toContain("https://real.test/b.png");
+  });
+});
+
 describe("what an artist writes never becomes a live address", () => {
   const payloads = [
     "[click](javascript:alert(1))",

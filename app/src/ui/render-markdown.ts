@@ -94,7 +94,22 @@ function unescape(text: string): string {
  */
 function inline(text: string): DocumentFragment {
   const frag = document.createDocumentFragment();
-  const pattern = /(!?)\[([^\]]*)\]\(([^)]*)\)|(\*\*)([^*]+)\*\*|(\*)([^*]+)\*/g;
+  // The label accepts an escaped anything, or any character that is neither a
+  // closing bracket nor a backslash. `[^\]]*` was the obvious version and it
+  // was wrong in both directions at once.
+  //
+  // The compiler escapes a seller's brackets, so an item named `A]B` arrives as
+  // `A\]B`. A pattern that merely excludes `]` stops inside that escape rather
+  // than at the end of the label. Before parentheses were escaped that let a
+  // seller forge an address: the label ended early, the rest of their own text
+  // supplied `](`, and the renderer built an image pointing wherever they said.
+  // After parentheses were escaped the forgery stopped and the legitimate image
+  // stopped with it, because the real `](` was no longer reachable either.
+  //
+  // Both halves are needed. The escaping stops the seller's text from ever
+  // supplying the delimiter; this stops the delimiter being looked for in the
+  // wrong place.
+  const pattern = /(!?)\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)|(\*\*)([^*]+)\*\*|(\*)([^*]+)\*/g;
 
   let last = 0;
   for (const match of text.matchAll(pattern)) {
