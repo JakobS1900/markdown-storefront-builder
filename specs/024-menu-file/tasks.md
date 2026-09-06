@@ -28,8 +28,17 @@ here in five lines.
 not be made correct without them. **T052 was checked and deliberately not
 changed**, with the reasoning in `1e8013b`.
 
-**Not done: T054, the holistic review over the whole diff.** It is mandatory
-above roughly three chunks and this is five. Nothing is finished until it runs.
+**T054, the holistic review, is DONE.** It found two high severity defects, both
+seams where each side was internally correct and independently tested, and one
+of them was introduced by the fix for an earlier review finding. Findings and
+method are in [holistic-review.md](./holistic-review.md); the fixes are
+`db8e869`.
+
+**One finding is deliberately left open**: `scripts/menu-file.mjs` never
+exercises a picture from the device, because it drives the bundled example and
+assets live in IndexedDB. That half of the produced file is covered only under
+jsdom. Recorded rather than fixed, since seeding IndexedDB from the gate is a
+larger change than the finding.
 
 ## How to read this
 

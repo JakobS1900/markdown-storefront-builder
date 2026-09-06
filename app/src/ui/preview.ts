@@ -143,7 +143,14 @@ export function previewSurface(container: HTMLElement): void {
         className: "menu-file",
         children: [
           el("p", { class: "hint" }, [
-            "This is the file itself, as whoever you send it to will see it. Save it from the Copy tab.",
+            // The second sentence exists because the two can genuinely differ,
+            // and a seller who spots that without being told will read it as
+            // the app being wrong. A picture from the device counts toward the
+            // per item layout only where the host can show one, so the same
+            // page can be a price table above and a block per item here.
+            // Principle VII wants a divergence stated in the product rather
+            // than in a document.
+            "This is the file itself, as whoever you send it to will see it. Save it from the Copy tab. It can be laid out differently from the page above, because it can show pictures no paste host can carry.",
           ]),
           // Why this can look different from the page above, said rather than
           // left to be noticed. A picture from the device counts toward the per

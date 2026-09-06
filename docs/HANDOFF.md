@@ -108,7 +108,20 @@ honest record of it.
 
    Done on 2026-09-06 at `965fc5b`, green, numbers quoted under "Current state".
 
-2. **F5, the menu file, is the next feature, and it goes AHEAD of F4.**
+2. **Release 024, or decide not to.** The feature is done and the tree is green.
+   What is outstanding is a version and a tag, and both are Jakob's calls.
+
+   The phone currently carries `0.7.0-dev`, versionCode 10, which was bumped so
+   that unreleased work would not sit on the owner's device labelled as the
+   released 0.6.0. A real release means choosing the version, tagging it, and
+   asking about the push. `docs/RELEASE.md` has the policy, and "tag often" is
+   the standing instruction.
+
+   Also worth putting to Jakob before tagging: the FileProvider preview finding
+   under T058 below, which is a two line change in `MainActivity.java` and is
+   the only thing anybody will notice about the share sheet.
+
+3. **F5, the menu file, was the previous feature and is DONE.**
    Jakob decided this on 2026-09-06 in the session that writes it down, which is
    the rule item 3 below exists to enforce.
 
@@ -149,7 +162,9 @@ honest record of it.
    itself, and the only feedback would be one non blocking `size_limit_exceeded`
    warning after the fact.
 
-   **Progress as of 2026-09-06. Phases 2A, 2B and 3 are committed and green.**
+   **FEATURE 024 IS COMPLETE as of 2026-09-06.** Every phase, the holistic
+   review, and the on device measurement. What remains is release work, not
+   feature work: see "Next up" item 1 below.
 
    | Commit | What |
    |---|---|
@@ -158,16 +173,27 @@ honest record of it.
    | `fba0a52` | The menu file itself, plus the `npm run menu-file` browser gate. |
    | `5ed22c1` | Renderer label pattern. A real forgery bug, see below. |
    | `9b11b6a` | Asset resolution moved onto nodes. The same bug one layer up. |
+   | `2fb0156` | Pictures from the device, and storage that says what went wrong. |
+   | `89b5d6f` | versionCode 10, and T058 measured on the real phone. |
+   | `1e8013b` | The relabel. `Bulk pricing` becomes what it does. |
+   | `db8e869` | The holistic review's findings, which were all seams. |
 
-   `npm run verify` on `9b11b6a`: 68 test files, 1240 tests, a11y 38, contrast
-   clean in both palettes, menu file gate clean, PWA gate clean, exit 0.
+   `npm run verify` is green: 69 test files, 1288 tests, a11y 50, contrast clean
+   in both palettes, menu file gate clean, PWA gate clean, exit 0.
 
-   **Still to do**: Phase 4 (the asset store, quota handling, the device picture
-   UI), Phase 5 (the `Bulk pricing` relabel), then the mandatory holistic review
-   over the whole diff and the on-device bridge measurement, T058.
+   **T046 and T047 were pulled forward** out of Phase 4 into Phase 3, because
+   the exporter could not be made correct without them. Do not do them twice.
 
-   **T046 and T047 are already done**, pulled forward out of Phase 4 because
-   Phase 3 could not be made correct without them. Do not do them twice.
+   **The holistic review found two high severity defects**, both seams where
+   each side was internally correct and tested, and one of them was introduced
+   by the fix for an earlier review finding. Read
+   `specs/024-menu-file/holistic-review.md` before concluding that per chunk
+   reviews are enough on the next feature. They were not, again.
+
+   **One finding is deliberately open**: `scripts/menu-file.mjs` never exercises
+   a picture from the device, because it drives the bundled example and assets
+   live in IndexedDB. That half of the saved file is covered only under jsdom,
+   which lays nothing out.
 
    The plan is at
    `C:/Users/Emu/.claude-personal/plans/some-of-my-friends-breezy-rocket.md`,
@@ -175,7 +201,17 @@ honest record of it.
    and `data:` URIs embedded in the markdown, which research D3 reversed before
    any code was written. `specs/024-menu-file/` is authoritative.
 
-3. **F4, the interview wizard, is UNGATED but is now second.**
+4. **F4, the interview wizard, is UNGATED and is now the next FEATURE**, once
+   the release decision above is made. It was put behind 024 on 2026-09-06 and
+   024 is finished.
+
+   Note before specifying it: 024 answered part of F4's problem by accident.
+   The complaint F4 exists for is that a blank field with a label over it does
+   not tell somebody what to type. `1e8013b` renamed one such field from "Bulk
+   pricing" to "Prices for different amounts" and changed nothing else, and that
+   was the entire fix for somebody who had asked for a layout the compiler has
+   produced since feature 017 and could not find the control. That is evidence
+   for the cheap answers, not against the wizard, but it belongs in the spec.
    `specs/021-starting-points/spec.md` gated it on whether a starting point
    turned out to be enough, because building a question by question interview
    before knowing that would be guessing.
@@ -213,7 +249,7 @@ honest record of it.
    is the largest of the three answers to this, not the only one, and the spec
    should say why it is the right one rather than assume it. Ask Jakob before
    ruling the cheap ones out.
-4. **Drive the app before believing anything about how it looks.** The design
+5. **Drive the app before believing anything about how it looks.** The design
    review on 2026-09-05 is done and found four defects plus the docked
    add-a-section row, all fixed, none of which was visible in `docs/media`.
    (This item used to say three, while the top of this file enumerated four and
@@ -221,7 +257,7 @@ honest record of it.
    `e1138d9`, `b8efe30`, and `dc68870` for the dock.) That is the standing
    lesson: the stills are not evidence about the states that are broken. See
    "Traps".
-5. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
+6. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
    budget in the suite was squeezed and rerun to find which waits were load
    bearing. None of the seven carried the `starters-picker` defect, which was a
    deficit rather than a thin margin. `a11y` and `price-list-screen` pass at one
