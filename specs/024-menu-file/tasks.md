@@ -4,6 +4,33 @@
 **Date**: 2026-09-06
 **Input**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/menu-file.md](./contracts/menu-file.md), [quickstart.md](./quickstart.md)
 
+## Status, 2026-09-06
+
+**Every task from T001 to T053 is done and committed.** The individual
+checkboxes below are ticked only through Phase 2B; from Phase 3 onward they are
+left as written, and this block is the authority rather than them. That is a
+deliberate choice recorded rather than an oversight: an implementer raised it,
+and ticking thirty boxes one at a time adds no information a reader cannot get
+here in five lines.
+
+| Phase | Commit | State |
+|---|---|---|
+| 1, setup and baseline | `5d3288c` | done |
+| 2A, the contract alone | `c5af80e` | done |
+| 2B, host, capability, refusal | `da03450` | done |
+| 3, the menu file | `fba0a52` | done |
+| 3 follow-ups, the forgery bug | `5ed22c1`, `9b11b6a` | done |
+| 4, pictures on the device | `2fb0156` | done |
+| 5, the relabel | `1e8013b` | done |
+| T058, the Android bridge | `89b5d6f` | done, on the real device |
+
+**T046 and T047 were pulled forward into Phase 3**, because the exporter could
+not be made correct without them. **T052 was checked and deliberately not
+changed**, with the reasoning in `1e8013b`.
+
+**Not done: T054, the holistic review over the whole diff.** It is mandatory
+above roughly three chunks and this is five. Nothing is finished until it runs.
+
 ## How to read this
 
 **Test tasks are not optional here.** The Speckit template treats them as
