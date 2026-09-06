@@ -90,7 +90,7 @@ engine/src/
 │   └── migrate.ts           # v3 to v4, sets the stamp and nothing else
 └── compile/
     ├── capabilities.ts      # localImages, and its citation on every target
-    ├── targets.ts           # MENU_FILE, deliberately outside the TARGETS array
+    ├── targets.ts           # MENU_FILE, outside TARGETS, plus ALL_TARGETS
     ├── diagnostics.ts       # local_image_unsupported
     └── emit/
         ├── menu.ts          # tier pictures
@@ -103,7 +103,12 @@ engine/tests/
 │   └── fixtures/v3-*.json   # the new migration step's fixture
 └── compile/
     ├── local-image-never-published.test.ts   # the sentinel
-    └── goldens/                              # a MENU_FILE set
+    └── golden/menu-file/                     # a MENU_FILE set
+
+scripts/
+└── menu-file.mjs            # NEW: headless Chrome, 390px reflow and axe over
+                             # the produced file. jsdom lays nothing out, so
+                             # neither check can live in the jsdom suite.
 
 app/src/
 ├── db.ts                    # DB_VERSION 2, the assets store

@@ -149,6 +149,41 @@ enforcing FR-014, and it is why adding a capability is deliberately not free.
 | `TEXT_IS` | `false` | As above, and its stated 200000 byte page limit makes embedding bytes impossible even in principle. |
 | `MENU_FILE` | `true` | Observed in our own renderer, which is the thing that displays this file. Stronger evidence than any of the three above carry. |
 
+### `TARGETS` and `ALL_TARGETS`
+
+Keeping `MENU_FILE` out of the `TARGETS` array is right for the host picker and
+**wrong for the test suite**, and the analysis pass caught it before any code
+was written.
+
+Seven engine test files iterate `TARGETS` to assert something across every
+target: `golden`, `determinism`, `performance`, `compile`, `holistic`,
+`holistic-003` and `cost-never-published`. A target outside that array is
+silently outside all seven. So the one output that carries embedded pictures
+would have had no golden file, no determinism check, no performance budget and
+no cost guarantee, and every one of those tests would have stayed green while
+covering nothing.
+
+That is the same shape as the gate this project already shipped which "would
+have compiled nineteen documents that carry no `cost` between them and passed
+forever".
+
+So the array splits in two:
+
+| Name | Contents | Used by |
+|---|---|---|
+| `TARGETS` | `PORTABLE`, `RENTRY`, `TEXT_IS` | `findTarget`, the host picker, and any sweep whose subject is "places a seller pastes a page" |
+| `ALL_TARGETS` | `TARGETS` plus `MENU_FILE` | Every sweep whose subject is "everything the compiler can emit" |
+
+`findTarget` keeps searching `TARGETS` only, so a page whose stored `target`
+reads `menu-file` still falls back to `PORTABLE` with a warning, which is the
+safe direction and the behaviour D2 wanted.
+
+Choosing between the two is now a decision a reviewer can see, which is the
+point. `cost-never-published` takes `ALL_TARGETS`, because a cost must never
+appear anywhere. `local-image-never-published` takes `TARGETS` for its absence
+half and `MENU_FILE` alone for its presence half, because that pair is what
+makes it discriminating.
+
 ### The emitted form
 
 For a target with `localImages: true`, a local picture is emitted as an ordinary

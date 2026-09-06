@@ -45,6 +45,7 @@ task.
 - [ ] T006 Add `{ from: 3, to: 4, apply }` to `MIGRATIONS` in `engine/src/document/migrate.ts`. The step sets `schemaVersion` to 4 and changes nothing else. It must not create any new field, even empty.
 - [ ] T007 Regenerate `engine/tests/document/parity.snapshot.json` with `npm run snapshot` and read the diff. Three added field specs and one changed `schemaVersion`, nothing else, is what correct looks like. Do not accept a diff you have not read.
 - [ ] T008 [P] Extend `engine/tests/document/roundtrip.test.ts` with a page carrying all three new fields, asserting a lossless round trip.
+- [ ] T008a Assert in `engine/tests/document/migrate-local-pictures.test.ts` that the version 3 fixture compiles to **byte identical output for every paste host** before and after the migration. SC-008 promises no seller's published page changes under them, and T004 only covers the fields surviving. Nothing today would catch a migration that preserved every field and still moved a byte of output.
 - [ ] T009 Run `npm run verify` from PowerShell and commit Phase 2A alone.
 
 ### Phase 2B: The host, the capability and the refusal (Chunk 1)
@@ -55,13 +56,16 @@ Blocks both US1 and US2. Ends in its own commit.
 - [ ] T011 Add `localImages: boolean` to `Capabilities` in `engine/src/compile/capabilities.ts`, with the comment stating its fallback, since that file requires a capability to have a consumer and a fallback test before it may exist.
 - [ ] T012 Add `localImages` and its citation to `PORTABLE`, `RENTRY` and `TEXT_IS` in `engine/src/compile/targets.ts`. All three are `false`. `sources` is `Record<keyof Capabilities, string>` with no optional keys, so this is the type system enforcing FR-014 rather than a chore.
 - [ ] T013 Add the `MENU_FILE` target to `engine/src/compile/targets.ts` with `localImages: true` and `tables: true`. Deliberately leave it OUT of the `TARGETS` array, and comment why: `TARGETS` feeds `findTarget` and the host picker, and a menu file listed among places to paste your page would be a lie.
+- [ ] T013a Add `ALL_TARGETS = [...TARGETS, MENU_FILE]` to `engine/src/compile/targets.ts` and export it from `engine/src/compile/index.ts`. **This is the fix for the worst thing the analysis pass found.** Seven engine test files iterate `TARGETS` to assert something across every target, so a target outside that array is silently outside all seven, and every one of them stays green while covering nothing. Comment the two arrays so choosing between them is a visible decision: `TARGETS` means "places a seller pastes a page", `ALL_TARGETS` means "everything the compiler can emit". `findTarget` keeps searching `TARGETS` only.
+- [ ] T013b Move the cross-target sweeps in `engine/tests/compile/golden.test.ts`, `determinism.test.ts`, `performance.test.ts`, `compile.test.ts`, `holistic.test.ts` and `holistic-003.test.ts` from `TARGETS` to `ALL_TARGETS`, and read what each one starts asserting. Do not do this mechanically: `textis.test.ts` is about one host and must keep naming it.
 - [ ] T014 Add `local_image_unsupported` to the diagnostic code union in `engine/src/compile/diagnostics.ts`.
 - [ ] T015 In `engine/src/compile/emit/menu.ts`, emit local pictures as `mdsb-asset:<id>` when `capabilities.localImages`, and otherwise drop them and raise `local_image_unsupported` naming the item. Follow the existing refused-address pattern at `menu.ts:49-61`, which holistic review HB-6 settled must never drop an address in silence.
 - [ ] T016 [P] Apply the same rule to gallery items in `engine/src/compile/emit/gallery.ts`.
 - [ ] T017 [P] Apply the same rule to the profile avatar in `engine/src/compile/emit/profile.ts`.
 - [ ] T018 Assert in `engine/tests/compile/local-image-never-published.test.ts` that no diagnostic message contains an asset id or a filename (FR-081), mirroring the check `cost-never-published.test.ts` makes for the same reason: a warning is somewhere a seller might screenshot.
-- [ ] T019 Add `MENU_FILE` explicitly to `engine/tests/compile/cost-never-published.test.ts`. It iterates `TARGETS` and will not see the new target otherwise, and `cost` must never publish anywhere including here. This is exactly the gap that makes a gate measure nothing.
-- [ ] T020 [P] Add a golden fixture set for `MENU_FILE` under `engine/tests/compile/`, regenerated with `npm run golden`, with the diff shown in the commit as Principle III requires of any output-altering change.
+- [ ] T019 Move `engine/tests/compile/cost-never-published.test.ts` from `TARGETS` to `ALL_TARGETS`. A cost must never publish anywhere, including into the one output that carries embedded pictures.
+- [ ] T020 Add a golden fixture directory `engine/tests/compile/golden/menu-file/` and regenerate with `npm run golden`, showing the diff in the commit as Principle III requires of any output-altering change. Note the harness keys directories by target id and is driven by the array T013b changes, so it produces nothing for this target until that lands.
+- [ ] T020a [P] Add a fixture under `engine/tests/compile/fixtures/` carrying a local picture on a tier, a gallery item and a profile avatar, so the golden files actually exercise all three emitters rather than only the menu.
 - [ ] T021 **Break the gate.** Make the emitter publish a local picture for a paste target on purpose and confirm `local-image-never-published.test.ts` fails for the paste targets while the `MENU_FILE` case stays green. Revert. Quote the failure. A gate nobody has broken is a gate nobody has tested.
 - [ ] T022 Run `npm run verify` and commit Phase 2B.
 
@@ -85,6 +89,8 @@ disabled, confirm styling and reflow. Delivers value without any of US2.
 - [ ] T030 [US1] **Break the gate.** Make the serializer in `app/src/menu-file.ts` write one seller field as markup rather than text and confirm the corpus test catches it. Revert. Quote the failure. If it cannot be made to pass at all, the exploration agent was right, and the export needs its own emitter instead of reusing the preview renderer.
 - [ ] T031 [P] [US1] Assert in `app/tests/menu-file.test.ts` that the saved file contains no occurrence of `mdsb-asset:`, per `specs/024-menu-file/contracts/menu-file.md`.
 - [ ] T032 [P] [US1] Add a11y coverage for the new control in `app/tests/a11y.test.ts`: 44 by 44 minimum, a real accessible name, keyboard operable.
+- [ ] T032a [US1] **Measure the saved file at 390px in headless Chrome**, in a script beside `scripts/contrast.mjs`, and fail on sideways page scroll. FR-073 and SC-007 are otherwise asserted by nobody: T025 inlines the stylesheet and nothing checks the result. This is the same gap `e0f345b` had to close for the preview table, where a min-width floor on cells gave every column exactly the floor and a floor on the table set the whole page scrolling. jsdom lays nothing out, so this cannot live in the jsdom suite.
+- [ ] T032b [P] [US1] Run axe over the produced file in the same script, covering what the contract promises about it: real headings, a real table, and alt text carried through from compiled output. Principle VI applies to the file, which other people open, and not only to the app. The app's own a11y gate cannot see the file at all.
 - [ ] T033 [US1] Run `npm run verify` including `npm run contrast` in both palettes, and commit Phase 3.
 
 ---
@@ -103,6 +109,7 @@ is absent and a warning names it.
 - [ ] T034 [US2] Write failing tests at `app/tests/assets.test.ts` against `fake-indexeddb` for storing, reading, totalling and removing a picture, and for a database upgrade from version 1 that preserves every existing page.
 - [ ] T035 [US2] Take `DB_VERSION` to 2 in `app/src/db.ts` and add the `assets` object store keyed by `id`. Do not disturb `pages`, including its deliberate storage of `json` as text for FR-018 recovery.
 - [ ] T036 [US2] Create `app/src/assets.ts` owning store, read, total and remove. Reuse `normalise()` from `app/src/upload.ts` rather than copying it: it already downscales to a 1600px edge at 0.85 and discards EXIF as a side effect, which is how FR-083 is satisfied with no new code.
+- [ ] T036a [US2] Assert in `app/tests/assets.test.ts` that a stored picture carries **no EXIF block**, by storing a JPEG that has one and checking it is gone. FR-083 is otherwise satisfied by a side effect of `normalise()` and asserted nowhere, which is one refactor away from silently losing a privacy property. This repository's own lesson is that twenty one tests covered a panel and every one missed that it displayed nothing.
 - [ ] T037 [US2] Restrict stored types in `app/src/assets.ts` to `image/png`, `image/jpeg`, `image/webp` and `image/gif` at storage time. Refuse `image/svg+xml` and comment why: the saved file is opened by other people in contexts we do not control, and Principle IV says allow list.
 
 ### Not losing the seller's work
@@ -199,6 +206,12 @@ priority, so it is not optional, only later.
 
 ## Format check
 
-62 tasks. Every one carries a checkbox, a sequential id, a file path or a named
-command, and a story label on the user story phases only, per the required
-format. Setup, Foundational and Polish phases carry no story label by design.
+69 tasks. Every one carries a checkbox, an id, a file path or a named command,
+and a story label on the user story phases only, per the required format. Setup,
+Foundational and Polish phases carry no story label by design.
+
+Seven of them (T008a, T013a, T013b, T020a, T032a, T032b, T036a) were added by
+the analysis pass rather than written here first, and they are suffixed rather
+than renumbered so the ids in the commit messages that already reference them
+stay valid. What each one closes is in
+[analysis.md](./analysis.md).
