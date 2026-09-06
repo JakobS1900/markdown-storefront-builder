@@ -89,6 +89,53 @@ describe("a seller's own words cannot be mistaken for a picture token", () => {
   });
 });
 
+/**
+ * What the compiler says about the menu file reaches the seller.
+ *
+ * Found by the holistic review, and it is the shape that review exists for.
+ * The emitters raise `picture_superseded` when a gallery item or an avatar
+ * carries both a picture from the device and a web address, because the device
+ * one wins in this file and the other has to be reported rather than vanish.
+ * The engine did that correctly and tested it. The app took `.markdown` and
+ * threw `.diagnostics` away, and every other surface compiles for the paste
+ * host, which never raises it.
+ *
+ * So the warning existed, passed its tests, and reached nobody. Each side of
+ * the seam was right; the wire between them was never run.
+ */
+describe("the compiler's warnings about this file reach the seller", () => {
+  function bothKinds(): Document {
+    return page({
+      id: "g",
+      kind: "gallery",
+      heading: "The stall",
+      layout: "list",
+      items: [
+        {
+          imageUrl: "https://shop.test/awning.png",
+          localImageId: "a1",
+          caption: "Saturday morning",
+        },
+      ],
+    });
+  }
+
+  it("tells the seller when their web picture gave way to the device one", () => {
+    const { notes } = buildMenuFile(bothKinds(), () => "data:image/png;base64,AAAA");
+    expect(notes.join(" ")).toContain("Saturday morning");
+    expect(notes.join(" ")).toContain("from your device");
+  });
+
+  it("names the item rather than the file, so nothing identifies the picture", () => {
+    const { notes } = buildMenuFile(bothKinds(), () => "data:image/png;base64,AAAA");
+    expect(notes.join(" ")).not.toContain("a1");
+  });
+
+  it("says nothing when there is nothing to say", () => {
+    expect(buildMenuFile(menuPage(), NO_ASSETS).notes).toEqual([]);
+  });
+});
+
 describe("the file shows the seller's page", () => {
   it("carries the headings the page has", () => {
     const { html } = buildMenuFile(menuPage(), NO_ASSETS);

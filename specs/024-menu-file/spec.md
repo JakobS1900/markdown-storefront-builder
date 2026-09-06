@@ -2,7 +2,7 @@
 
 **Feature Branch**: `024-menu-file`
 **Created**: 2026-09-06
-**Status**: Draft
+**Status**: Shipped through Phase 5, holistic review run and its findings applied
 **Input**: User description: "The menu file: a self contained HTML menu a seller can save and send, pictures held on the device, and making the per item price breakdown findable"
 
 ## Where this came from

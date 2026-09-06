@@ -199,7 +199,24 @@ async function refusalForRoom(bytes: number): Promise<string | undefined> {
   }
 
   if (usage === undefined || quota === undefined) return undefined;
-  if (usage + bytes <= quota) return undefined;
+
+  // A reserve, so accepting a picture cannot strand the page that refers to it.
+  //
+  // This was `usage + bytes <= quota`, which will spend the last byte of the
+  // origin's quota on a picture. The document then gains a reference to that
+  // picture and `save()` in `store.ts` has to write the page JSON, which now
+  // cannot fit: the picture is stored and the page naming it is not. Nothing is
+  // destroyed, because FR-085 catches the write and says the page is still on
+  // screen, but the seller is walked into a dead end by a check that told them
+  // there was room.
+  //
+  // Half a megabyte is far more than any page this app produces, which the
+  // largest starting point puts at a few kilobytes, and small enough not to
+  // refuse a picture anybody could otherwise have kept. Found by the holistic
+  // review reading the two quota paths against each other; neither is wrong on
+  // its own.
+  const RESERVE_FOR_THE_PAGE = 512 * 1024;
+  if (usage + bytes + RESERVE_FOR_THE_PAGE <= quota) return undefined;
 
   return `Your pictures and pages are already using ${describeBytes(usage)} of the ${describeBytes(quota)} this browser will allow, so there is no room for this one. Remove a picture you no longer need under "Pictures on this device", or free up space on the device itself, then try again. Nothing has been changed.`;
 }

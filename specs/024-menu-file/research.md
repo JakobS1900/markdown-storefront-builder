@@ -174,15 +174,27 @@ does not "fix" it.
 
 ---
 
-## Open, to be answered by measurement rather than by discussion
+## Answered by measurement. Both were open; neither is now.
 
-- **How large a menu file the Android bridge will actually carry.** D4. Measured
-  on the owner's device during chunk 3, not guessed.
+- **How large a menu file the Android bridge will actually carry.** D4.
+  **Settled 2026-09-06 on the owner's Moto G7**, release build, real signing
+  key: a page imported from a 3.23 MB backup produced `menu.html` at
+  **3,231,878 bytes**, valid doctype, ending in `</html>` so nothing was
+  truncated, all 34,000 paragraphs present, and no `OutOfMemory`, ANR or
+  JavaBridge error in `logcat`. So D4's fallbacks, a smaller export edge, a
+  chunked bridge call and reconsidering embedding, are all unnecessary.
+  `docs/HANDOFF.md` says do not re-probe it.
 - **Whether serializing the rendered DOM is inert across the hostile text
   corpus.** The approved plan records a disagreement with an exploration agent,
   which held that reading markup out of the preview renderer surrenders its
-  no-markup-string guarantee. The counter argument is that the guarantee is
-  about the inbound direction and serialization escapes text nodes on the way
-  out. That argument is not evidence. SC-003 settles it by producing the files
-  and checking them, and if it fails the agent was right and the export gets its
-  own emitter.
+  no-markup-string guarantee. **Settled by `app/tests/menu-file-hostile.test.ts`,
+  72 tests**, which produces files and inspects them rather than reading the
+  code that makes them, and which was verified to fail when the serializer was
+  made to write one seller field as markup. The export did not need its own
+  emitter. The corpus also grew by two cases for the `<title>`, which is RCDATA
+  and which no existing payload closed an element to reach, and those two are
+  what caught the deliberate break.
+
+Left standing because a reader arriving here should see that these were real
+questions answered with evidence, rather than find a section that quietly
+disappeared once it became inconvenient.

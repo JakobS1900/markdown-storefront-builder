@@ -93,8 +93,10 @@ export function emitGallery(block: Gallery, target: Target, sink: DiagnosticSink
       }
       // Encoded like any other address, because a page can arrive from an
       // exported file somebody edited by hand and a bracket in an identifier
-      // would otherwise end the image early. CHUNK 1: the app's resolver
-      // decodes what it reads back, per contracts/menu-file.md.
+      // would otherwise end the image early. The app's resolver decodes what it
+      // reads back, per contracts/menu-file.md, and NOT with
+      // `decodeURIComponent`, which does not invert this. That is done, in
+      // `app/src/menu-file.ts`.
       usable.push({ item, address: `mdsb-asset:${local}` });
     } else if (webUsable) {
       usable.push({ item, address: item.imageUrl });

@@ -46,7 +46,18 @@ function safeAddress(url: string): string | undefined {
   // same cleaning the engine's own address check does, for the same reason.
   // eslint-disable-next-line no-control-regex
   const cleaned = url.replace(/[\s\u0000-\u001f\u007f]/g, "");
-  if (/^https?:\/\//i.test(cleaned)) return url;
+  // Anchored, and requiring something after the slashes, which is what the
+  // engine's `isSafeUrl` has always required. This was `/^https?:\/\//i`, so
+  // the bare string `https://` was refused there and accepted here, and the
+  // renderer would build `<img src="https://">` from something the compiler
+  // would never have emitted.
+  //
+  // Not a live hole, because this only ever sees compiled output and the
+  // compiler refuses that address first. It is recorded and fixed anyway: the
+  // stated reason these two checks are duplicated rather than shared is that a
+  // scheme hidden from one and not the other is a hole in whichever ends up
+  // laxer. A drift nobody can currently reach is still a drift.
+  if (/^https?:\/\/[^\s]+$/i.test(cleaned)) return url;
 
   // A picture held on the seller's own device, named rather than addressed.
   // T047. No browser implements this scheme, so one that somehow reached a

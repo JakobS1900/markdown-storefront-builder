@@ -107,8 +107,10 @@ export function emitProfile(block: Profile, target: Target, sink: DiagnosticSink
           "Your profile has both a photo from your device and a web address. The menu file shows the one from your device. The web address is what appears everywhere you paste this page.",
       });
     }
-    // CHUNK 1: the address is encoded, so the app's resolver decodes what it
-    // reads back out of the `src`, per contracts/menu-file.md.
+    // The address is encoded, so the app's resolver decodes what it reads back
+    // out of the `src`, per contracts/menu-file.md, and NOT with
+    // `decodeURIComponent`, which does not invert this. That is done, in
+    // `app/src/menu-file.ts`.
     parts.push(
       `![${escapeInline(block.displayName)}](${encodeAddress(`mdsb-asset:${localAvatar}`)})`,
     );

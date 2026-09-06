@@ -168,9 +168,23 @@ function withCurrency(price: string, currency: string | undefined): string {
   return `${price.slice(0, at)}${currency}${symbol ? "" : " "}${price.slice(at)}`;
 }
 
-/** The pictures of an item held on the seller's device. Blanks are not pictures. */
+/**
+ * The pictures of an item held on the seller's device. Blanks are not pictures.
+ *
+ * Trimmed, not merely tested for blankness after trimming. This filtered on
+ * `id.trim() !== ""` and then emitted the untrimmed value, which the gallery,
+ * the profile and the app's own `assetIds` all avoid by trimming outright.
+ *
+ * That disagreement had a cost. A page arriving from a hand edited backup, which
+ * is the case the address encoding exists for in the first place, carrying
+ * `localImageIds: [" abc "]` would be stored by the app under `abc` and asked
+ * for by the emitter as `" abc "`. The lookup missed, the picture was removed,
+ * and the seller was told it was not on this device. The same identifier on a
+ * gallery item or an avatar resolved perfectly. One value, three behaviours,
+ * and only the price list was wrong.
+ */
 function localIds(t: Tier): readonly string[] {
-  return (t.localImageIds ?? []).filter((id) => id.trim() !== "");
+  return (t.localImageIds ?? []).map((id) => id.trim()).filter((id) => id !== "");
 }
 
 /**
@@ -216,8 +230,10 @@ function tierImages(t: Tier, target: Target): readonly string[] {
     // Encoded like any other address. An identifier is minted by the app, but
     // a page can also arrive from an exported file somebody edited by hand, so
     // one containing a closing bracket would otherwise end the image early and
-    // spill the rest into the page. CHUNK 1: the app's resolver must therefore
-    // decode what it reads back out of the `src`, per contracts/menu-file.md.
+    // spill the rest into the page. The app's resolver therefore decodes what
+    // it reads back out of the `src`, per contracts/menu-file.md, and NOT with
+    // `decodeURIComponent`, which does not invert this. That is done, in
+    // `app/src/menu-file.ts`.
     ...local.map((id, i) => `![${alt(usable.length + i)}](${encodeAddress(`mdsb-asset:${id}`)})`),
   ];
 }

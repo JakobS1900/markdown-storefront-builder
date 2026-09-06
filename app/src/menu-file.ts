@@ -118,23 +118,43 @@ function decodeAddress(address: string): string {
  * lazy match would begin at the FIRST image on a line and swallow everything up
  * to the asset image at the end of it.
  */
-const ALT = String.raw`(?:(?!!\[)[^\n])*?`;
+// The alt pattern that used to live here is gone, and the history is kept
+// because it is the whole argument of this file.
+//
+// `[^\]]*` was the obvious version and the hostile corpus broke it in one run.
+// The cause was misdiagnosed as the engine failing to escape a closing bracket.
+// It escapes both: `ESCAPABLE` covers `[` and `]`, and an item named
+// `[click](x)` compiles to `![\[click\](x)](address)`. The real reason is
+// duller. An escaped bracket is a backslash followed by a literal `]`, so a
+// pattern excluding `]` stops inside the escape sequence rather than at the end
+// of the label.
+//
+// The replacement pattern was better and still wrong, in three different ways
+// over three reviews: it let a seller forge an asset token by naming a product
+// `X](mdsb-asset:evil)`, and it fetched a gallery item's link address as though
+// it were a picture. Every fix made it cleverer and none made it right.
+//
+// Nothing in this file matches structure out of text any more. Local pictures
+// resolve on `img` nodes, web pictures are found on `img` nodes, and the seller's
+// words can never become a node.
 
 /**
- * The text of a compiled label, as the seller wrote it.
+ * Names an image in a note, falling back when it has no alt text of its own.
  *
- * Alt text arrives escaped for the host, so `Bob\'s` and `&#36;45` would reach
- * the seller as plumbing. Running it back through the renderer and reading the
- * text off undoes exactly what the compiler did, using the code that already
- * knows how, rather than a second copy of the escape table here.
+ * Takes the alt off a NODE, which the renderer has already unescaped, so there
+ * is nothing left to undo here.
+ *
+ * It used to run the alt back through `renderMarkdown` and read the text off,
+ * on the correct reasoning that compiled alt text arrives escaped for the host
+ * and `Bob\'s` would otherwise reach the seller as plumbing. That reasoning
+ * stopped applying when the caller changed from passing compiled Markdown to
+ * passing `img.alt`, and nobody noticed, so an item named `Oranges **fresh**`
+ * lost its asterisks in one note and kept them in the other. Two paths in one
+ * file naming the same picture two different ways, which the holistic review
+ * found by reading them side by side.
  */
-function asWritten(compiled: string): string {
-  return renderMarkdown(compiled).textContent ?? "";
-}
-
-/** Names an image in a note, falling back when it has no alt text of its own. */
 function pictureName(alt: string): string {
-  const name = asWritten(alt).trim();
+  const name = alt.trim();
   return name === "" ? "One of your pictures" : name;
 }
 
@@ -173,23 +193,42 @@ function resolveLocalPictures(body: HTMLElement, resolve: AssetResolver, notes: 
       continue;
     }
 
-    // `img.alt` is already the seller's own words: the renderer unescapes alt
-    // text on the way in, so nothing here has to undo the compiler a second
-    // time.
-    const named = img.alt.trim() === "" ? "One of your pictures" : img.alt.trim();
-    notes.push(`${named}: your own picture is not in this file, because it is not stored on this device.`);
+    // The same helper the web picture note uses, so the two cannot name the
+    // same picture differently again.
+    notes.push(
+      `${pictureName(img.alt)}: your own picture is not in this file, because it is not stored on this device.`,
+    );
     img.remove();
   }
 }
 
-/** Every web picture the compiled output actually shows, still encoded. */
+/**
+ * Every web picture the compiled output actually shows, still encoded.
+ *
+ * Read off elements, not matched out of the Markdown, which is the third time
+ * this feature has learned the same lesson and the first time it was learned
+ * before something broke rather than after.
+ *
+ * The pattern version fetched the wrong thing. A gallery picture that carries a
+ * link compiles to `[![alt](mdsb-asset:a1)](https://link.test/page)`, and since
+ * the address group cannot match `mdsb-asset:`, the lazy label backtracked past
+ * the inner image and captured the OUTER link. Saving a menu file then issued a
+ * serial HTTP request, eight second timeout apiece, against whatever site the
+ * seller had linked to. Nothing was embedded from it and no note was produced,
+ * so it was invisible: a third party ping from a feature whose whole promise is
+ * that it needs no connection.
+ *
+ * A link is an `a` and a picture is an `img`. The tree knows the difference and
+ * a pattern over the text does not.
+ */
 function pictureAddresses(doc: Document): string[] {
+  const probe = document.createElement("div");
+  probe.append(renderMarkdown(compile(doc, MENU_FILE).markdown));
+
   const found = new Set<string>();
-  for (const match of compile(doc, MENU_FILE).markdown.matchAll(
-    new RegExp(String.raw`!\[${ALT}\]\((https?:[^)\s]*)\)`, "g"),
-  )) {
-    const address = match[1];
-    if (address !== undefined) found.add(address);
+  for (const img of probe.querySelectorAll("img")) {
+    const src = img.getAttribute("src") ?? "";
+    if (/^https?:/i.test(src)) found.add(src);
   }
   return [...found];
 }
@@ -264,7 +303,7 @@ function embedPictures(body: HTMLElement, pictures: PictureBytes, notes: string[
     const data = pictures.get(address);
     if (data === undefined) {
       notes.push(
-        `${pictureName(img.getAttribute("alt") ?? "")}: that website would not let us copy the picture into the file, so it only shows with a connection.`,
+        `${pictureName(img.alt)}: that website would not let us copy the picture into the file, so it only shows with a connection.`,
       );
       continue;
     }
@@ -285,10 +324,28 @@ export function menuFileBody(
   pictures: PictureBytes = new Map(),
 ): { body: HTMLElement; notes: string[] } {
   const notes: string[] = [];
+  const compiled = compile(doc, MENU_FILE);
+
+  // The compiler's own diagnostics for THIS host, carried through to the seller.
+  //
+  // They were dropped on the floor, and the holistic review found it. The
+  // emitters raise `picture_superseded` when a gallery item or an avatar carries
+  // both a device picture and a web address, because the device one wins here
+  // and the other has to be reported rather than vanish. Nothing read it: this
+  // function took `.markdown` and discarded `.diagnostics`, and every other
+  // surface compiles for the paste host, which never raises it.
+  //
+  // So the warning existed, was tested in the engine, and reached nobody. That
+  // is worse than not having raised it, because the comment at the emit site
+  // says in as many words that this seller's output is the last place a picture
+  // should disappear without a word. Both halves of that promise are now here.
+  for (const diagnostic of compiled.diagnostics) {
+    notes.push(diagnostic.message);
+  }
 
   const body = document.createElement("div");
   body.className = "rendered";
-  body.append(renderMarkdown(compile(doc, MENU_FILE).markdown));
+  body.append(renderMarkdown(compiled.markdown));
   resolveLocalPictures(body, resolve, notes);
   embedPictures(body, pictures, notes);
 

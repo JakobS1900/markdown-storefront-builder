@@ -82,13 +82,30 @@ export function previewSurface(container: HTMLElement): void {
     );
   }
 
-  if (result.markdown === "") {
+  // The menu file is built unconditionally and asked whether IT is empty,
+  // rather than being shown only when the paste host has something to say.
+  //
+  // Those are different questions, and the holistic review found the seam. A
+  // page whose only content is a picture from the seller's device compiles to
+  // nothing at all for rentry, because no paste host can carry that picture, and
+  // to a real file for the menu file, because that is the whole point of it. The
+  // old gate was on the paste result, so that seller was told "Nothing to
+  // preview yet" while the Copy tab would cheerfully hand them a menu with
+  // their picture in it. The preview and the file disagreed about whether the
+  // page existed, which is Principle VII failing for exactly the person user
+  // story 2 was written for.
+  const { body, notes } = menuFileBody(getState().doc, heldAsset);
+  const menuFileIsEmpty = body.childNodes.length === 0;
+
+  if (result.markdown === "" && menuFileIsEmpty) {
     parts.push(
       el("p", { class: "empty" }, [
         "Nothing to preview yet. Add a section on the Build tab and it will appear here.",
       ]),
     );
-  } else {
+  }
+
+  if (result.markdown !== "") {
     const page = el("div", { class: "rendered" });
     page.append(renderMarkdown(result.markdown));
     parts.push(
@@ -116,7 +133,9 @@ export function previewSurface(container: HTMLElement): void {
     // job: the seller is looking at the file they are about to send, and a
     // preview that dropped every device picture with a note would be describing
     // a file that does not exist.
-    const { body, notes } = menuFileBody(getState().doc, heldAsset);
+  }
+
+  if (!menuFileIsEmpty) {
     parts.push(
       disclosure({
         id: "menu-file-preview",
@@ -126,6 +145,18 @@ export function previewSurface(container: HTMLElement): void {
           el("p", { class: "hint" }, [
             "This is the file itself, as whoever you send it to will see it. Save it from the Copy tab.",
           ]),
+          // Why this can look different from the page above, said rather than
+          // left to be noticed. A picture from the device counts toward the per
+          // item layout only where the host can show one, so the same page can
+          // be a table on rentry and a block per item here. Principle VII wants
+          // a divergence stated in the product, not in a document.
+          ...(result.markdown === ""
+            ? [
+                el("p", { class: "caveat" }, [
+                  "Your page has nothing a paste host can carry yet, so the preview above is empty. This file still has your pictures in it.",
+                ]),
+              ]
+            : []),
           ...notes.map((note) => el("p", { class: "caveat" }, [note])),
           body,
         ],
