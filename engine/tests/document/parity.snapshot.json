@@ -26,6 +26,11 @@
             "type": "string"
           },
           {
+            "name": "localImageId",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "caption",
             "required": false,
             "type": "string"
@@ -139,6 +144,11 @@
             "type": "stringArray"
           },
           {
+            "name": "localImageIds",
+            "required": false,
+            "type": "stringArray"
+          },
+          {
             "name": "cost",
             "required": false,
             "type": "string"
@@ -173,6 +183,11 @@
       },
       {
         "name": "avatarUrl",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "name": "localAvatarId",
         "required": false,
         "type": "string"
       },
@@ -280,5 +295,5 @@
       "type": "blockArray"
     }
   ],
-  "schemaVersion": 3
+  "schemaVersion": 4
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { SCHEMA_VERSION } from "../../src/document/descriptor.js";
 import { serializeDocument } from "../../src/document/serialize.js";
 import type { Document } from "../../src/document/types.js";
 import { validateDocument } from "../../src/document/validate.js";
@@ -68,6 +69,73 @@ describe("absent and empty stay different (FR-010)", () => {
     const absent = serializeDocument(minimalDocument());
     const empty = serializeDocument({ schemaVersion: 1, target: "portable", title: "", blocks: [] });
     expect(absent).not.toBe(empty);
+  });
+});
+
+describe("pictures held on the device survive the round trip", () => {
+  /**
+   * All three of the version 4 fields at once, on one page.
+   *
+   * Written at the current version so no migration runs: this is about the
+   * writer and the validator agreeing on fields nothing has ever stored before,
+   * not about coming forward from an older page.
+   */
+  function withLocalPictures(): Document {
+    return structuredClone({
+      schemaVersion: SCHEMA_VERSION,
+      target: "portable",
+      blocks: [
+        {
+          id: "m1",
+          kind: "menu",
+          tiers: [
+            {
+              id: "t0",
+              name: "Small",
+              price: "10",
+              imageUrls: ["https://example.com/small.png"],
+              localImageIds: ["a1", "a2"],
+              cost: "4",
+            },
+          ],
+        },
+        {
+          id: "g1",
+          kind: "gallery",
+          layout: "grid",
+          items: [{ imageUrl: "", localImageId: "a3", caption: "From my phone" }],
+        },
+        { id: "p1", kind: "profile", displayName: "Sam", avatarUrl: "", localAvatarId: "a4" },
+      ],
+    } satisfies Document);
+  }
+
+  it("keeps the identifiers, and keeps them apart from the addresses", () => {
+    const original = validateDocument(withLocalPictures());
+    if (!original.ok) throw new Error(`page should be valid: ${JSON.stringify(original.issues)}`);
+
+    const out = roundTrip(original.document);
+    expect(out).toEqual(original.document);
+
+    const menu = out.blocks[0];
+    if (menu?.kind !== "menu") throw new Error("expected a menu first");
+    expect(menu.tiers[0]?.localImageIds).toEqual(["a1", "a2"]);
+    expect(menu.tiers[0]?.imageUrls).toEqual(["https://example.com/small.png"]);
+
+    const gallery = out.blocks[1];
+    if (gallery?.kind !== "gallery") throw new Error("expected a gallery second");
+    expect(gallery.items[0]?.localImageId).toBe("a3");
+
+    const profile = out.blocks[2];
+    if (profile?.kind !== "profile") throw new Error("expected a profile third");
+    expect(profile.localAvatarId).toBe("a4");
+  });
+
+  it("does not drift when written twice", () => {
+    const original = validateDocument(withLocalPictures());
+    if (!original.ok) throw new Error("page should be valid");
+    const first = serializeDocument(original.document);
+    expect(serializeDocument(roundTrip(original.document))).toBe(first);
   });
 });
 

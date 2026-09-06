@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 3,
+  "target": "rentry",
+  "title": "A page from version 3",
+  "blocks": [
+    {
+      "id": "prices",
+      "kind": "menu",
+      "heading": "Prices",
+      "currency": "USD",
+      "tiers": [
+        {
+          "id": "t0",
+          "name": "Small",
+          "price": "10",
+          "unit": "each",
+          "blurb": "The usual size.",
+          "includes": ["A printed card"],
+          "details": [{ "label": "Colour", "value": "Black" }],
+          "quantities": [{ "amount": "5", "price": "45" }],
+          "imageUrls": ["https://example.com/small.png"],
+          "cost": "4"
+        },
+        { "id": "t1", "name": "Large", "price": "20" }
+      ],
+      "addOns": [{ "name": "Rush", "price": "15" }]
+    },
+    {
+      "id": "shots",
+      "kind": "gallery",
+      "heading": "Recent work",
+      "layout": "grid",
+      "items": [
+        {
+          "imageUrl": "https://example.com/one.png",
+          "caption": "One of a pair",
+          "linkUrl": "https://example.com/one"
+        }
+      ]
+    },
+    {
+      "id": "about",
+      "kind": "profile",
+      "displayName": "Sam",
+      "avatarUrl": "https://example.com/avatar.png",
+      "tagline": "Taking orders this month",
+      "status": "open",
+      "links": [{ "label": "Shop", "url": "https://example.com/shop" }],
+      "paymentMethods": ["Cash"]
+    }
+  ]
+}

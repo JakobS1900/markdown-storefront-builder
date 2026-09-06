@@ -107,6 +107,25 @@ function tierIdsByPosition(doc: Record<string, unknown>): Record<string, unknown
 }
 
 /**
+ * The contract learns about pictures held on the seller's own device.
+ *
+ * The smallest step a migration can be: it stamps the version and returns.
+ * `localImageIds`, `localImageId` and `localAvatarId` are all optional, and the
+ * rule stated above for `imageUrl` applies to every one of them. An absent
+ * optional field is never defaulted into existence, not even as an empty array
+ * or an empty string, because absent and empty must not both be able to mean
+ * the same thing: the contract distinguishes them and round tripping depends on
+ * it.
+ *
+ * A version 3 page therefore comes forward carrying exactly what it carried,
+ * which is what makes SC-008 hold. No field lost, no field invented, and
+ * identical output for every paste host, because the emitters see nothing new.
+ */
+function stampVersionFour(doc: Record<string, unknown>): Record<string, unknown> {
+  return { ...doc, schemaVersion: 4 };
+}
+
+/**
  * Ordered by `from`, ascending, with no gaps.
  *
  * When adding another entry:
@@ -118,6 +137,7 @@ function tierIdsByPosition(doc: Record<string, unknown>): Record<string, unknown
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, apply: tierImagesToList },
   { from: 2, to: 3, apply: tierIdsByPosition },
+  { from: 3, to: 4, apply: stampVersionFour },
 ];
 
 /**

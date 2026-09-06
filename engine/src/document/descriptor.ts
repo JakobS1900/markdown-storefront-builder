@@ -15,7 +15,7 @@
  * change, not a tidy-up.
  */
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const BLOCK_KINDS = [
   "heading",
@@ -102,6 +102,23 @@ export const MENU_TIER_FIELDS = [
   // the same thing is two things to keep in step and two things for a reader
   // to choose between, and the migration below means nothing is lost.
   { name: "imageUrls", type: "stringArray", required: false },
+  // Pictures held on the seller's own device, named rather than addressed.
+  //
+  // Each entry is an identifier for a picture this app stored, never a place
+  // anything can be fetched from. That distinction is the whole design: put an
+  // unpublishable value in `imageUrls` and every path that reads that field as
+  // "addresses that can be published" becomes wrong by default and correct only
+  // if it remembers to check. A separate field makes the same code wrong only if
+  // it goes looking for trouble.
+  //
+  // The precedent is `cost` immediately below: a field the contract carries and
+  // the compiler is forbidden to publish, guarded by its own test.
+  //
+  // Positioned here because ORDER IS NORMATIVE and this is the sibling of
+  // `imageUrls`. Somebody reading a saved page should find the two kinds of
+  // picture together, and before `cost`, which ends the row with what it is
+  // worth rather than what it looks like.
+  { name: "localImageIds", type: "stringArray", required: false },
   // What the seller paid. Text for the same reason `price` is text, and never
   // compiled: stored here, but `engine/tests/compile/cost-never-published.test.ts`
   // enforces that it never reaches compiled output, for any target. The app
@@ -117,6 +134,15 @@ export const MENU_ADDON_FIELDS = [
 
 export const GALLERY_ITEM_FIELDS = [
   { name: "imageUrl", type: "string", required: true },
+  // The same kind of value as `localImageIds` on a price list row: an
+  // identifier for a picture this app stored, never an address anything can
+  // fetch. Singular, because a gallery item is one picture.
+  //
+  // Directly after `imageUrl` because order is normative and this is that
+  // field's sibling. `imageUrl` stays required and may be the empty string,
+  // which is what an item carrying only a device picture holds: `nonEmpty`
+  // appears on exactly two fields in this whole schema and neither is content.
+  { name: "localImageId", type: "string", required: false },
   { name: "caption", type: "string", required: false },
   { name: "linkUrl", type: "string", required: false },
 ] as const satisfies readonly FieldSpec[];
@@ -180,6 +206,16 @@ export const BLOCK_FIELDS = {
   profile: [
     { name: "displayName", type: "string", required: true },
     { name: "avatarUrl", type: "string", required: false },
+    // An identifier for a picture held on this device, not an address. It sits
+    // straight after `avatarUrl` for the reason the other two additions sit
+    // beside their own siblings: order is normative here, and the two ways of
+    // having an avatar belong next to each other.
+    //
+    // Like `cost`, this is a field the contract carries and the compiler is
+    // forbidden to publish. A picture on somebody's phone is not something a
+    // paste host can reach, so emitting the identifier to one would publish a
+    // promise nothing can keep.
+    { name: "localAvatarId", type: "string", required: false },
     { name: "tagline", type: "string", required: false },
     { name: "status", type: "enum", required: false, values: ["open", "closed", "waitlist"] },
     { name: "links", type: "objectArray", required: false, of: PROFILE_LINK_FIELDS },
