@@ -14,7 +14,8 @@
 import { compile, findTarget, type CompileDiagnostic } from "@mdsb/engine";
 
 import { getState, selectBlock, setSurface } from "../store.js";
-import { button, el, render } from "./dom.js";
+import { NO_ASSETS, menuFileBody } from "../menu-file.js";
+import { button, disclosure, el, render } from "./dom.js";
 import { KIND_LABEL } from "./forms.js";
 import { renderMarkdown } from "./render-markdown.js";
 
@@ -94,6 +95,32 @@ export function previewSurface(container: HTMLElement): void {
         el("h2", { id: "preview-heading", class: "sr-only" }, ["Preview of your page"]),
         page,
       ]),
+    );
+
+    // Principle VII again, for the other thing this app now produces. The menu
+    // file is compiled for its own host, so it is not the same page as the one
+    // above: it can carry pictures no paste host will take. Built by the same
+    // function the saved file is built by, from the same compiled output, so
+    // the two cannot show different things.
+    //
+    // Folded, because it is the whole page a second time and the seller came
+    // here to look at the first one. Web pictures are not read in here: that
+    // needs the network, it happens at the point of saving, and doing it on
+    // every repaint would fetch a photograph per keystroke.
+    const { body, notes } = menuFileBody(getState().doc, NO_ASSETS);
+    parts.push(
+      disclosure({
+        id: "menu-file-preview",
+        summary: "The menu file you can save",
+        className: "menu-file",
+        children: [
+          el("p", { class: "hint" }, [
+            "This is the file itself, as whoever you send it to will see it. Save it from the Copy tab.",
+          ]),
+          ...notes.map((note) => el("p", { class: "caveat" }, [note])),
+          body,
+        ],
+      }),
     );
   }
 

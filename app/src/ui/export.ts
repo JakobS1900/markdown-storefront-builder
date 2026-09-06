@@ -14,6 +14,7 @@ import { PORTABLE, TARGETS, compile, findTarget, serializeDocument } from "@mdsb
 import { getState, setTarget } from "../store.js";
 import { handOff } from "../files.js";
 import { openBackup } from "../import.js";
+import { MENU_FILE_NAME, NO_ASSETS, buildMenuFile, fetchPictures } from "../menu-file.js";
 import { announce, button, el, render, select } from "./dom.js";
 
 /** Where to paste, per host. Kept beside the target ids it describes. */
@@ -43,6 +44,60 @@ const WALKTHROUGH: Record<string, string[]> = {
 /** Announces what actually happened, which is not always what was asked for. */
 function save(name: string, text: string, type: string): void {
   announce(handOff(name, text, type).message);
+}
+
+/**
+ * A size somebody can act on, rather than a byte count.
+ *
+ * FR-077 exists because a menu file with photographs in it can be too large to
+ * send, and finding that out from a messaging app that refuses it is finding
+ * out too late. Measured in bytes of UTF-8, which is what the file actually is,
+ * rather than in characters.
+ */
+function sizeOf(html: string): string {
+  const bytes = new TextEncoder().encode(html).length;
+  if (bytes < 1024) return `${bytes} bytes`;
+  const kb = bytes / 1024;
+  return kb < 1024 ? `${Math.round(kb)} KB` : `${(kb / 1024).toFixed(1)} MB`;
+}
+
+/**
+ * Saves the menu file.
+ *
+ * Compiled for `MENU_FILE` whatever host is selected above, for the same reason
+ * the `.md` button always compiles portable: a file is not a host. FR-074.
+ *
+ * Reading the web pictures needs the network, so this is asynchronous and the
+ * control says so rather than appearing to do nothing. A picture that cannot be
+ * read is named in the announcement instead of quietly leaving a hole, FR-076,
+ * and so is one held on a device that no longer has it, FR-088.
+ */
+function menuFileControl(): HTMLButtonElement {
+  const control: HTMLButtonElement = button({
+    label: "Save a menu you can send",
+    onClick: () => {
+      const doc = getState().doc;
+      control.disabled = true;
+      announce("Preparing your menu file.");
+
+      void fetchPictures(doc)
+        .then((pictures) => {
+          const file = buildMenuFile(doc, NO_ASSETS, pictures);
+          const handed = handOff(MENU_FILE_NAME, file.html, "text/html");
+          announce(
+            [handed.ok ? `${handed.message} It is ${sizeOf(file.html)}.` : handed.message, ...file.notes].join(" "),
+          );
+        })
+        .catch(() => {
+          announce("The menu file could not be prepared. Your page is still saved here.");
+        })
+        .finally(() => {
+          control.disabled = false;
+        });
+    },
+  });
+
+  return control;
 }
 
 /**
@@ -175,6 +230,7 @@ export function exportSurface(container: HTMLElement): void {
             save("page.md", portable.markdown, "text/markdown");
           },
         }),
+        menuFileControl(),
         button({
           label: "Save a backup you can reopen here",
           onClick: () => save("page-backup.json", serializeDocument(state.doc), "application/json"),

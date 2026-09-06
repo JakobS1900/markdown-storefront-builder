@@ -339,6 +339,70 @@ describe("the preview and export surfaces are accessible", () => {
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 
+  /**
+   * The menu file control, feature 024.
+   *
+   * Rendered here rather than assumed, because this file's own docstring is
+   * about a control that shipped unlabelled for weeks while the gate was green
+   * on a DOM it had never built.
+   */
+  function menuFileButton(): HTMLButtonElement {
+    const root = mount();
+    // A real item, not a blank one. Both surfaces show their empty state until
+    // the page compiles to something, so a blank menu renders neither the
+    // control nor the preview and would make every assertion below vacuous.
+    addBlock({ id: "m", kind: "menu", heading: "Prices", tiers: [{ id: "t", name: "Bust", price: "45" }] });
+    setSurface("export");
+    renderShell(root);
+
+    const found = [...document.querySelectorAll("button")].find((b) =>
+      /menu/i.test(b.getAttribute("aria-label") ?? b.textContent ?? ""),
+    );
+    if (found === undefined) throw new Error("the menu file control did not render");
+    return found;
+  }
+
+  it("gives the menu file control a name that says what it produces", () => {
+    const name = menuFileButton().textContent ?? "";
+    // A real name, not a glyph and not "Save" on its own, which says nothing
+    // about which of the four things on this surface it saves.
+    expect(name.trim().length).toBeGreaterThan(8);
+    expect(name.toLowerCase()).toContain("menu");
+  });
+
+  it("makes the menu file control reachable and operable by keyboard", () => {
+    const control = menuFileButton();
+    expect(control.tagName).toBe("BUTTON");
+    expect(control.getAttribute("type")).toBe("button");
+    // Not removed from the tab order, and not hidden from a screen reader.
+    expect(control.getAttribute("tabindex")).toBeNull();
+    expect(control.getAttribute("aria-hidden")).toBeNull();
+    expect(control.disabled).toBe(false);
+  });
+
+  it("gives the menu file control the 44 pixel touch target", async () => {
+    // jsdom lays nothing out, so this asserts the pair that produces the size:
+    // the control carries `.btn`, and `.btn` carries both minimums.
+    expect(menuFileButton().classList.contains("btn")).toBe(true);
+    const css = await stylesheet();
+    expect(css).toMatch(/\.btn\s*\{[^}]*min-height: var\(--tap\)/);
+    expect(css).toMatch(/\.btn\s*\{[^}]*min-width: var\(--tap\)/);
+  });
+
+  it("has no axe violations with the menu file preview open", async () => {
+    const root = mount();
+    addBlock({ id: "m", kind: "menu", heading: "Prices", tiers: [{ id: "t", name: "Bust", price: "45" }] });
+    setSurface("preview");
+    renderShell(root);
+
+    const group = document.querySelector<HTMLDetailsElement>("details.menu-file");
+    if (group === null) throw new Error("the menu file preview did not render");
+    group.open = true;
+
+    expect(document.querySelector("details.menu-file .rendered")).not.toBeNull();
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
   it("labels the output box rather than leaving it bare", () => {
     const root = mount();
     addBlock(blankBlock("heading"));

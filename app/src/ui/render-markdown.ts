@@ -227,6 +227,16 @@ export function renderMarkdown(markdown: string): DocumentFragment {
       // The wrapper takes the page width, the table takes the width it needs.
       const scroll = document.createElement("div");
       scroll.className = "table-scroll";
+      // A region that scrolls has to be reachable by keyboard, or the columns
+      // past the edge of a phone are readable with a finger and unreachable
+      // without one. WCAG 2.1.1, and axe's `scrollable-region-focusable`.
+      //
+      // Found by the menu file gate, which is the first thing in this project
+      // to run axe over a laid out page: jsdom reports no overflow, so the app
+      // gate cannot see this, and the contrast gate runs only the one rule. It
+      // was true of the preview too, which is why the fix is here rather than
+      // in the exporter.
+      scroll.tabIndex = 0;
       scroll.append(table);
       out.append(scroll);
       continue;

@@ -157,6 +157,25 @@ async function waitFor(expression, what, timeoutMs = 30000) {
 
 /** Puts real, coloured content on screen: the bundled example storefront. */
 async function loadRealContent() {
+  // The waits below were made real; the CLICKS in front of them were left as a
+  // fixed sleep, and that is the same bug one layer up. `#app` is in the static
+  // markup, so `sleep(2500)` after navigating can end before the bundle has
+  // drawn the button: the click then finds nothing, nothing happens, and the
+  // wait times out reporting that the example never loaded. Seen inside
+  // `npm run verify` on 2026-09-06, passing on its own immediately afterwards,
+  // which is precisely the signature this file's own docstring describes.
+  //
+  // Either state, not just the first one. The two schemes run in one browser
+  // with one profile, so the dark run reopens an app that already has the
+  // example saved in IndexedDB and therefore no longer offers it: waiting only
+  // for the button made the light run pass and the dark run time out. The
+  // original click-if-present was tolerant of that by accident; this is
+  // tolerant of it on purpose.
+  await waitFor(
+    `document.querySelectorAll('#surface .blocks > li').length >= 3
+      || [...document.querySelectorAll('button')].some(x => /example page/i.test(x.textContent || ''))`,
+    "the app to open the example or offer it",
+  );
   await evaluate(`(async () => {
     const b = [...document.querySelectorAll('button')].find(x => /example page/i.test(x.textContent || ''));
     if (b) b.click();
@@ -168,7 +187,13 @@ async function loadRealContent() {
     "the example page to put its sections on screen",
   );
   // Open the first section too, so form labels, hints and the danger colour
-  // are all rendered rather than only the list.
+  // are all rendered rather than only the list. Waited for first, for the
+  // reason above.
+  await waitFor(
+    `document.querySelectorAll('#surface input, #surface textarea, #surface select').length >= 3
+      || [...document.querySelectorAll('#surface button')].some(x => /^Open /.test((x.textContent||'').trim()))`,
+    "a section to be open or to offer to open",
+  );
   await evaluate(`(() => {
     const b = [...document.querySelectorAll('#surface button')].find(x => /^Open /.test((x.textContent||'').trim()));
     if (b) b.click();
