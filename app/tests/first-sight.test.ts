@@ -83,7 +83,10 @@ describe("a blank price row", () => {
     for (const label of [
       "What you paid",
       "What the price buys (optional)",
-      "Bulk pricing (optional)",
+      // Renamed from "Bulk pricing (optional)" in feature 024. The control is
+      // unchanged; the name now says what it does to the page, because
+      // somebody asked for this exact layout and never found the field.
+      "Prices for different amounts (optional)",
     ]) {
       expect(later).toContain(label);
     }

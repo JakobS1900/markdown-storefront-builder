@@ -518,11 +518,19 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
       // to write, and stopped. Reach is why it is in the FIRST group rather
       // than behind a second one, and why the group opens itself the moment
       // there is a bulk price in it.
+      // Named for what it does to the page, not for the idea behind it. FR-091.
+      //
+      // It was "Bulk pricing", which is what a seller calls the concept once
+      // they already know they want it. Somebody asked for a layout this
+      // control has produced since feature 017, described it as the item and
+      // its price on one line with the amounts underneath, and never found the
+      // field, because nothing about the words "bulk pricing" says that is what
+      // comes out. The layout was not missing. The name was.
       field({
-        label: "Bulk pricing (optional)",
+        label: "Prices for different amounts (optional)",
         value: (tier.quantities ?? []).map((q) => `${q.amount} = ${q.price}`).join("\n"),
         multiline: true,
-        hint: 'One per line, as "5 lb = 90". Leave empty if you sell one at a time.',
+        hint: 'One per line, as "1 lb = 7" or "5 lb = 30". Each line becomes a row under this item on your page.',
         onInput: (v) => {
           // Lines rather than a pair of boxes per break, for the reason the
           // details field is: three prices would otherwise be six controls plus

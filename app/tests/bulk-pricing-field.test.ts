@@ -18,7 +18,11 @@ import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 import { settle } from "./settle.js";
 
-const LABEL = "Bulk pricing (optional)";
+// Renamed in feature 024, FR-091. The field and its parsing are unchanged: it
+// is named for what it does to the published page rather than for the pricing
+// idea behind it, because somebody described this exact layout, asked for it,
+// and never found the control.
+const LABEL = "Prices for different amounts (optional)";
 
 let stop: (() => void) | undefined;
 
