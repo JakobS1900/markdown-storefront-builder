@@ -334,6 +334,68 @@ during implementation", and the short version is worth carrying:
   a11y 34, contrast 164 elements and 12 sections clean in both palettes, pwa
   gate green. It was 1080 before the table fix added one test.
 
+## T058 is DONE. The Android bridge carries a 3.2 MB menu file.
+
+**This was the largest unretired risk in feature 024 and it is now settled with
+evidence.** Do not re-probe it.
+
+`app/src/files.ts` hands a file to Android by calling
+`window.AndroidFiles.save(name, mime, text)`, a synchronous string call across
+the WebView's JavaScript interface. Every existing caller passes a few
+kilobytes. A menu file with photographs in it is megabytes, and nothing said
+whether that survived. Research D4 listed the fallbacks in order in case it did
+not.
+
+It does. Measured on the owner's Moto G7 (`ZY2262PFGQ`) on 2026-09-06, running
+a release build signed with the real key:
+
+- A small page produced `menu.html` at **1,831 bytes**, and the Android share
+  sheet opened offering Bluetooth, Drive, Gmail and Quick Share. That is the
+  flow the whole feature exists for.
+- A deliberately large page, imported from a 3.23 MB backup, produced
+  `menu.html` at **3,231,878 bytes**. Pulled back and checked: valid doctype,
+  **ends with `</html>` so nothing was truncated**, all 34,000 paragraphs
+  present, no script, title intact.
+- `logcat` showed no `OutOfMemory`, no ANR, and no JavaBridge error.
+
+So the smaller export edge, the chunked bridge call and the reconsideration of
+embedding are all unnecessary. Delete that worry rather than carrying it.
+
+**Method, since the numbers are only worth what the method is.** The probe page
+was created by importing a backup, which `import.ts` always opens as a NEW page,
+so no existing page was touched. It was removed afterwards and the page list is
+back to the owner's two pages with their original edit dates of 9/1 and 8/31.
+The probe file, the screenshots and the export were deleted from the device and
+`stay_on_while_plugged_in` was set back to 0.
+
+### Found on the device, not fixed: the share sheet cannot preview the file
+
+```
+E DatabaseUtils: java.lang.SecurityException: Permission Denial: reading
+androidx.core.content.FileProvider uri
+content://com.rade.storefrontbuilder.fileprovider/exports/menu.html
+from pid=..., uid=1000 requires the provider be exported, or grantUriPermission()
+W ChooserActivity: Could not load (...) thumbnail/name for preview. If desired,
+consider using Intent#createChooser ... and set your Intent's clipData and flags
+```
+
+Cosmetic and real. The share sheet DOES show the file name and sending works,
+but Android cannot render a preview because the FileProvider URI is not granted
+to the system chooser. The fix the platform names is `Intent#createChooser` with
+`clipData` set and `FLAG_GRANT_READ_URI_PERMISSION`, in
+`android/.../MainActivity.java`. Not done here because it is outside feature
+024 and nothing about the file or the send is broken.
+
+### Two device traps confirmed live, both already documented
+
+- `mWakefulness=Dozing` on arrival. A capture then would have been a white PNG,
+  which is the reading that once cost a rebuild, a reinstall and a service
+  worker investigation. Every capture in this run was preceded by a wakefulness
+  check and came back between 97 kB and 231 kB.
+- An **offline emulator** was also attached, so every `adb` call needs
+  `-s ZY2262PFGQ` or it fails with "more than one device". Worth adding to the
+  checklist: the failure looks like a dead device rather than an ambiguous one.
+
 ## The forgery bug, 2026-09-06, worth reading before touching the renderer
 
 A product named `Keyring](https://tracker.example/pixel.png)` made the app build
