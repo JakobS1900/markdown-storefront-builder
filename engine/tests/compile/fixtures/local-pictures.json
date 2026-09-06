@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 4,
+  "target": "rentry",
+  "title": "Sam's fruit and veg",
+  "blocks": [
+    {
+      "id": "prof",
+      "kind": "profile",
+      "displayName": "Sam",
+      "avatarUrl": "",
+      "localAvatarId": "a1-stallholder",
+      "tagline": "Saturdays on the market square",
+      "status": "open",
+      "paymentMethods": [
+        "Cash",
+        "Card"
+      ]
+    },
+    {
+      "id": "menu",
+      "kind": "menu",
+      "heading": "This week",
+      "currency": "GBP",
+      "tiers": [
+        {
+          "id": "oranges",
+          "name": "Oranges",
+          "price": "3",
+          "unit": "per kg",
+          "blurb": "Seville, in season",
+          "localImageIds": [
+            "a2-oranges"
+          ]
+        },
+        {
+          "id": "lemons",
+          "name": "Lemons",
+          "price": "4",
+          "unit": "per kg",
+          "imageUrls": [
+            "https://example.test/lemons.jpg"
+          ]
+        },
+        {
+          "id": "apples",
+          "name": "Apples",
+          "price": "2.50",
+          "unit": "per kg",
+          "imageUrls": [
+            "https://example.test/apples.jpg"
+          ],
+          "localImageIds": [
+            "a3-apples-close",
+            "a4-apples-crate"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gal",
+      "kind": "gallery",
+      "heading": "The stall",
+      "layout": "list",
+      "items": [
+        {
+          "imageUrl": "",
+          "localImageId": "a5-stall",
+          "caption": "Saturday morning"
+        },
+        {
+          "imageUrl": "https://example.test/awning.jpg",
+          "caption": "The awning"
+        }
+      ]
+    }
+  ]
+}

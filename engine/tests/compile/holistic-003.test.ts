@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { compile } from "../../src/compile/compile.js";
-import { TARGETS } from "../../src/compile/targets.js";
+import { ALL_TARGETS } from "../../src/compile/targets.js";
 import type { Block, Document } from "../../src/document/types.js";
 
 /**
@@ -125,16 +125,22 @@ describe("HB-4: the whole page is safe, not just each section", () => {
 });
 
 describe("HB-5: determinism survives the new emitters", () => {
-  it.each(TARGETS.map((t) => t.id))("is stable for %s across many compiles", (id) => {
-    const doc = page(...EVERY_KIND);
-    const first = compile(doc, id).markdown;
-    for (let i = 0; i < 25; i += 1) expect(compile(doc, id).markdown).toBe(first);
-  });
+  // `ALL_TARGETS`, and the record rather than the id: determinism is a property
+  // of the compiler, and `findTarget` searches `TARGETS` only, so an id would
+  // have compiled `menu-file` as `portable` and proved nothing about it.
+  it.each(ALL_TARGETS.map((t) => [t.id, t] as const))(
+    "is stable for %s across many compiles",
+    (_id, target) => {
+      const doc = page(...EVERY_KIND);
+      const first = compile(doc, target).markdown;
+      for (let i = 0; i < 25; i += 1) expect(compile(doc, target).markdown).toBe(first);
+    },
+  );
 
   it("does not mutate the page", () => {
     const doc = page(...EVERY_KIND);
     const before = JSON.stringify(doc);
-    for (const t of TARGETS) compile(doc, t.id);
+    for (const t of ALL_TARGETS) compile(doc, t);
     expect(JSON.stringify(doc)).toBe(before);
   });
 

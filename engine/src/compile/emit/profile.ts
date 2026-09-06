@@ -41,27 +41,79 @@ export function emitProfile(block: Profile, target: Target, sink: DiagnosticSink
     parts.push(`${"#".repeat(level)} ${name}`);
   }
 
-  if (block.avatarUrl !== undefined) {
-    if (isSafeUrl(block.avatarUrl)) {
-      // The seller's own name as the alt text, collapsed to one line the
-      // way a heading is: a newline inside alt text ends the image early and
-      // spills the rest of the name into the page. This was empty, so the one
-      // image on the page that identifies who is selling was the one image
-      // a screen reader could say nothing about.
-      parts.push(`![${escapeInline(block.displayName)}](${encodeAddress(block.avatarUrl)})`);
-    } else {
-      // Holistic review HB-6: this used to drop the avatar in silence while
-      // every other refused address warned. SC-004 allows zero silent
-      // degradations, and an artist whose picture vanishes with no explanation
-      // has no way to work out why.
+  const localAvatar = block.localAvatarId?.trim() ?? "";
+  /** The avatar's web address, when there is one this host may fetch. */
+  const webAvatar =
+    block.avatarUrl !== undefined && isSafeUrl(block.avatarUrl) ? block.avatarUrl : undefined;
+
+  if (localAvatar !== "" && !target.capabilities.localImages) {
+    // FR-080. Dropped, and never in silence, exactly as HB-6 settled for the
+    // refused address below. Once, because there is one avatar.
+    //
+    // "Your profile picture" names it without naming the file: FR-081 keeps
+    // the identifier and the original filename out of every message, and the
+    // seller has never seen either of them in any case.
+    sink.add({
+      code: "local_image_unsupported",
+      severity: "warning",
+      blockId: block.id,
+      capability: "localImages",
+      message: `Your profile picture is one of your own, so it is not part of the text you paste into ${target.name}. It appears in the menu file you save.`,
+    });
+  }
+
+  // A refused address is still refused when something else takes its place, per
+  // holistic review HB-6. The one case that stays quiet is an address that was
+  // never filled in because the picture came from the device: telling that
+  // seller their address is not a web address would send them looking for a
+  // second problem that does not exist.
+  if (
+    block.avatarUrl !== undefined &&
+    webAvatar === undefined &&
+    !(block.avatarUrl === "" && localAvatar !== "")
+  ) {
+    // This used to drop the avatar in silence while every other refused address
+    // warned. SC-004 allows zero silent degradations, and an artist whose
+    // picture vanishes with no explanation has no way to work out why.
+    sink.add({
+      code: "link_scheme_refused",
+      severity: "warning",
+      blockId: block.id,
+      message:
+        "Your profile picture does not have an http:// or https:// address, so it has been left out. Images need a web address to show on your page.",
+    });
+  }
+
+  // The seller's own name as the alt text, collapsed to one line the way a
+  // heading is: a newline inside alt text ends the image early and spills the
+  // rest of the name into the page. This was empty, so the one image on the
+  // page that identifies who is selling was the one image a screen reader could
+  // say nothing about.
+  //
+  // The picture from the device wins where the host can show it, matching the
+  // gallery. A profile has one avatar, so carrying both is a choice, and the
+  // seller's own photograph is the one the menu file exists for.
+  //
+  // Reported rather than silent, for the reason set out at length in the
+  // gallery: the seller who only ever sends the menu file loses the web picture
+  // entirely, and they are the seller this feature is for.
+  if (localAvatar !== "" && target.capabilities.localImages) {
+    if (webAvatar !== undefined) {
       sink.add({
-        code: "link_scheme_refused",
+        code: "picture_superseded",
         severity: "warning",
         blockId: block.id,
         message:
-          "Your profile picture does not have an http:// or https:// address, so it has been left out. Images need a web address to show on your page.",
+          "Your profile has both a photo from your device and a web address. The menu file shows the one from your device. The web address is what appears everywhere you paste this page.",
       });
     }
+    // CHUNK 1: the address is encoded, so the app's resolver decodes what it
+    // reads back out of the `src`, per contracts/menu-file.md.
+    parts.push(
+      `![${escapeInline(block.displayName)}](${encodeAddress(`mdsb-asset:${localAvatar}`)})`,
+    );
+  } else if (webAvatar !== undefined) {
+    parts.push(`![${escapeInline(block.displayName)}](${encodeAddress(webAvatar)})`);
   }
 
   if (block.tagline !== undefined && block.tagline !== "") {

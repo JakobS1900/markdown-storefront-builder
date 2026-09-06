@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { validateDocument } from "../../src/document/validate.js";
 import { compile } from "../../src/compile/compile.js";
-import { TARGETS } from "../../src/compile/targets.js";
+import { ALL_TARGETS } from "../../src/compile/targets.js";
 
 /**
  * The golden harness. FR-013, SC-001.
@@ -16,6 +16,17 @@ import { TARGETS } from "../../src/compile/targets.js";
  * be legible, because that is exactly the moment you most need to read it.
  *
  * To update after a deliberate change: `npm run golden`. Then READ the diff.
+ *
+ * `ALL_TARGETS`, because the subject here is everything the compiler can emit
+ * and not only the places a seller pastes a page. The menu file is the one
+ * output that carries a picture held on the device, so it is the last output
+ * that should go uncompared.
+ *
+ * Each target is passed as the record rather than as its id. `findTarget`
+ * searches `TARGETS` only, so an id would send `menu-file` down the unknown
+ * host path and quietly compile it as `portable`: every file under
+ * `golden/menu-file/` would then be a copy of the portable output and this
+ * whole sweep would agree with itself about nothing.
  */
 
 const here = (p: string): string => fileURLToPath(new URL(p, import.meta.url));
@@ -51,14 +62,14 @@ describe("golden files", () => {
     expect(fixtureNames.length).toBeGreaterThan(0);
   });
 
-  for (const target of TARGETS) {
+  for (const target of ALL_TARGETS) {
     describe(target.id, () => {
       for (const name of fixtureNames) {
         const base = name.replace(/\.json$/, "");
 
         it(`compiles ${base} to the expected output`, () => {
           const doc = loadFixture(name);
-          const actual = compile(doc, target.id).markdown;
+          const actual = compile(doc, target).markdown;
           const expected = readFileSync(here(`./golden/${target.id}/${base}.md`), "utf8");
           expect(lf(actual)).toBe(lf(expected));
         });
@@ -70,8 +81,8 @@ describe("golden files", () => {
 describe("SC-001: output renders as Markdown, not as broken text", () => {
   it.each(fixtureNames)("%s produces no raw angle bracket for any target", (name) => {
     const doc = loadFixture(name);
-    for (const target of TARGETS) {
-      const { markdown } = compile(doc, target.id);
+    for (const target of ALL_TARGETS) {
+      const { markdown } = compile(doc, target);
       expect(markdown).not.toContain("<");
       expect(markdown).not.toContain(">");
     }
@@ -79,8 +90,8 @@ describe("SC-001: output renders as Markdown, not as broken text", () => {
 
   it.each(fixtureNames)("%s ends with exactly one newline, or is empty", (name) => {
     const doc = loadFixture(name);
-    for (const target of TARGETS) {
-      const { markdown } = compile(doc, target.id);
+    for (const target of ALL_TARGETS) {
+      const { markdown } = compile(doc, target);
       if (markdown === "") continue;
       expect(markdown.endsWith("\n")).toBe(true);
       expect(markdown.endsWith("\n\n")).toBe(false);
@@ -93,8 +104,8 @@ describe("SC-001: output renders as Markdown, not as broken text", () => {
     // space hard break, which is the only form rentry implements. Anything else
     // trailing, a single space, a tab, or three spaces, is still a failure.
     const doc = loadFixture(name);
-    for (const target of TARGETS) {
-      const { markdown } = compile(doc, target.id);
+    for (const target of ALL_TARGETS) {
+      const { markdown } = compile(doc, target);
       const breakAllowed = target.capabilities.hardBreak === "spaces";
 
       for (const line of markdown.split("\n")) {
@@ -108,8 +119,8 @@ describe("SC-001: output renders as Markdown, not as broken text", () => {
     // A line of --- makes the preceding line a heading and is read as front
     // matter at the start of a document.
     const doc = loadFixture(name);
-    for (const target of TARGETS) {
-      const { markdown } = compile(doc, target.id);
+    for (const target of ALL_TARGETS) {
+      const { markdown } = compile(doc, target);
       for (const line of markdown.split("\n")) {
         expect(line.trim()).not.toBe("---");
       }

@@ -84,3 +84,26 @@ as `mdsb-asset:<id>`. This form:
 
 A saved menu file containing the text `mdsb-asset:` anywhere is a defect, and
 the test suite asserts its absence.
+
+### How the address is encoded, and the trap in decoding it
+
+The emitters put the address through `encodeAddress` like any other, so a
+bracket or a space in an identifier cannot end the image early and spill the
+rest of the page into it as text. An identifier the app minted never contains
+one, but a page can arrive from an exported backup somebody edited by hand, and
+`import.ts` accepts those.
+
+**The resolver in the app must not undo this with `decodeURIComponent`.**
+`encodeAddress` percent-encodes exactly `( ) < > " ' \` \` and whitespace, and
+nothing else. It is not a subset of `encodeURIComponent` and
+`decodeURIComponent` does not invert it:
+
+- a literal `%` in an identifier passes through `encodeAddress` untouched, so
+  `mdsb-asset:a%41b` stays as it is, and `decodeURIComponent` would turn it into
+  `a A b`'s identifier instead and silently look up the wrong picture;
+- a malformed sequence such as `mdsb-asset:100%` makes `decodeURIComponent`
+  throw `URIError`, which would take out the whole export rather than one image.
+
+The resolver must reverse the specific set `encodeAddress` produces, or the two
+functions must be changed together as a pair. This is recorded here because the
+`CHUNK 1:` comments at the three emit sites point at this document for it.

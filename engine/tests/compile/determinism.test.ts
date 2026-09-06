@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { compile } from "../../src/compile/compile.js";
-import { TARGETS } from "../../src/compile/targets.js";
+import { ALL_TARGETS } from "../../src/compile/targets.js";
 import { validateDocument } from "../../src/document/validate.js";
 import type { Document } from "../../src/document/types.js";
 
@@ -18,6 +18,12 @@ import type { Document } from "../../src/document/types.js";
  * Feature 001 could not assert this, because there was no compiler to assert it
  * against. This is where the third structurally required test from Principle
  * III finally lands.
+ *
+ * `ALL_TARGETS`, because the claim is about the compiler rather than about the
+ * places a seller pastes a page, and a target left out of this sweep has no
+ * determinism guarantee at all. Passed as the record and not as an id:
+ * `findTarget` searches `TARGETS` only, so an id would compile `menu-file` as
+ * `portable` and this file would prove `portable` deterministic four times.
  */
 
 const here = (p: string): string => fileURLToPath(new URL(p, import.meta.url));
@@ -33,18 +39,18 @@ const fixtures: [string, Document][] = readdirSync(here("./fixtures"))
 
 describe("SC-002: identical input, identical bytes", () => {
   it.each(fixtures)("%s is stable across many compiles", (_name, doc) => {
-    for (const target of TARGETS) {
-      const first = compile(doc, target.id).markdown;
+    for (const target of ALL_TARGETS) {
+      const first = compile(doc, target).markdown;
       for (let i = 0; i < 50; i += 1) {
-        expect(compile(doc, target.id).markdown).toBe(first);
+        expect(compile(doc, target).markdown).toBe(first);
       }
     }
   });
 
   it.each(fixtures)("%s produces the same diagnostics every time", (_name, doc) => {
-    for (const target of TARGETS) {
-      const first = JSON.stringify(compile(doc, target.id).diagnostics);
-      expect(JSON.stringify(compile(doc, target.id).diagnostics)).toBe(first);
+    for (const target of ALL_TARGETS) {
+      const first = JSON.stringify(compile(doc, target).diagnostics);
+      expect(JSON.stringify(compile(doc, target).diagnostics)).toBe(first);
     }
   });
 });
@@ -53,15 +59,15 @@ describe("compilation does not depend on anything ambient", () => {
   it("does not mutate the page it was given", () => {
     for (const [, doc] of fixtures) {
       const before = JSON.stringify(doc);
-      for (const target of TARGETS) compile(doc, target.id);
+      for (const target of ALL_TARGETS) compile(doc, target);
       expect(JSON.stringify(doc)).toBe(before);
     }
   });
 
   it("does not depend on the order targets are compiled in", () => {
     for (const [, doc] of fixtures) {
-      const forward = TARGETS.map((t) => compile(doc, t.id).markdown);
-      const backward = [...TARGETS].reverse().map((t) => compile(doc, t.id).markdown).reverse();
+      const forward = ALL_TARGETS.map((t) => compile(doc, t).markdown);
+      const backward = [...ALL_TARGETS].reverse().map((t) => compile(doc, t).markdown).reverse();
       expect(backward).toEqual(forward);
     }
   });
@@ -90,6 +96,7 @@ describe("SC-007: adding a host changes no compiler logic", () => {
         thematicBreak: "___",
         tables: false,
         hardBreak: "backslash",
+        localImages: false,
         escapeStyle: "commonmark",
       },
       sources: {
@@ -97,6 +104,7 @@ describe("SC-007: adding a host changes no compiler logic", () => {
         thematicBreak: "invented",
         tables: "invented",
         hardBreak: "invented",
+        localImages: "invented",
         escapeStyle: "invented",
         maxBytes: "invented",
       },

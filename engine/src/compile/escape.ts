@@ -158,6 +158,22 @@ export function escapeInline(text: string): string {
 }
 
 /**
+ * Collapses a run of seller text to one line, without escaping anything.
+ *
+ * For naming a section or an item inside a diagnostic. A diagnostic is prose
+ * shown in this app, not Markdown emitted to a host, so the backslashes
+ * `escapeInline` adds would be visible noise in it: a warning about an item
+ * called `Oranges [organic]` should say `Oranges [organic]`. The app renders a
+ * diagnostic as a text node, so there is nothing here for an escaper to defend.
+ *
+ * What it still does is collapse the characters that would break the message
+ * across lines, for the same reason `escapeInline` collapses them in a heading.
+ */
+export function plainInline(text: string): string {
+  return text.replace(LINE_BREAKING, " ").replace(/\s+/g, " ").trim();
+}
+
+/**
  * Characters that some renderer somewhere treats as a line boundary.
  *
  * Holistic review H-6. JavaScript's `\s` does NOT include U+0085, U+001C,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { compile } from "../../src/compile/compile.js";
 import type { Target } from "../../src/compile/capabilities.js";
-import { PORTABLE, RENTRY, TARGETS, findTarget } from "../../src/compile/targets.js";
+import { ALL_TARGETS, PORTABLE, RENTRY, findTarget } from "../../src/compile/targets.js";
 import type { Document } from "../../src/document/types.js";
 
 /**
@@ -112,12 +112,13 @@ describe("FR-012: a heading too deep for the host degrades, with a warning", () 
   const shallow: Target = {
     id: "shallow-test-host",
     name: "Shallow Test Host",
-    capabilities: { maxHeadingLevel: 2, thematicBreak: "***", tables: true, hardBreak: "backslash", escapeStyle: "commonmark" },
+    capabilities: { maxHeadingLevel: 2, thematicBreak: "***", tables: true, hardBreak: "backslash", localImages: false, escapeStyle: "commonmark" },
     sources: {
       maxHeadingLevel: "test fixture",
       thematicBreak: "test fixture",
       tables: "test fixture",
       hardBreak: "test fixture",
+      localImages: "test fixture",
       escapeStyle: "test fixture",
       maxBytes: "test fixture",
     },
@@ -149,10 +150,14 @@ describe("FR-012: a heading too deep for the host degrades, with a warning", () 
     }
   });
 
-  it("both shipped hosts support all six levels, so neither warns", () => {
-    for (const target of TARGETS) {
+  it("every shipped target supports all six levels, so none of them warns", () => {
+    // `ALL_TARGETS`, because the subject is what the compiler emits rather than
+    // where a seller pastes it, and a menu file that quietly flattened a
+    // heading would be a worse document than the page it was made from. Passed
+    // as the record, since `findTarget` would send `menu-file` to `portable`.
+    for (const target of ALL_TARGETS) {
       for (let level = 1; level <= 6; level += 1) {
-        const out = compile(page({ id: "h", kind: "heading", text: "x", level }), target.id);
+        const out = compile(page({ id: "h", kind: "heading", text: "x", level }), target);
         expect(out.diagnostics).toEqual([]);
       }
     }
@@ -168,6 +173,7 @@ describe("FR-015: output over a host's limit warns and is returned in full", () 
       thematicBreak: "***",
       tables: true,
       hardBreak: "backslash",
+      localImages: false,
       escapeStyle: "commonmark",
       maxBytes: 20,
     },
@@ -176,6 +182,7 @@ describe("FR-015: output over a host's limit warns and is returned in full", () 
       thematicBreak: "test fixture",
       tables: "test fixture",
       hardBreak: "test fixture",
+      localImages: "test fixture",
       escapeStyle: "test fixture",
       maxBytes: "test fixture",
     },
@@ -221,7 +228,11 @@ describe("FR-015: output over a host's limit warns and is returned in full", () 
     // checks: an absent limit means undocumented, never unlimited. rentry
     // documents no limit, so it stays undefined rather than being given a
     // generous number that would be a guess written down.
-    const declared = TARGETS.filter((t) => t.capabilities.maxBytes !== undefined);
+    // `ALL_TARGETS`, so the menu file has to justify its absence from this list
+    // too. It has no limit because a file on the seller's own device has none,
+    // and the constraint that does exist is on the Android bridge, which is
+    // measured rather than declared.
+    const declared = ALL_TARGETS.filter((t) => t.capabilities.maxBytes !== undefined);
     expect(declared.map((t) => t.id)).toEqual(["text.is"]);
     expect(RENTRY.capabilities.maxBytes).toBeUndefined();
     expect(PORTABLE.capabilities.maxBytes).toBeUndefined();

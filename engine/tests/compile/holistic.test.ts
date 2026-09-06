@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { compile } from "../../src/compile/compile.js";
-import { PORTABLE, RENTRY, TARGETS, TEXT_IS } from "../../src/compile/targets.js";
+import { ALL_TARGETS, PORTABLE, RENTRY, TEXT_IS } from "../../src/compile/targets.js";
 import { escapeInline } from "../../src/compile/escape.js";
 import type { Block, Document } from "../../src/document/types.js";
 
@@ -38,6 +38,10 @@ describe("H-2: every declared capability must be consulted by something", () => 
     expect(declared).toEqual([
       "escapeStyle",
       "hardBreak",
+      // `localImages` earns its place here the same way the rest did: the menu,
+      // gallery and profile emitters all consult it, and the fallback it
+      // declares is proved by `local-image-never-published.test.ts`.
+      "localImages",
       "maxHeadingLevel",
       "tables",
       "thematicBreak",
@@ -45,8 +49,23 @@ describe("H-2: every declared capability must be consulted by something", () => 
   });
 
   it("cites a source for every capability, including absent ones", () => {
-    for (const target of TARGETS) {
-      for (const key of ["maxHeadingLevel", "thematicBreak", "escapeStyle", "maxBytes"] as const) {
+    // `ALL_TARGETS`, because FR-014 is a rule about target records and the menu
+    // file is one. Its citations are the shortest in the file precisely because
+    // its host is our own renderer, so they need checking as much as any.
+    //
+    // Every key rather than four of them. The four were an accident of what the
+    // review happened to look at, and `tables`, `hardBreak` and `localImages`
+    // were then free to carry an empty citation while this passed.
+    for (const target of ALL_TARGETS) {
+      for (const key of [
+        "maxHeadingLevel",
+        "thematicBreak",
+        "tables",
+        "hardBreak",
+        "localImages",
+        "escapeStyle",
+        "maxBytes",
+      ] as const) {
         expect(target.sources[key]).toBeTruthy();
         expect(target.sources[key].length).toBeGreaterThan(10);
       }
@@ -55,11 +74,12 @@ describe("H-2: every declared capability must be consulted by something", () => 
 });
 
 describe("H-3: escapeStyle is declared but never actually branched on", () => {
-  it("is the same for both hosts, so no divergence is being silently ignored", () => {
+  it("is the same for every target, so no divergence is being silently ignored", () => {
     // The capability exists and the escaper does not read it. That is honest
     // only while every host shares one style. The moment two differ, this fails
-    // and forces the escaper to actually consult it.
-    const styles = new Set(TARGETS.map((t) => t.capabilities.escapeStyle));
+    // and forces the escaper to actually consult it. The name said "both hosts"
+    // while there were three, and now covers the menu file as well.
+    const styles = new Set(ALL_TARGETS.map((t) => t.capabilities.escapeStyle));
     expect(styles.size).toBe(1);
   });
 });
@@ -124,8 +144,8 @@ describe("H-5: the shipped hosts, and where they now differ", () => {
     // The property behind the test above, so a future host cannot quietly
     // reintroduce the form that is destructive on two of the three.
     const doc = page({ id: "t", kind: "prose", text: "one\ntwo\nthree" });
-    for (const target of TARGETS) {
-      const lines = compile(doc, target.id).markdown.split("\n");
+    for (const target of ALL_TARGETS) {
+      const lines = compile(doc, target).markdown.split("\n");
       expect(lines.filter((l) => l.endsWith("\\")), `${target.id} emitted one`).toEqual([]);
     }
   });

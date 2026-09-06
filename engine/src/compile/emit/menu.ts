@@ -1,7 +1,7 @@
 import type { Block } from "../../document/types.js";
 import type { Target } from "../capabilities.js";
 import type { DiagnosticSink } from "../diagnostics.js";
-import { escapeInline, escapeText } from "../escape.js";
+import { escapeInline, escapeText, plainInline } from "../escape.js";
 import { encodeAddress, isSafeUrl } from "../link.js";
 import { SECTION_HEADING_LEVEL, bulletList, cell, joinParts, sectionHeading } from "./shared.js";
 
@@ -60,6 +60,27 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
     }
   }
 
+  // FR-080. A picture held on the seller's device is dropped by a host that
+  // cannot show one, and never in silence: the same rule as the refused
+  // addresses above. Once per item that has one, matching the refusal above,
+  // because the seller acts on an item rather than on a file.
+  if (!target.capabilities.localImages) {
+    for (const t of tiers) {
+      const count = localIds(t).length;
+      if (count === 0) continue;
+      sink.add({
+        code: "local_image_unsupported",
+        severity: "warning",
+        blockId: block.id,
+        capability: "localImages",
+        message:
+          count === 1
+            ? `Your own picture ${itemPhrase(t, block.heading)} is not part of the text you paste into ${target.name}. It appears in the menu file you save.`
+            : `Your own pictures ${itemPhrase(t, block.heading)} are not part of the text you paste into ${target.name}. They appear in the menu file you save.`,
+      });
+    }
+  }
+
   if (tiers.length > 0) {
     // One item per block, rather than one table for the section, but only where
     // somebody is actually pricing by quantity. FR-030 and FR-031.
@@ -77,14 +98,22 @@ export function emitMenu(block: Menu, target: Target, sink: DiagnosticSink): str
     // of them: both are more than a table cell can hold. One picture still
     // fits in a column, so one picture does not trigger this and a page that
     // has always had one compiles to exactly what it always did.
-    const perItem = tiers.some((t) => realQuantities(t).length > 0 || tierImages(t).length > 1);
+    //
+    // The count is per host, because "how many pictures does this item have"
+    // has a different answer for a host that cannot show the one held on the
+    // device. Counting a picture a paste host will never receive would give
+    // that page a layout chosen for a picture that is not on it, and would
+    // disclose that the picture exists, which FR-081 forbids.
+    const perItem = tiers.some(
+      (t) => realQuantities(t).length > 0 || tierImages(t, target).length > 1,
+    );
     if (perItem) {
       if (!target.capabilities.tables) warnNoTables(block.id, target, sink);
       parts.push(tiers.map((t) => tierBlock(t, block.currency, target)).join("\n\n"));
     } else {
       parts.push(
         target.capabilities.tables
-          ? tierTable(tiers, block.currency)
+          ? tierTable(tiers, block.currency, target)
           : tierList(tiers, block.currency, block.id, target, sink),
       );
     }
@@ -139,21 +168,58 @@ function withCurrency(price: string, currency: string | undefined): string {
   return `${price.slice(0, at)}${currency}${symbol ? "" : " "}${price.slice(at)}`;
 }
 
+/** The pictures of an item held on the seller's device. Blanks are not pictures. */
+function localIds(t: Tier): readonly string[] {
+  return (t.localImageIds ?? []).filter((id) => id.trim() !== "");
+}
+
 /**
- * The pictures of an item that can actually be shown.
+ * How to name the item a warning is about, without naming the file.
+ *
+ * FR-080 says the warning must name the picture, and FR-081 forbids disclosing
+ * the asset identifier or the original filename. Those are compatible in
+ * exactly one way: name the thing on the page that the picture belongs to. A
+ * seller recognises `Oranges` and has never once seen the identifier.
+ */
+function itemPhrase(t: Tier, heading: string | undefined): string {
+  const name = plainInline(t.name);
+  if (name !== "") return `on ${name}`;
+  const section = heading === undefined ? "" : plainInline(heading);
+  return section === "" ? "in your price list" : `in ${section}`;
+}
+
+/**
+ * The pictures of an item that can actually be shown, in the order they appear.
+ *
+ * Web addresses first, then the pictures held on the seller's device, which
+ * only a host with `localImages` receives at all. Target aware for that reason
+ * alone: no branch here asks WHICH host it is, only what this one can do.
  *
  * An unsafe address is dropped here rather than emitted, matching the gallery.
- * The caller raises the warning, because it holds the block id.
+ * The caller raises both warnings, because it holds the block id.
  */
-function tierImages(t: Tier): string[] {
+function tierImages(t: Tier, target: Target): readonly string[] {
   const usable = (t.imageUrls ?? []).filter((u) => u !== "" && isSafeUrl(u));
-  return usable.map((url, i) => {
-    // One picture is described by the item's name. Several need telling apart,
-    // or a screen reader reads the same words three times and the listener
-    // learns nothing about what the second and third pictures are for.
-    const alt = usable.length === 1 ? cell(t.name) : `${cell(t.name)}, picture ${i + 1} of ${usable.length}`;
-    return `![${alt}](${encodeAddress(url)})`;
-  });
+  const local = target.capabilities.localImages ? localIds(t) : [];
+  const total = usable.length + local.length;
+
+  // One picture is described by the item's name. Several need telling apart,
+  // or a screen reader reads the same words three times and the listener
+  // learns nothing about what the second and third pictures are for. Counted
+  // across both kinds, because a reader cannot tell them apart and should not
+  // be able to.
+  const alt = (i: number): string =>
+    total === 1 ? cell(t.name) : `${cell(t.name)}, picture ${i + 1} of ${total}`;
+
+  return [
+    ...usable.map((url, i) => `![${alt(i)}](${encodeAddress(url)})`),
+    // Encoded like any other address. An identifier is minted by the app, but
+    // a page can also arrive from an exported file somebody edited by hand, so
+    // one containing a closing bracket would otherwise end the image early and
+    // spill the rest into the page. CHUNK 1: the app's resolver must therefore
+    // decode what it reads back out of the `src`, per contracts/menu-file.md.
+    ...local.map((id, i) => `![${alt(usable.length + i)}](${encodeAddress(`mdsb-asset:${id}`)})`),
+  ];
 }
 
 /**
@@ -164,8 +230,8 @@ function tierImages(t: Tier): string[] {
  * A tier with more than one picture is why the section chooses the per item
  * layout in the first place, so this only ever runs where there is one.
  */
-function tierImage(t: Tier): string {
-  return tierImages(t)[0] ?? "";
+function tierImage(t: Tier, target: Target): string {
+  return tierImages(t, target)[0] ?? "";
 }
 
 /**
@@ -239,13 +305,13 @@ function warnNoTables(blockId: string, target: Target, sink: DiagnosticSink): vo
  * The order is the one the fallback has always used, which is what keeps the
  * golden files byte identical.
  */
-function itemBody(tier: Tier): string[] {
+function itemBody(tier: Tier, target: Target): string[] {
   const lines: string[] = [];
   if (tier.blurb !== undefined && tier.blurb !== "") lines.push(escapeText(tier.blurb));
   // On one line, separated by spaces, so they render as a row that wraps
   // rather than as a column of full width pictures somebody has to scroll
   // past to reach the next item.
-  const images = tierImages(tier);
+  const images = tierImages(tier, target);
   if (images.length > 0) lines.push(images.join(" "));
   const includes = tier.includes === undefined ? undefined : bulletList(tier.includes.map(escapeText));
   if (includes !== undefined) lines.push(includes);
@@ -297,14 +363,18 @@ function tierBlock(tier: Tier, currency: string | undefined, target: Target): st
           ) ?? ""),
     );
   }
-  return [...parts, ...itemBody(tier)].join("\n\n");
+  return [...parts, ...itemBody(tier, target)].join("\n\n");
 }
 
-function tierTable(tiers: readonly Tier[], currency: string | undefined): string {
+function tierTable(
+  tiers: readonly Tier[],
+  currency: string | undefined,
+  target: Target,
+): string {
   // The Example column appears only when at least one tier has a usable image.
   // An empty column on every row would be a worse table for everyone who does
   // not use the feature.
-  const withImages = tiers.some((t) => tierImage(t) !== "");
+  const withImages = tiers.some((t) => tierImage(t, target) !== "");
   // The same rule for details: a column of empty cells is a worse table for
   // everybody who does not sell anything with options.
   const withDetails = tiers.some((t) => realDetails(t).length > 0);
@@ -331,7 +401,7 @@ function tierTable(tiers: readonly Tier[], currency: string | undefined): string
     if (withDetails) {
       cells.push(realDetails(t).map((d) => `${cell(d.label)}: ${cell(d.value)}`).join(", "));
     }
-    if (withImages) cells.push(tierImage(t));
+    if (withImages) cells.push(tierImage(t, target));
     return `| ${cells.join(" | ")} |`;
   });
 
@@ -363,7 +433,7 @@ function tierList(
     .map((t) =>
       // Details follow the item as a list, which is what this fallback already
       // does for what is included. See `itemBody`.
-      [`**${escapeText(t.name)}**: ${escapeText(pricedAs(t, currency))}`, ...itemBody(t)].join("\n\n"),
+      [`**${escapeText(t.name)}**: ${escapeText(pricedAs(t, currency))}`, ...itemBody(t, target)].join("\n\n"),
     )
     .join("\n\n");
 }

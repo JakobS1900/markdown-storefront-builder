@@ -13,7 +13,11 @@ import { fileURLToPath } from "node:url";
 
 const { validateDocument } = await import("../engine/dist/document/validate.js");
 const { compile } = await import("../engine/dist/compile/compile.js");
-const { TARGETS } = await import("../engine/dist/compile/targets.js");
+// ALL_TARGETS, so the menu file gets golden files too. The harness keys its
+// directories by target id and is driven by whichever array is imported here,
+// so a target missing from it simply has no golden files and the golden test
+// then fails looking for them, which is the loud direction.
+const { ALL_TARGETS } = await import("../engine/dist/compile/targets.js");
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 
@@ -22,7 +26,7 @@ const names = readdirSync(fixtureDir).filter((f) => f.endsWith(".json")).sort();
 
 let written = 0;
 
-for (const target of TARGETS) {
+for (const target of ALL_TARGETS) {
   const outDir = here(`../engine/tests/compile/golden/${target.id}`);
   mkdirSync(outDir, { recursive: true });
 
@@ -35,10 +39,13 @@ for (const target of TARGETS) {
     }
 
     const base = name.replace(/\.json$/, "");
-    writeFileSync(`${outDir}/${base}.md`, compile(result.document, target.id).markdown, "utf8");
+    // The record, not the id. `findTarget` searches the paste hosts only, so an
+    // id would write the portable output into every menu-file golden and the
+    // golden test would then happily agree with it.
+    writeFileSync(`${outDir}/${base}.md`, compile(result.document, target).markdown, "utf8");
     written += 1;
   }
 }
 
-console.log(`Wrote ${written} golden file(s) across ${TARGETS.length} target(s).`);
+console.log(`Wrote ${written} golden file(s) across ${ALL_TARGETS.length} target(s).`);
 console.log("Read the diff before committing. These files are the compiler's guard.");

@@ -17,7 +17,16 @@ export { compile } from "./compile.js";
  * compiler silently drops it. One definition, one answer.
  */
 export { isSafeUrl, isSafeLinkUrl } from "./link.js";
-export { TARGETS, PORTABLE, RENTRY, TEXT_IS, FALLBACK_TARGET, findTarget } from "./targets.js";
+export {
+  TARGETS,
+  ALL_TARGETS,
+  PORTABLE,
+  RENTRY,
+  TEXT_IS,
+  MENU_FILE,
+  FALLBACK_TARGET,
+  findTarget,
+} from "./targets.js";
 export type { Capabilities, Target } from "./capabilities.js";
 export type {
   CompileDiagnostic,

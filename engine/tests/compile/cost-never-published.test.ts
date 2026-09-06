@@ -5,10 +5,16 @@
  * that output is a disclosure the seller never agreed to, on a page they
  * published themselves, and it cannot be taken back once it is on the internet.
  * This is the test that makes `cost` safe to store at all.
+ *
+ * `ALL_TARGETS`, not `TARGETS`. A cost must never appear anywhere, and that
+ * includes the menu file, which is the output a seller is most likely to send
+ * straight to a customer as an attachment. A supplier cost in it would be a
+ * disclosure with a name on it rather than one on the open internet, which is
+ * not obviously better.
  */
 import { describe, expect, it } from "vitest";
 
-import { compile, TARGETS, type Document } from "@mdsb/engine";
+import { compile, ALL_TARGETS, type Document } from "@mdsb/engine";
 
 const COST = "SUPPLIER-COST-9179";
 
@@ -30,7 +36,7 @@ const doc: Document = {
 
 describe("a cost", () => {
   it("appears in no target's output", () => {
-    for (const target of TARGETS) {
+    for (const target of ALL_TARGETS) {
       const result = compile(doc, target);
       expect([target.id, result.markdown.includes(COST)]).toEqual([target.id, false]);
     }
@@ -68,7 +74,7 @@ describe("a cost", () => {
       ],
     };
 
-    for (const target of TARGETS) {
+    for (const target of ALL_TARGETS) {
       expect([target.id, compile(rich, target).markdown.includes(COST)]).toEqual([target.id, false]);
     }
   });
@@ -76,7 +82,7 @@ describe("a cost", () => {
   it("does not become a diagnostic either", () => {
     // A warning naming the cost would publish it into the app's own interface,
     // which is not the page but is still somewhere the seller might screenshot.
-    for (const target of TARGETS) {
+    for (const target of ALL_TARGETS) {
       const messages = compile(doc, target).diagnostics.map((d) => d.message).join(" ");
       expect(messages.includes(COST)).toBe(false);
     }

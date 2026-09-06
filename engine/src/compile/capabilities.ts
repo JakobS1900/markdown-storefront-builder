@@ -42,6 +42,20 @@ export interface Capabilities {
    * any test, because every test encoded the same assumption as the emitter.
    */
   readonly hardBreak: "backslash" | "spaces";
+  /**
+   * Whether this host can display a picture held on the seller's own device.
+   *
+   * True for exactly one thing: the file we render ourselves. A paste host
+   * receives text, and no text can reach a photograph sitting on somebody's
+   * phone, so this is false for every host a page is pasted into and there is
+   * no setting that changes it.
+   *
+   * The fallback is to drop the picture and raise `local_image_unsupported`
+   * naming the item or section it belonged to. Not the file: FR-081 keeps the
+   * asset identifier and the original filename out of every message, because a
+   * warning is somewhere a seller might screenshot.
+   */
+  readonly localImages: boolean;
   /** Which escaping rules apply to artist text. Never optional. */
   readonly escapeStyle: "commonmark";
   /**

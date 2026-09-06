@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { compile } from "../../src/compile/compile.js";
-import { TARGETS } from "../../src/compile/targets.js";
+import { ALL_TARGETS } from "../../src/compile/targets.js";
 import type { Block, Document } from "../../src/document/types.js";
 
 /**
@@ -10,6 +10,11 @@ import type { Block, Document } from "../../src/document/types.js";
  *
  * The compiler runs on every keystroke once the preview exists in 2.3, so this
  * budget is the one the artist feels most directly.
+ *
+ * `ALL_TARGETS`, because a budget only applies to what it measures, and the
+ * menu file is previewed on the same keystroke as everything else. The record
+ * is passed rather than the id, or `findTarget` would fall back and this would
+ * time `portable` under a name that says `menu-file`.
  */
 
 const BUDGET_MS = 25;
@@ -38,10 +43,13 @@ function medianMs(run: () => void, times = 9): number {
 }
 
 describe("SC-008: compiling feels instant", () => {
-  it.each(TARGETS.map((t) => t.id))(`compiles a 50 block page for %s under ${BUDGET_MS}ms`, (id) => {
-    const doc = pageOf(50);
-    expect(medianMs(() => compile(doc, id))).toBeLessThan(BUDGET_MS);
-  });
+  it.each(ALL_TARGETS.map((t) => [t.id, t] as const))(
+    `compiles a 50 block page for %s under ${BUDGET_MS}ms`,
+    (_id, target) => {
+      const doc = pageOf(50);
+      expect(medianMs(() => compile(doc, target))).toBeLessThan(BUDGET_MS);
+    },
+  );
 
   it("scales roughly linearly, so a long page stays usable", () => {
     const small = medianMs(() => compile(pageOf(50), "rentry"));
