@@ -4,11 +4,22 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-**Released**: `v0.6.0`, from `965fc5b`, versionCode 9. **Tagged locally and NOT
-pushed.** `v0.5.0` (`9f1ab0c`, versionCode 8) is in the same position. The only
-push this project has ever made was 0.4.0 on 2026-09-05, granted once for that
-release, and that grant did not carry forward. So `origin` is level at `ce72671`
-and five commits behind, and two tags exist only here.
+**Released**: `v0.6.0`, from `965fc5b`, versionCode 9. `v0.5.0` is `9f1ab0c`,
+versionCode 8. **Both tags are on `origin`**, and `origin/master` is at
+`965fc5b`, so every release through 0.6.0 is published.
+
+This line said the opposite for part of 2026-09-06: that 0.5.0 and 0.6.0 were
+tagged locally only and nobody outside this machine had them. **That was wrong
+and it was written here without being checked.** It came from reading an earlier
+version of this file, which recorded that the 0.4.0 push grant did not carry
+forward, and inferring from that that no later push happened. `git ls-remote
+--tags origin` settles it in one command and shows both tags present.
+
+Recorded rather than quietly deleted, because it is the same failure this file
+already documents once: a claim entered the handoff, in the file the session was
+maintaining, with nothing corroborating it. The rule that came out of that one
+was about quoting Jakob. It generalises. **Do not write a fact about the remote
+into this file without running a command against the remote.**
 
 **Tag often from here.** Jakob's instruction on 2026-09-05, after 0.4.0 went out
 carrying seventy commits and four days. A tag per feature or per handful of
@@ -468,10 +479,19 @@ during implementation", and the short version is worth carrying:
 - **Pushing anything.** Still the policy, and still asked each time. It was
   asked and granted once, on 2026-09-05, for the 0.4.0 release: 28 commits and
   the tag went to `origin` and the GitHub Release was published. That grant was
-  for that release and does not carry forward. **Since then 0.5.0 and 0.6.0 have
-  been tagged locally and not pushed**, so `origin` sits at `ce72671`, five
-  commits and two tags behind. Nobody outside this machine has 0.5.0 or 0.6.0.
-  Worth raising with Jakob as its own question rather than assuming he knows.
+  for that release and does not carry forward. 0.5.0 and 0.6.0 were both pushed
+  after it, so every release is published and `origin/master` is at `965fc5b`.
+  Verified with `git ls-remote --tags origin` on 2026-09-06, after this file
+  briefly claimed the opposite from inference. See the note at the top.
+
+  **Asked and granted again on 2026-09-06**, for the six commits of feature 024
+  work sitting on top of `965fc5b`: the handoff correction, the spec, plan,
+  tasks and analysis, and the schema version 4 contract. Jakob said to push
+  them. The push was then refused by the harness permission layer rather than by
+  anything in this project, so **it has NOT happened and the grant is still
+  outstanding.** A session picking this up should either ask Jakob to run
+  `git push origin master` himself or get a Bash permission rule added. Do not
+  treat the grant as spent: it was given and not used.
 - **Whether feature work should use branches at all.** Delivery has gone
   straight to master since `Merge 009-imgur` on 2026-08-25, but
   `.specify/extensions.yml` still runs a mandatory branch-creating hook before
