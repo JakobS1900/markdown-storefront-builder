@@ -149,10 +149,31 @@ honest record of it.
    itself, and the only feedback would be one non blocking `size_limit_exceeded`
    warning after the fact.
 
+   **Progress as of 2026-09-06. Phases 2A, 2B and 3 are committed and green.**
+
+   | Commit | What |
+   |---|---|
+   | `c5af80e` | Schema version 4. The contract, alone. |
+   | `da03450` | `MENU_FILE` target, `localImages` capability, `ALL_TARGETS`. |
+   | `fba0a52` | The menu file itself, plus the `npm run menu-file` browser gate. |
+   | `5ed22c1` | Renderer label pattern. A real forgery bug, see below. |
+   | `9b11b6a` | Asset resolution moved onto nodes. The same bug one layer up. |
+
+   `npm run verify` on `9b11b6a`: 68 test files, 1240 tests, a11y 38, contrast
+   clean in both palettes, menu file gate clean, PWA gate clean, exit 0.
+
+   **Still to do**: Phase 4 (the asset store, quota handling, the device picture
+   UI), Phase 5 (the `Bulk pricing` relabel), then the mandatory holistic review
+   over the whole diff and the on-device bridge measurement, T058.
+
+   **T046 and T047 are already done**, pulled forward out of Phase 4 because
+   Phase 3 could not be made correct without them. Do not do them twice.
+
    The plan is at
-   `C:/Users/Emu/.claude-personal/plans/some-of-my-friends-breezy-rocket.md`.
-   Seven chunks, contract first and alone, holistic review mandatory. Route it
-   through Spec Kit as `CLAUDE.md` says.
+   `C:/Users/Emu/.claude-personal/plans/some-of-my-friends-breezy-rocket.md`,
+   and it is STALE in one respect worth knowing: it describes two capabilities
+   and `data:` URIs embedded in the markdown, which research D3 reversed before
+   any code was written. `specs/024-menu-file/` is authoritative.
 
 3. **F4, the interview wizard, is UNGATED but is now second.**
    `specs/021-starting-points/spec.md` gated it on whether a starting point
@@ -226,6 +247,26 @@ during implementation", and the short version is worth carrying:
 
 ## Verified live, do not re-probe
 
+- **A gate can pass by moving its own ruler.** `scripts/menu-file.mjs` measures
+  the saved file at 390 CSS pixels and fails on sideways scroll. Its first
+  version ran Chrome with `mobile: true`, which widens the LAYOUT VIEWPORT to
+  fit the content, so it reported "583px in a 583px viewport" and went green.
+  The ruler moved with the thing being measured. Fixed to `mobile: false` and a
+  fixed 390 comparison. Fourth gate in this project to have measured nothing,
+  and the first caught before it shipped.
+- **`npm run menu-file` is a new gate and it is in `verify`**, after `contrast`.
+  It is the first thing here to run axe over a LAID OUT page, and it found a
+  real WCAG 2.1.1 defect in code that had already shipped: a horizontally
+  scrolling region has to be keyboard focusable, and the preview's price table
+  was not. jsdom lays nothing out and the contrast gate runs one rule, so
+  neither could see it. Fixed where the wrapper is made, so the preview got it
+  too. `MDSB_BREAK_MENUFILE=1` is its self test.
+- **`scripts/contrast.mjs` was flaking for a reason, not randomly.** `a6d1314`
+  made its waits real but left the CLICKS in front of them behind a fixed
+  sleep, which is the same bug one layer up. Fixed 2026-09-06. That exposed a
+  second one: the light and dark runs share a browser profile, so the dark run
+  reopens an app that already has the example imported and no longer offers it.
+  Both waits now accept either state.
 - **`npm run verify` passes on `965fc5b`**, run alone from PowerShell on
   2026-09-06, nothing else running. 64 test files, 1092 tests, a11y 34,
   `light: 164 elements, 12 sections, 3 fields, 2 hints, 0 contrast failure(s)`
@@ -292,6 +333,53 @@ during implementation", and the short version is worth carrying:
 - **`npm run verify` passes on `053bdae`**, run alone. 1081 tests in 63 files,
   a11y 34, contrast 164 elements and 12 sections clean in both palettes, pwa
   gate green. It was 1080 before the table fix added one test.
+
+## The forgery bug, 2026-09-06, worth reading before touching the renderer
+
+A product named `Keyring](https://tracker.example/pixel.png)` made the app build
+an image pointing at that address, and drop the picture the seller had actually
+chosen. A tracking pixel smuggled through a product name. It arrives by hand or
+through an imported backup, which is somebody else's file.
+
+**The bug was ours alone.** A real Markdown parser treats `\]` in a label as a
+literal bracket, so rentry and text.is always resolved that image to the address
+the seller chose. Only our renderer was fooled, because it finds a label with a
+regular expression where the hosts use a parser. The published page was never
+affected. **When our renderer and a real parser disagree, the bug is ours by
+default.**
+
+The cause: the label pattern was `[^\]]*`. The compiler escapes a seller's
+brackets, so `A]B` arrives as `A\]B`, and a pattern that merely excludes `]`
+stops INSIDE the escape. The rest of the seller's text then supplied the `](`
+the pattern wanted. Fixed to `(?:\\.|[^\]\\])*`, which crosses an escaped
+bracket and stops at the first unescaped one.
+
+**A second fix was made and reverted, and the reversal is the more useful
+record.** Adding round brackets to `ESCAPABLE` also closes it, and
+`app/tests/render-markdown.test.ts` has always claimed that IS the defence:
+"the compiler escapes an artist's parentheses as well as their brackets".
+`ESCAPABLE` never contained parentheses. That comment described a defence that
+did not exist, and it warned in the same breath that the coupling was the kind
+that rots silently.
+
+Escaping them was tried, changed eight golden files, and broke four tests that
+deliberately assert the opposite: **feature 013 removed those brackets on
+purpose**, because they mean something only inside a link destination and the
+compiler writes those itself. Escaping them would put
+`Laser engraving \(up to 20 characters\)` on the Copy screen for every seller,
+to work around a defect in one regular expression. Reverted, and the reasoning
+is now written into `escape.ts` so nobody repeats the experiment.
+
+Why the hostile corpus never caught it: every payload in it uses a scheme
+`safeAddress` refuses anyway, so the pattern was never the thing under test. An
+address the checker ALLOWS had nothing in front of it. The new cases use an
+ordinary `https:` address for exactly that reason.
+
+The same forgery worked one layer up, against the menu file exporter, which
+found asset tokens by matching the compiled Markdown. Fixed by resolving on
+`img` nodes instead. **A pattern cannot tell the seller's words from the
+compiler's structure once they are the same characters. A node carries that
+distinction in the tree, and seller text can never become a node.**
 
 ## Traps that cost real time in this session
 
