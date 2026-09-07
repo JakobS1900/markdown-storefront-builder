@@ -210,6 +210,130 @@ describe("what the drawer does to everything behind it", () => {
   });
 });
 
+/**
+ * Everything `showModal()` would have done, done by hand.
+ *
+ * These are the tests that matter most in this feature, because they cover the
+ * part the platform normally guarantees. `inert` is set on the rest of the app
+ * and jsdom implements none of its behaviour, so the containment below is the
+ * only thing standing between a keyboard user and a page they cannot see.
+ *
+ * The drawer is opened with `openSidebar` rather than by pressing the trigger,
+ * so no history entry exists and `dismissSidebar` takes its direct path. The
+ * history path is covered separately by dispatching `popstate`, where the
+ * timing is ours rather than jsdom's.
+ */
+describe("the drawer holds on to the keyboard", () => {
+  beforeEach(() => {
+    init(true);
+    resetSidebarFocusTracking();
+    atWidth(false);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stops(): HTMLElement[] {
+    return [
+      ...document.querySelectorAll<HTMLElement>(
+        '.pages-panel a[href], .pages-panel button:not([disabled]), .pages-panel summary, .pages-panel [tabindex]:not([tabindex="-1"])',
+      ),
+    ];
+  }
+
+  it("moves focus into the panel when it opens", () => {
+    // Onto the panel itself, which carries tabindex -1 for exactly this: it can
+    // hold focus without stealing it from a control the seller has not chosen.
+    shell();
+    openSidebar();
+    shell();
+    expect(document.activeElement).toBe(document.getElementById("pages-panel"));
+  });
+
+  it("gives focus back to the trigger when it closes", () => {
+    shell();
+    openSidebar();
+    shell();
+    closeSidebar();
+    const host = shell();
+    expect(document.activeElement).toBe(
+      host.querySelector('.bar [aria-controls="pages-panel"]'),
+    );
+  });
+
+  it("never lets focus fall out to the body across a repaint", () => {
+    // The shell rebuilds its whole interface on any state change, which
+    // destroys whatever control was focused: only form fields get their caret
+    // put back. Focus then lands on the body, and tab from the body walks
+    // straight into the page behind the drawer, which is the thing this panel
+    // exists to prevent.
+    //
+    // What is asserted is that focus stays INSIDE the drawer, not that it stays
+    // on the same node. The node is gone; asking for it back would be asking
+    // for caret restoration that buttons have never had.
+    openSidebar();
+    shell();
+    stops()[0]?.focus();
+
+    const host = shell();
+    const panel = host.querySelector(".pages-panel");
+    expect(document.activeElement).not.toBe(document.body);
+    expect(panel?.contains(document.activeElement)).toBe(true);
+  });
+
+  it("wraps from the last control back to the first", () => {
+    openSidebar();
+    shell();
+    const all = stops();
+    const first = all[0];
+    const last = all[all.length - 1];
+    if (first === undefined || last === undefined) throw new Error("nothing to tab between");
+
+    last.focus();
+    document
+      .querySelector(".pages-panel")
+      ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+
+    expect(document.activeElement).toBe(first);
+  });
+
+  it("wraps backwards from the first control to the last", () => {
+    openSidebar();
+    shell();
+    const all = stops();
+    const first = all[0];
+    const last = all[all.length - 1];
+    if (first === undefined || last === undefined) throw new Error("nothing to tab between");
+
+    first.focus();
+    document
+      .querySelector(".pages-panel")
+      ?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }),
+      );
+
+    expect(document.activeElement).toBe(last);
+  });
+
+  it("closes on escape", () => {
+    openSidebar();
+    shell();
+    document
+      .querySelector(".pages-panel")
+      ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    expect(getState().sidebarOpen).toBe(false);
+  });
+
+  it("closes when the backdrop is tapped", () => {
+    openSidebar();
+    const host = shell();
+    host.querySelector<HTMLElement>(".pages-backdrop")?.click();
+    expect(getState().sidebarOpen).toBe(false);
+  });
+});
+
 describe("the system back gesture", () => {
   beforeEach(() => {
     init(true);

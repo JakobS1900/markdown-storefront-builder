@@ -202,6 +202,28 @@ async function loadRealContent() {
     `document.querySelectorAll('#surface input, #surface textarea, #surface select').length >= 3`,
     "a section to open its fields",
   );
+
+  // And the pages panel, which is a surface of its own since feature 025.
+  //
+  // It moved out of the Build surface into a drawer, and this gate measured 164
+  // elements before that and 137 after: twenty seven pieces of coloured text
+  // quietly stopped being checked. Nothing failed, because a gate that measures
+  // less does not complain about it. It reuses the same tokens as everything
+  // else, which is an argument rather than evidence, and this project's rule is
+  // that a gate is worth what it measures.
+  //
+  // The guard below demands the panel, so this cannot drift back to unmeasured
+  // without the gate refusing to report a pass.
+  await waitFor(
+    `!!document.querySelector('.bar [aria-controls="pages-panel"]')
+      || !!document.querySelector('.pages-panel')`,
+    "the app to offer or already show the pages panel",
+  );
+  await evaluate(`(() => {
+    const t = document.querySelector('.bar [aria-controls="pages-panel"]');
+    if (t) t.click();
+  })()`);
+  await waitFor(`!!document.querySelector('.pages-panel .pages li')`, "the pages panel to list a page");
 }
 
 async function auditScheme(scheme) {
@@ -242,6 +264,11 @@ async function auditScheme(scheme) {
       sections: document.querySelectorAll('#surface .blocks > li').length,
       fields: document.querySelectorAll('#surface input, #surface textarea, #surface select').length,
       hints: document.querySelectorAll('#surface .hint').length,
+      // Feature 025 moved the page list into a panel of its own, and this gate
+      // silently went from measuring 164 elements to 137 without saying so.
+      // Counted and demanded, so a panel that stops being drawn stops the run
+      // rather than shrinking it.
+      pages: document.querySelectorAll('.pages-panel .pages li').length,
     });
   })()`);
   return JSON.parse(result);
@@ -254,19 +281,19 @@ try {
   await send("Runtime.enable");
 
   for (const scheme of ["light", "dark"]) {
-    const { violations, checked, sections, fields, hints } = await auditScheme(scheme);
+    const { violations, checked, sections, fields, hints, pages } = await auditScheme(scheme);
     const nodes = violations.flatMap((v) => v.nodes);
     console.log(
-      `\n${scheme}: ${checked} elements, ${sections} sections, ${fields} fields, ${hints} hints, ${nodes.length} contrast failure(s)`,
+      `\n${scheme}: ${checked} elements, ${sections} sections, ${fields} fields, ${hints} hints, ${pages} pages listed, ${nodes.length} contrast failure(s)`,
     );
 
     // A run that measured the empty shell would pass and prove nothing, which
     // is the trap three tests fell into earlier in this project. The example
     // storefront has several sections and an opened one has several fields, so
     // this refuses to report a pass it did not earn.
-    if (sections < 3 || fields < 3) {
+    if (sections < 3 || fields < 3 || pages < 1) {
       console.error(
-        `  ${scheme}: only ${sections} sections and ${fields} fields on screen. The example page did not load, so this run proves nothing.`,
+        `  ${scheme}: only ${sections} sections, ${fields} fields and ${pages} listed pages on screen. Something did not render, so this run proves less than it claims.`,
       );
       failed++;
     }

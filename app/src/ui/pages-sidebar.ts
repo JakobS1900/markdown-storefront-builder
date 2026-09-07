@@ -404,7 +404,20 @@ export function pagesColumn(state: State): HTMLElement {
 let wasOpen = false;
 
 export function syncSidebarFocus(open: boolean, trigger: HTMLElement | null): void {
-  if (open && !wasOpen) {
+  // Two reasons to take focus, and the second is not obvious.
+  //
+  // The drawer has just opened, which is the ordinary one. Or it is open and
+  // focus has fallen to the body, which happens on any repaint that destroys
+  // the control the seller was on: the shell rebuilds its whole interface, and
+  // only form fields get their caret put back. A modal that lets focus land on
+  // the body behind it is not containing anything, and tab from there walks
+  // straight into a page nobody can see.
+  //
+  // Both conditions require focus to be nowhere useful, so neither can pull the
+  // caret out of a field somebody is typing into.
+  const lost = document.activeElement === document.body;
+
+  if (open && (!wasOpen || lost)) {
     document.getElementById(PANEL_ID)?.focus({ preventScroll: true });
   } else if (!open && wasOpen) {
     trigger?.focus({ preventScroll: true });
