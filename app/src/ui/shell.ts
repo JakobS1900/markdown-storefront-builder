@@ -88,6 +88,16 @@ function statusLine(): HTMLElement {
     return el("div", { class: "status error", role: "alert" }, children);
   }
 
+  // `role="status"` is already an aria-live region, so a busy message is
+  // announced as well as shown. Both matter here: the announcement is for a
+  // screen reader, and the visible text is for the seller who tapped a template
+  // and is watching nothing happen.
+  if (status.kind === "busy") {
+    return el("div", { class: "status busy", role: "status" }, [
+      status.message ?? "Working",
+    ]);
+  }
+
   return el("div", { class: "status", role: "status" }, [
     status.kind === "saved" ? "Saved" : "",
   ]);

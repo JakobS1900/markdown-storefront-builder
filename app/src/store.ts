@@ -23,7 +23,25 @@ import { canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 export type Surface = "build" | "preview" | "export";
 
 export interface Status {
-  readonly kind: "idle" | "saved" | "error";
+  /**
+   * `busy` means something the seller asked for is under way and has not
+   * finished.
+   *
+   * It exists because opening a template looked broken. The starting points are
+   * lazy chunks on purpose, split out of the entry bundle and guarded by a test
+   * that keeps them out of it, so `starter.load()` is a dynamic import that
+   * needs about thirty macrotask ticks cold and three warm. Between the tap and
+   * the page appearing there was nothing at all: no spinner, no text, no
+   * disabled control. The only feedback was an `announce()` AFTER it resolved,
+   * which a sighted seller never hears.
+   *
+   * Jakob hit exactly that on 2026-09-07 and described it as the app not
+   * loading the page, then noticed it had. Something that works and looks
+   * broken for a second is a defect, and the fix is to say so rather than to
+   * make the import eager, which would put eight documents back into the entry
+   * chunk to hide a missing sentence.
+   */
+  readonly kind: "idle" | "saved" | "busy" | "error";
   readonly message?: string;
   /**
    * Present when a page could not be loaded. FR-018: the artist must always be
@@ -386,6 +404,32 @@ function setQuietly(next: Patch): void {
   }
   state = merged as unknown as State;
   repaintSoon();
+}
+
+/**
+ * Says that something the seller asked for is under way.
+ *
+ * Paints immediately rather than on the deferred repaint, because the entire
+ * point is to be on screen BEFORE the slow thing finishes. `setQuietly` would
+ * put it up at roughly the moment it stopped being true.
+ *
+ * Never sets an error and never clears one: a failure has its own message and a
+ * busy line has nothing to say about it.
+ */
+export function setBusy(message: string): void {
+  if (state.status.kind === "error") return;
+  set({ status: { kind: "busy", message } });
+}
+
+/**
+ * The end of a busy stretch, whatever the outcome.
+ *
+ * Only clears a status this module put up. Anything that finished by setting an
+ * error, or by opening a page and reporting its own state, has already said
+ * something better and must not be overwritten by silence.
+ */
+export function clearBusy(): void {
+  if (state.status.kind === "busy") set({ status: { kind: "idle" } });
 }
 
 export function setSurface(surface: Surface): void {

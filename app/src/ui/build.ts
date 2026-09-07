@@ -12,6 +12,7 @@ import {
   addBlock,
   askPageDelete,
   cancelPageDelete,
+  clearBusy,
   getState,
   moveBlock,
   newPage,
@@ -19,6 +20,7 @@ import {
   removeBlock,
   removePage,
   selectBlock,
+  setBusy,
   undoLast,
   updateBlock,
   update,
@@ -164,6 +166,10 @@ function starterPicker(id: string): HTMLElement {
               // once you know which one covers what you sell.
               label: `${starter.label}. ${starter.description}`,
               onClick: () => {
+                // Before the import starts, not after. `load()` is a dynamic
+                // import of a lazy chunk, about thirty ticks cold, and this is
+                // the sentence that stops that reading as a dead button.
+                setBusy(`Opening ${starter.label}`);
                 void starter
                   .load()
                   .then((doc) => openBackup(serializeDocument(doc)))
@@ -179,6 +185,9 @@ function starterPicker(id: string): HTMLElement {
                     message: "That template could not be opened. Nothing has been changed.",
                   }))
                   .then((result) => {
+                    // `openBackup` has already set whatever the outcome was, so
+                    // this only takes down a busy line still standing.
+                    clearBusy();
                     announce(
                       result.ok
                         ? `Started a new page from ${starter.label}. Change anything you like.`
@@ -310,7 +319,9 @@ function pageList(state: State): HTMLElement[] {
               button({
                 label,
                 onClick: () => {
+                  setBusy(`Opening ${title}`);
                   void openPage(page.id).then(() => {
+                    clearBusy();
                     if (getState().pageId === page.id)
                       announce(`Opened ${title}`);
                     // The button just pressed no longer exists: it is the
@@ -378,11 +389,15 @@ function emptyState(): HTMLElement[] {
     onClick: () => {
       load.disabled = true;
       announce("Loading an example.");
+      // This one crosses the network, so it can be slow for a reason a seller
+      // will recognise, and slower than any of the others.
+      setBusy("Opening the example page");
       void fetch("example.json")
         .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
         .then((text) => openBackup(text))
         .catch(() => ({ ok: false, message: "The example could not be loaded. Nothing has been changed." }))
         .then((result) => {
+          clearBusy();
           load.disabled = false;
           // Its own words on success. `openBackup` says "the page you had open
           // is still saved", which is true of an import and nonsense to

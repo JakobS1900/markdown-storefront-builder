@@ -871,6 +871,25 @@ fieldset.item > .btn.icon.danger {
   font-size: var(--t-sm);
 }
 
+/*
+ * Something is happening, as opposed to something has happened.
+ *
+ * Full ink rather than the muted grey the idle line uses, because "Saved" is a
+ * receipt somebody can ignore and "Opening Handmade and crafts" is the only
+ * thing on screen telling them their tap registered. Rendered identically to
+ * "Saved" it would read as done, which is the opposite of true.
+ *
+ * No animation and deliberately no transform. A pulse would be the obvious
+ * choice and this app has already shipped a bug where a transform on an `#app`
+ * descendant silently re-parented every fixed element inside it, pinning the
+ * tab bar to the wrong thing. Contrast is enough to carry a sentence that is on
+ * screen for half a second, and it costs nothing to anybody who has asked for
+ * reduced motion.
+ */
+.status.busy {
+  color: var(--ink);
+}
+
 .status.error {
   background: var(--warn-bg);
   color: var(--warn-ink);
