@@ -567,6 +567,25 @@ distinction in the tree, and seller text can never become a node.**
   gate's result through it.** Run anything whose exact output matters through
   the PowerShell tool instead, which is not intercepted, and prefer the Read and
   Grep tools over shell `cat` and `grep`.
+- **PowerShell writes a BOM, and a BOM breaks the Gradle build.** Hit twice on
+  2026-09-06 and 2026-09-07. `Set-Content -Encoding utf8` in Windows PowerShell
+  5.1 writes UTF-8 **with** a byte order mark, and so does the tooling that wrote
+  three test files earlier that day. `android/app/build.gradle` with `EF BB BF`
+  at the front fails in one second with no useful message: no "what went wrong"
+  block, no stack, just `BUILD FAILED in 1s`.
+
+  It cost a build cycle for a two line version bump that should have gone
+  through the Edit tool, which is what `CLAUDE.md` already says and what was
+  walked past anyway. **Use Edit for file changes. If something must be written
+  from the shell, check the first three bytes afterwards:**
+
+  ```powershell
+  $b = [IO.File]::ReadAllBytes((Resolve-Path "path"))
+  "{0:X2} {1:X2} {2:X2}" -f $b[0],$b[1],$b[2]   # EF BB BF means a BOM
+  ```
+
+  Stripping it is a byte copy from offset 3, not a rewrite: rewriting the text
+  is how the BOM got there.
 - **`cat >>` corrupted a file again on 2026-09-04**, in the exact way
   `CLAUDE.md` says it will, this time appending a test to
   `app/tests/bulk-apply.test.ts` and breaking a comment forty lines further up.
