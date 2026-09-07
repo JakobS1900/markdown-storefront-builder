@@ -15,7 +15,7 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { addBlock, getState, init, subscribe } from "../src/store.js";
+import { addBlock, getState, init, openSidebar, subscribe } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -28,6 +28,9 @@ function live(): HTMLElement {
   const root = document.getElementById("app");
   if (root === null) throw new Error("missing #app");
   init(true);
+  // "Start a new page" and the template picker moved into the sidebar in
+  // feature 025, so it has to be showing for these to reach them.
+  openSidebar();
   stop = subscribe(() => renderShell(root));
   renderShell(root);
   return root;

@@ -6,29 +6,23 @@
  * unreliable and unreachable by keyboard, so the buttons are the accessible
  * path and drag is the enhancement, not the other way round.
  */
-import { serializeDocument, type Block } from "@mdsb/engine";
+import { type Block } from "@mdsb/engine";
 
 import {
   addBlock,
-  askPageDelete,
-  cancelPageDelete,
   clearBusy,
   getState,
   moveBlock,
-  newPage,
-  openPage,
   removeBlock,
-  removePage,
   selectBlock,
   setBusy,
   undoLast,
   updateBlock,
   update,
-  type State,
 } from "../store.js";
 import { openBackup } from "../import.js";
-import { STARTERS } from "../starters/index.js";
-import { announce, button, disclosure, el, field, render } from "./dom.js";
+import { showsEmptyState, starterPicker } from "./pages-sidebar.js";
+import { announce, button, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
 
 const ADDABLE: Block["kind"][] = [
@@ -105,268 +99,10 @@ function revealSection(blockId: string): void {
   }
 }
 
-/**
- * Whether the surface has nothing of its own to show: no sections, and no
- * offer to undo removing the last one hanging over an otherwise empty page.
- *
- * `buildSurface` reads this to choose the empty state over the section list.
- * `pageList` reads the very same predicate to decide whether to include its
- * own copy of the starting-point picker, rather than repeating the
- * condition. The two placements answer two different situations, "just
- * arrived with nothing saved" and "already have pages, want another", and
- * must never both be on screen at once: pressing "Start a new page" while a
- * page is already saved lands on an empty document with `state.pages`
- * non-empty, which is true of both conditions independently the moment they
- * are written separately. A second copy of this check drifting from the
- * first is exactly how that duplicate picker, with the identical name "Start
- * from a template", would come back.
- */
-function showsEmptyState(state: State): boolean {
-  return state.doc.blocks.length === 0 && state.undo?.kind !== "block";
-}
-
-/** When a page was last written, short enough to sit beside its title. */
-function lastEdited(at: number): string {
-  const when = new Date(at);
-  return when.toDateString() === new Date().toDateString()
-    ? `today at ${when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-    : when.toLocaleDateString();
-}
-
-/**
- * The starting points, offered wherever somebody might begin a page.
- *
- * Declared in two places and rendered in exactly one, see `showsEmptyState`.
- * `pageList` returns nothing when there are no saved pages, which is right, and
- * which would otherwise hide this from the person who has just arrived and
- * needs it most.
- *
- * A folded `details` with a fixed id, so `shell.ts` reopens it after a repaint
- * along with every other group, and so the picker does not need a scrap of
- * state in the store.
- *
- * Choosing one goes through `openBackup`, the same path the example and a file
- * import take. That is where the page gets validated, gets an id of its own,
- * and is guaranteed not to touch whatever was already open.
- */
-function starterPicker(id: string): HTMLElement {
-  return disclosure({
-    id,
-    className: "starters",
-    summary: "Start from a template",
-    children: [
-      el(
-        "ul",
-        { "aria-label": "Templates to start from" },
-        STARTERS.map((starter) =>
-          el("li", {}, [
-            button({
-              // The description is part of the name, not decoration beside it.
-              // "Art commissions" and "Handmade and crafts" are a choice only
-              // once you know which one covers what you sell.
-              label: `${starter.label}. ${starter.description}`,
-              onClick: () => {
-                // Before the import starts, not after. `load()` is a dynamic
-                // import of a lazy chunk, about thirty ticks cold, and this is
-                // the sentence that stops that reading as a dead button.
-                setBusy(`Opening ${starter.label}`);
-                void starter
-                  .load()
-                  .then((doc) => openBackup(serializeDocument(doc)))
-                  // Catches a rejection, which is the offline `load()` and a
-                  // `serializeDocument` throw. It deliberately does not cover
-                  // `openBackup` RESOLVING `{ ok: false }`, whose message is
-                  // written for a file import and would read as nonsense here.
-                  // That path needs a starting point that fails to parse, and
-                  // `app/tests/starters.test.ts` refuses to let one ship. If
-                  // that gate is ever removed, this needs its own message.
-                  .catch(() => ({
-                    ok: false,
-                    message: "That template could not be opened. Nothing has been changed.",
-                  }))
-                  .then((result) => {
-                    // `openBackup` has already set whatever the outcome was, so
-                    // this only takes down a busy line still standing.
-                    clearBusy();
-                    announce(
-                      result.ok
-                        ? `Started a new page from ${starter.label}. Change anything you like.`
-                        : result.message,
-                    );
-                  });
-              },
-            }),
-          ]),
-        ),
-      ),
-    ],
-  });
-}
-
-/**
- * The other pages saved in this browser.
- *
- * Storage has been multi-page since the app shell was built and there was never
- * a way to choose one, so whichever page had the newest timestamp was the only
- * page anybody could reach. That went unnoticed while there was one page per
- * device, and then two things started making more: importing a backup writes it
- * under a new id so that opening the wrong file cannot destroy the page already
- * open, and FR-018 refuses a page it cannot read while leaving it in place with
- * the newest timestamp of all. Each of those strands the artist's real page,
- * intact and unreachable, which is close enough to losing it.
- *
- * It lives on Build, folded, rather than in a fourth tab: Build is the surface
- * still standing when a page has been refused, which is the case this exists
- * for, and a tab would spend a permanent quarter of the tab bar on something
- * used once a month.
- *
- * It is present whenever storage works, including for somebody who has exactly
- * one page. It first appeared only when there was something to switch to, which
- * was right while it was only a switcher and became wrong the moment it carried
- * the only way to start a second page. That is FR-021c replacing FR-020c, and
- * the reasoning is written down in specs/012-page-lifecycle rather than being
- * quietly edited into the spec it contradicts.
- *
- * The page on screen has no remove control, and the store refuses its id as
- * well. Removing what somebody is looking at raises a question with no good
- * answer, and every answer to it is worse than not asking.
- */
-function pageList(state: State): HTMLElement[] {
-  if (!state.storageOk) return [];
-
-  // Nothing saved yet, so there is nothing to list. A new install used to open
-  // on "Your pages (0)": a list of nothing, above an empty page, offering to
-  // start a second empty page. It appears the moment the first page is written,
-  // which the store now notices, so hiding it here does not hide the way to a
-  // second page for longer than it takes to type one character.
-  if (state.pages.length === 0) return [];
-
-  const live =
-    state.doc.title === undefined || state.doc.title === ""
-      ? "Untitled page"
-      : state.doc.title;
-
-  return [
-    disclosure({
-      // Its own id, not one from the numbered sequence. There is exactly one of
-      // these on the surface, and a number would make its identity depend on
-      // how many fields the open section happens to have.
-      id: "pages-group",
-      className: "pages-group",
-      summary: `Your pages (${String(state.pages.length)})`,
-      children: [
-        el(
-          "ul",
-          { class: "pages", "aria-label": "Saved pages" },
-          state.pages.map((page) => {
-            const current = page.id === state.pageId;
-            // The record only catches up to the title when a save lands, so the
-            // page on screen reads its name from the document instead. Renaming
-            // renames the entry as it is typed.
-            const title = current ? live : page.title;
-            // A title is optional and untitled pages are all called the same
-            // thing, so the date is part of the name rather than decoration
-            // beside it. Two entries reading "Untitled page" are not a choice.
-            const label = `${title}, last edited ${lastEdited(page.updatedAt)}`;
-
-            if (current) {
-              return el("li", {}, [
-                el("p", { class: "current", "aria-current": "page" }, [
-                  `${label}. Open now.`,
-                ]),
-              ]);
-            }
-
-            // Being asked about, the row holds the question and its two answers
-            // and nothing else, exactly as a section does. The control that
-            // raised it is gone while it stands, so the same thumb cannot hit
-            // it twice, and "open this page" is not sitting a few pixels from
-            // "destroy this page" during the one interaction that is final.
-            if (state.pendingPageDeleteId === page.id) {
-              // The group role goes on a wrapper, not on the `li`. Overriding a
-              // list item's role breaks the list it is in, which axe says as
-              // `aria-allowed-role` and `list`, and it caught this the day the
-              // markup was written.
-              return el("li", { class: "confirm" }, [
-                el("div", { role: "group", "aria-label": `Remove ${title}?` }, [
-                  el("p", { class: "ask" }, [
-                    `Remove ${title}? This cannot be undone.`,
-                  ]),
-                  el("div", { class: "answers" }, [
-                    button({
-                      label: `Keep ${title}`,
-                      variant: "primary",
-                      onClick: () => {
-                        cancelPageDelete();
-                        announce(`Kept ${title}`);
-                      },
-                    }),
-                    button({
-                      label: `Yes, remove ${title}`,
-                      variant: "danger",
-                      onClick: () => {
-                        void removePage(page.id).then(() => {
-                          announce(`Removed ${title}`);
-                        });
-                      },
-                    }),
-                  ]),
-                ]),
-              ]);
-            }
-
-            return el("li", {}, [
-              button({
-                label,
-                onClick: () => {
-                  setBusy(`Opening ${title}`);
-                  void openPage(page.id).then(() => {
-                    clearBusy();
-                    if (getState().pageId === page.id)
-                      announce(`Opened ${title}`);
-                    // The button just pressed no longer exists: it is the
-                    // current entry now, or the page was refused and the
-                    // status line has the news. Either way focus has fallen
-                    // to the body, which leaves a keyboard user at the top
-                    // of the document hunting for what changed. The summary
-                    // is where they were.
-                    document
-                      .querySelector<HTMLElement>(".pages-group > summary")
-                      ?.focus({ preventScroll: true });
-                  });
-                },
-              }),
-              button({
-                label: `Remove ${title}`,
-                glyph: "×",
-                variant: "danger",
-                onClick: () => {
-                  askPageDelete(page.id);
-                },
-              }),
-            ]);
-          }),
-        ),
-        el("div", { class: "adders" }, [
-          button({
-            label: "Start a new page",
-            variant: "primary",
-            onClick: () => {
-              void newPage(getState().doc.target).then(() => {
-                announce("Started a new page");
-              });
-            },
-          }),
-        ]),
-        // Skipped while the empty state is the thing on screen: it carries its
-        // own copy of this same picker, and having both up at once is two
-        // disclosures sharing the summary "Start from a template", which is an
-        // accessible-name collision as well as a redundant control.
-        ...(showsEmptyState(state) ? [] : [starterPicker("starters-group")]),
-      ],
-    }),
-  ];
-}
+// `showsEmptyState`, `lastEdited` and `starterPicker` moved to
+// `pages-sidebar.ts` in feature 025, along with the page list itself. They are
+// imported above. The dependency runs one way: this file reads from there, and
+// nothing there reads from here.
 
 /**
  * What somebody sees before they have written anything.
@@ -569,7 +305,9 @@ export function buildSurface(container: HTMLElement): void {
   render(
     container,
     el("div", { class: "stack" }, [
-      ...pageList(state),
+      // The page list used to open this surface, above the page being edited.
+      // It is in the sidebar now, reachable from all three surfaces instead of
+      // this one, which is feature 025 and FR-106: there is exactly one of it.
       field({
         label: "Page title (optional)",
         value: state.doc.title ?? "",

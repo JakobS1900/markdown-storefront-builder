@@ -17,7 +17,14 @@
  * that is precisely the work that made typing expensive on a Moto G7. So a
  * narrow screen does not build it at all, and a change of width repaints.
  */
-import { getState, setSurface, type Surface } from "../store.js";
+import { getState, openSidebar, setSurface, type Surface } from "../store.js";
+import { rememberSidebarOpen } from "../surface-history.js";
+import {
+  PANEL_ID,
+  pagesColumn,
+  pagesDrawer,
+  syncSidebarFocus,
+} from "./pages-sidebar.js";
 import { handOff } from "../files.js";
 import { rememberSurface } from "../surface-history.js";
 import { announce, button, el, render, resetFieldIds } from "./dom.js";
@@ -49,17 +56,45 @@ const renderers: Record<Surface, SurfaceRenderer> = {
  */
 const ROOM_FOR_BOTH = "(min-width: 900px)";
 
+/**
+ * Wide enough to pin the page list open beside everything else.
+ *
+ * A second breakpoint, which the plan for this feature said not to add, and the
+ * reason it was wrong is arithmetic. At 900 pixels the editor already shares the
+ * width with the preview; a third column would leave roughly 300 pixels each and
+ * make all three worse. Pinning the list at 1300 instead is additive: nothing
+ * that happens today at 900 changes, and a laptop gets list, editor and preview
+ * at once.
+ *
+ * Below this the list is a drawer, which is available at every width including
+ * a desktop window somebody has made narrow. It is not a phone feature that a
+ * desktop tolerates.
+ */
+const ROOM_FOR_SIDEBAR = "(min-width: 1300px)";
+
 function roomForBoth(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(ROOM_FOR_BOTH).matches;
 }
 
-/** Repaints when the window crosses the breakpoint, since the shape changes. */
+function roomForSidebar(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(ROOM_FOR_SIDEBAR).matches;
+}
+
+/**
+ * Repaints when the window crosses either breakpoint, since the shape changes.
+ *
+ * Both are watched. Crossing 1300 moves the page list between a drawer and a
+ * pinned column, and a window dragged past it while the drawer was open would
+ * otherwise keep an overlay up beside the column it just became.
+ */
 export function watchWidth(onChange: () => void): () => void {
   if (typeof window.matchMedia !== "function") return () => undefined;
-  const query = window.matchMedia(ROOM_FOR_BOTH);
   const handle = (): void => onChange();
-  query.addEventListener("change", handle);
-  return () => query.removeEventListener("change", handle);
+  const queries = [window.matchMedia(ROOM_FOR_BOTH), window.matchMedia(ROOM_FOR_SIDEBAR)];
+  for (const query of queries) query.addEventListener("change", handle);
+  return () => {
+    for (const query of queries) query.removeEventListener("change", handle);
+  };
 }
 
 function statusLine(): HTMLElement {
@@ -230,6 +265,40 @@ export function renderShell(root: HTMLElement): void {
     panes.push(side);
   }
 
+  // Pinned where there is room, a drawer everywhere else. Decided here rather
+  // than in CSS for the reason the preview pane is: a media query would still
+  // build the phone's copy on every repaint for something the phone never
+  // shows, and that is the work that made typing expensive on a Moto G7.
+  const pinned = roomForSidebar();
+  const drawerOpen = state.sidebarOpen && !pinned;
+
+  if (pinned) panes.unshift(pagesColumn(state));
+
+  // While the drawer is up, everything behind it is out of reach. `inert` is
+  // the platform's word for that and it is what a browser acts on. jsdom
+  // implements it neither as a property nor as behaviour, so nothing here is
+  // proved by asserting the attribute; the focus containment inside the drawer
+  // is the guarantee the tests actually establish. Both exist because they fail
+  // in different places.
+  const behind = drawerOpen ? { inert: "" } : {};
+
+  // Set on the element rather than wrapped in one. `.tabs` is `position:
+  // fixed`, and giving it a new parent is how it once ended up pinned to the
+  // app instead of the viewport.
+  if (drawerOpen) tabs.setAttribute("inert", "");
+
+  const trigger = pinned
+    ? undefined
+    : button({
+        label: "Your pages",
+        expanded: state.sidebarOpen,
+        controls: PANEL_ID,
+        onClick: () => {
+          rememberSidebarOpen();
+          openSidebar();
+        },
+      });
+
   render(
     root,
     // The host picker used to live here, which made it the first control on
@@ -238,10 +307,22 @@ export function renderShell(root: HTMLElement): void {
     // and they have no reason to know what rentry is. It has moved to the
     // Export tab, where the choice is actually being made and where its effect
     // is visible in the same glance.
-    el("header", { class: "bar" }, [el("h1", {}, ["Storefront builder"])]),
+    el("header", { class: "bar", ...behind }, [
+      ...(trigger === undefined ? [] : [trigger]),
+      el("h1", {}, ["Storefront builder"]),
+    ]),
     statusLine(),
-    el("main", { class: alongside ? "split" : undefined }, panes),
+    el("main", { class: alongside ? "split" : undefined, ...behind }, panes),
     tabs,
+    ...(drawerOpen ? [pagesDrawer(state)] : []),
+  );
+
+  // After the render, because the nodes it moves focus to have just been made.
+  // It acts only on a change of state, or every keystroke would drag the caret
+  // out of the field being typed into and into the panel.
+  syncSidebarFocus(
+    drawerOpen,
+    root.querySelector<HTMLElement>(`.bar [aria-controls="${PANEL_ID}"]`),
   );
 
   // Groups before the caret: a field inside a folded group cannot take focus.

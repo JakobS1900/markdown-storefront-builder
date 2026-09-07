@@ -19,7 +19,15 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { emptyDocument } from "@mdsb/engine";
 
 import { listPages, writePage } from "../src/db.js";
-import { getState, init, refreshPages, removePage, setSurface, subscribe } from "../src/store.js";
+import {
+  getState,
+  init,
+  openSidebar,
+  refreshPages,
+  removePage,
+  setSurface,
+  subscribe,
+} from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
 import { settle } from "./settle.js";
 
@@ -41,18 +49,21 @@ async function live(pageId: string, title?: string): Promise<void> {
   const root = document.getElementById("app");
   if (root === null) throw new Error("missing #app");
   init(true, title === undefined ? undefined : { ...emptyDocument("rentry"), title }, pageId);
+  // The page list moved into the sidebar in feature 025, so it has to be
+  // showing for these to have anything to act on.
+  openSidebar();
   stop = subscribe(() => renderShell(root));
   await refreshPages();
   renderShell(root);
 }
 
-/** A control in the page group, by accessible name. */
+/** A control in the pages panel, by accessible name. */
 function control(name: string): HTMLButtonElement {
-  const found = [...document.querySelectorAll<HTMLButtonElement>(".pages-group button")].filter(
+  const found = [...document.querySelectorAll<HTMLButtonElement>(".pages-panel button")].filter(
     (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === name,
   );
   if (found.length !== 1) {
-    const all = [...document.querySelectorAll(".pages-group button")].map(
+    const all = [...document.querySelectorAll(".pages-panel button")].map(
       (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
     );
     throw new Error(`${String(found.length)} controls named ${JSON.stringify(name)}. Saw: ${JSON.stringify(all)}`);
@@ -77,7 +88,7 @@ describe("starting a page", () => {
     await stored("only", { title: "Commissions" });
     await live("only", "Commissions");
 
-    expect(document.querySelector(".pages-group")).not.toBeNull();
+    expect(document.querySelector(".pages-panel")).not.toBeNull();
     expect(control("Start a new page")).toBeTruthy();
   });
 
@@ -104,6 +115,13 @@ describe("starting a page", () => {
 
     control("Start a new page").click();
     await settle();
+
+    // Starting a page closes the drawer, because the seller now has a page to
+    // write on and the list has done its job. Reopened here to look at what it
+    // holds, which is what this test is actually about: the new page is listed
+    // straight away rather than appearing only once it has been typed into.
+    openSidebar();
+    renderShell(document.getElementById("app") as HTMLElement);
 
     expect(document.querySelectorAll(".pages li")).toHaveLength(2);
     expect(document.querySelectorAll('.pages [aria-current="page"]')).toHaveLength(1);

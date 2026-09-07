@@ -43,6 +43,7 @@ import {
   addBlock,
   getState,
   init,
+  openSidebar,
   refreshPages,
   selectBlock,
   selectTiers,
@@ -215,12 +216,21 @@ describe("the page switcher is accessible", () => {
     await refreshPages();
   });
 
-  /** Unfolded, because a closed group is content axe is entitled to skip. */
+  /**
+   * Showing, because a panel that is not built is content axe cannot see.
+   *
+   * It used to be a folded `details` that this unfolded. It is a drawer now,
+   * absent from the document entirely until it is opened, so this opens it and
+   * renders rather than reaching for a node and setting a property. That is a
+   * state the gate had never seen before feature 025 and it is the state where
+   * the interface is at its most unusual: a modal region over an inert page.
+   */
   function open(root: HTMLElement): void {
+    openSidebar();
     renderShell(root);
-    const group = document.querySelector<HTMLDetailsElement>(".pages-group");
-    if (group === null) throw new Error("the switcher did not render");
-    group.open = true;
+    if (document.querySelector(".pages-panel") === null) {
+      throw new Error("the switcher did not render");
+    }
   }
 
   it("has no axe violations with the switcher open", async () => {
@@ -312,10 +322,11 @@ describe("the starting point picker is accessible", () => {
     for (let i = 0; i < 12; i += 1) await new Promise((r) => setTimeout(r, 0));
     renderShell(root);
 
-    const pages = document.querySelector<HTMLDetailsElement>(".pages-group");
+    openSidebar();
+    renderShell(root);
+    const pages = document.querySelector(".pages-panel");
     if (pages === null) throw new Error("Your pages did not render");
-    pages.open = true;
-    const group = document.querySelector<HTMLDetailsElement>(".pages-group .starters");
+    const group = document.querySelector<HTMLDetailsElement>(".pages-panel .starters");
     if (group === null) throw new Error("the picker did not render beside Your pages");
     group.open = true;
 

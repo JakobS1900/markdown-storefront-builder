@@ -25,7 +25,16 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { emptyDocument } from "@mdsb/engine";
 
 import { listPages, writePage } from "../src/db.js";
-import { addBlock, getState, init, refreshPages, selectBlock, subscribe, update } from "../src/store.js";
+import {
+  addBlock,
+  getState,
+  init,
+  openSidebar,
+  refreshPages,
+  selectBlock,
+  subscribe,
+  update,
+} from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
 import { settle } from "./settle.js";
@@ -64,6 +73,11 @@ async function live(pageId: string, title?: string): Promise<void> {
   const root = document.getElementById("app");
   if (root === null) throw new Error("missing #app");
   init(true, title === undefined ? undefined : { ...emptyDocument("rentry"), title }, pageId);
+  // The list moved into the sidebar in feature 025, so it has to be showing for
+  // these to have anything to look at. Opened rather than pinned: jsdom answers
+  // no media query, so this is the narrow path, which is the one a seller on a
+  // phone actually takes.
+  openSidebar();
   stop = subscribe(() => renderShell(root));
   await refreshPages();
   renderShell(root);
@@ -119,8 +133,8 @@ describe("the page list", () => {
     renderShell(document.getElementById("app") as HTMLElement);
 
     expect(await listPages()).toHaveLength(1);
-    expect(document.querySelector(".pages-group")).not.toBeNull();
-    expect(document.querySelector(".pages-group > summary")?.textContent).toBe("Your pages (1)");
+    expect(document.querySelector(".pages-panel")).not.toBeNull();
+    expect(document.querySelector(".panel-heading")?.textContent).toBe("Your pages (1)");
     expect(document.querySelector('.pages [aria-current="page"]')?.textContent).toContain("Commissions");
   });
 
@@ -164,7 +178,7 @@ describe("the page list", () => {
 
     expect(document.querySelector(".pages")).not.toBeNull();
     expect(entries()).toHaveLength(2);
-    expect(document.querySelector(".pages-group > summary")?.textContent).toBe("Your pages (2)");
+    expect(document.querySelector(".panel-heading")?.textContent).toBe("Your pages (2)");
   });
 
   it("lists the newest first", async () => {
@@ -215,11 +229,19 @@ describe("the page list", () => {
   });
 
   it("stays open when a section is opened, having been left open", async () => {
-    // It used to fold itself shut whenever a section was opened. The shell
-    // remembers which groups were open by id, and this one took its id from the
-    // counter that every field draws from, so rendering an open section's
-    // fields moved the number out from under it and the shell had nothing to
-    // restore. Nothing the artist did closed it and it closed anyway.
+    // The promise is unchanged and the way it is kept is completely different,
+    // so this test now points at the new mechanism rather than the old one.
+    //
+    // It used to be a `details` group that folded itself shut whenever a
+    // section was opened: the shell restores open groups by id, and this one
+    // drew its id from the counter every field uses, so rendering an open
+    // section's fields moved the number out from under it and there was nothing
+    // to restore. Nothing the artist did closed it and it closed anyway.
+    //
+    // That failure mode no longer exists. The panel is not a `details` and its
+    // open state is in the store, where no amount of repainting can lose it.
+    // What is still worth asserting is the thing the seller cares about: the
+    // list they left open is still open after the interface rebuilds.
     await stored("mine", { title: "Commissions", updatedAt: 2000 });
     await stored("other", { title: "Old prices", updatedAt: 1000 });
     await live("mine", "Commissions");
@@ -234,17 +256,13 @@ describe("the page list", () => {
     selectBlock(undefined);
     renderShell(root);
 
-    const group = document.querySelector<HTMLDetailsElement>(".pages-group");
-    if (group === null) throw new Error("no group");
-    group.open = true;
-    const idWhileShut = group.id;
+    expect(document.querySelector(".pages-panel")).not.toBeNull();
 
     selectBlock(section);
     renderShell(root);
 
-    const after = document.querySelector<HTMLDetailsElement>(".pages-group");
-    expect(after?.id).toBe(idWhileShut);
-    expect(after?.open).toBe(true);
+    expect(getState().sidebarOpen).toBe(true);
+    expect(document.querySelector(".pages-panel")).not.toBeNull();
   });
 
   it("opens the page that was pressed", async () => {
@@ -298,6 +316,14 @@ describe("the page list", () => {
   });
 
   it("puts focus somewhere after switching, since the button pressed is gone", async () => {
+    // The button just pressed no longer exists: it is the current entry now.
+    // Without this, focus falls to the body and a keyboard user is left at the
+    // top of the document hunting for what changed.
+    //
+    // Where focus lands has moved with the list. It used to go to the group's
+    // summary, which was where they were. Now the drawer closes on choosing a
+    // page, so it returns to the control that opened it, which is where they
+    // were.
     await stored("mine", { title: "Commissions", updatedAt: 2000 });
     await stored("other", { title: "Old prices", updatedAt: 1000 });
     await live("mine", "Commissions");
@@ -307,6 +333,9 @@ describe("the page list", () => {
     button.click();
     await settle();
 
-    expect(document.activeElement).toBe(document.querySelector(".pages-group > summary"));
+    expect(getState().sidebarOpen).toBe(false);
+    expect(document.activeElement).toBe(
+      document.querySelector('.bar [aria-controls="pages-panel"]'),
+    );
   });
 });

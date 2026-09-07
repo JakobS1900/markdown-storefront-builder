@@ -862,6 +862,82 @@ fieldset.item > .btn.icon.danger {
   background: var(--panel);
 }
 
+/*
+ * The pages panel: a drawer on a narrow screen, a column on a wide one.
+ *
+ * THE TRANSFORM RULE. Only `.pages-panel` is transformed, and nothing that
+ * contains `.tabs` ever is. `.tabs` is `position: fixed`, and a transform on an
+ * ancestor makes that ancestor its containing block, which is how the tab bar
+ * once pinned itself to the app instead of the viewport. `transform: none` in a
+ * `to` keyframe does not avoid it either: animated it computes to the identity
+ * matrix rather than the keyword, and a `both` fill persists that forever. The
+ * drawer is a sibling of the tab bar, not a wrapper around it, and
+ * `app/tests/pages-sidebar.test.ts` asserts `#app` carries no transform.
+ */
+
+.pages-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.pages-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+}
+
+.pages-panel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 1rem;
+}
+
+/* The drawer itself. Absolute inside the fixed wrapper, so it is the only
+   thing that moves and the wrapper stays a plain box. */
+.pages-drawer .pages-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: min(20rem, 85vw);
+  box-shadow: var(--e2);
+  animation: pages-in 160ms ease-out;
+}
+
+@keyframes pages-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+/* Somebody who has asked not to be moved is not moved. The panel still
+   appears; it simply arrives rather than slides. */
+@media (prefers-reduced-motion: reduce) {
+  .pages-drawer .pages-panel {
+    animation: none;
+  }
+}
+
+/* Pinned, where there is room for it beside everything else. */
+.pages-panel.pinned {
+  flex: 0 0 17rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+}
+
+.pages-panel .panel-heading {
+  font-size: var(--t-md);
+  margin: 0 0 0.75rem;
+}
+
+.pages-panel .pages {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
 /* Status */
 
 .status {

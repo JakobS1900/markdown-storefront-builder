@@ -58,6 +58,14 @@ than it looks.
 - [ ] T016 [US2] Style the drawer, the backdrop and the pinned column in `app/src/styles.css`. **Transform the panel only.** Nothing containing `.tabs` may be transformed, and `transform: none` in a `to` keyframe does not count as untransformed. Research D2.
 - [ ] T017 [US2] **Assert `#app` carries no transform**, as a test rather than a comment, because this bug shipped once and the next thing added to `#app` can reintroduce it.
 - [ ] T018 [P] [US2] Extend `app/tests/a11y.test.ts` with the drawer open. It is a state the gate has never seen, and it is the state where the interface is at its most unusual.
+### T024 moves here, deliberately
+
+- [ ] T024 [US2] **Delete the page list from `app/src/ui/build.ts` in THIS chunk**, not the next one, and move its contents into the panel: the list, the remove control, "Start a new page" and the template picker. They are one disclosure today, so moving them is one operation and duplicating them is more work than moving them.
+
+  Written into Phase 3 first, and moved on 2026-09-07 before implementation started. Leaving it there would mean one commit in which the app has two page lists, which is the exact thing FR-106 forbids, and would need either tests for both or a knowingly worse intermediate state. Recorded rather than quietly resequenced.
+
+  Keep the removal confirmation exactly as it is: it names the page in the question and in both answers, and the answer that keeps the page is the prominent one. Do not redesign it while moving it.
+
 - [ ] T019 [US1] Run `npm run verify` including `npm run contrast` in both palettes, and commit Phase 2.
 
 ---
