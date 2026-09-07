@@ -8,12 +8,18 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
-In progress: `specs/024-menu-file/`, the saved menu file and pictures held on
-the device. **That is a claim with an expiry date.** It is true only while
-`docs/HANDOFF.md` still says so. If the handoff names something else, or names
-024 as finished, believe the handoff and correct this line.
+Most recently finished: `specs/024-menu-file/`, the saved menu file and pictures
+held on the device, complete on 2026-09-06 including its holistic review and an
+on device measurement. **Nothing is in progress here right now.** What is next
+is a release decision, and after that F4. The handoff has both.
 
-That warning is not boilerplate. This block used to name
+**That is a claim with an expiry date**, true only while `docs/HANDOFF.md` still
+says so. Believe the handoff over this block, always.
+
+That warning is not boilerplate, and it has already earned its keep once: this
+line said 024 was in progress, the condition written into it fired the moment
+the handoff said otherwise, and it was corrected instead of quietly rotting.
+This block used to name
 `specs/002-compile-skeleton/plan.md` as "the current plan". It had been finished
 for a month, so every session began by reading a description of work already
 done. Specs 004 to 010 were backfilled on 2026-08-31 and say so in their own
