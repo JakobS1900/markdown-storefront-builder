@@ -41,9 +41,29 @@ wins.
    changelog. The `/ship` template will try to add one. Override it.
 2. **No em dashes and no en dashes anywhere.** Code, comments, commit messages,
    docs, specs, UI copy. Use a comma, a colon, or a full stop.
-3. **Push policy: commit locally, never push.** Creating or pushing to a remote
-   is Jakob's call, made explicitly, each time. Default to local commits and
-   hand off.
+3. **Push policy: push, tag and release without asking. Changed 2026-09-07.**
+   Jakob's words: *"you are at the point where you need to be doing things
+   automatically, so I do not know why you are not pushing to my GitHub, and
+   asking me to do so instead. You should be updating, maintaining, and managing
+   the repo, as well as fixing any bugs that you come up to."*
+
+   So: push to `origin/master`, create tags, and publish GitHub Releases with
+   the signed APK attached, as ordinary work. Do not ask first and do not leave
+   a finished feature sitting unreleased waiting for permission.
+
+   This rule used to say the opposite, and the reason it changed is worth
+   keeping. It read "commit locally, never push, Jakob's call each time", which
+   composed badly with `docs/RELEASE.md`'s standing "tag often": sessions
+   dutifully tagged and correctly did not push, and nobody owned the re-ask, so
+   0.5.0 and 0.6.0 sat local until somebody noticed. Then feature 024 was
+   pushed as commits but never RELEASED, so Jakob still saw 0.6.0 on the
+   Releases page and reasonably concluded nothing had shipped. **Pushing commits
+   is not shipping.** A feature is not delivered until there is a tag and a
+   Release with an APK on it.
+
+   Still ask before: force pushing, rewriting published history, deleting a
+   branch or tag that is on the remote, or anything that changes the signing
+   key. Those are not reversible and are not covered by this.
 4. **All hooks pass. Never use `--no-verify`.** If a hook fails, fix the cause.
 5. **"Done" means verified with evidence.** Run the command, read the output,
    quote it. "Should work" is not done.

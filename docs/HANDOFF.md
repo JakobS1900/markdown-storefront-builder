@@ -662,7 +662,21 @@ distinction in the tree, and seller text can never become a node.**
   hints above them, address the same complaint for a fraction of a new surface
   with its own state machine. Jakob has not been asked to choose. Unlocks
   specifying whatever wins.
-- **Pushing anything.** Still the policy, and still asked each time. It was
+- **Pushing is NO LONGER blocked on Jakob. Changed 2026-09-07.** He asked for
+  the opposite: push, tag and publish releases as ordinary work, and stop asking.
+  `CLAUDE.md` rule 3 carries the new policy and his words.
+
+  What prompted it is worth knowing, because it was a real failure and not an
+  impatience. Feature 024 was pushed to `origin` commit by commit and never
+  RELEASED, so the Releases page still said 0.6.0 and Jakob reasonably concluded
+  the work had not shipped. **Pushing commits is not shipping.** A feature is
+  delivered when there is a tag and a GitHub Release with the signed APK on it.
+
+  Still ask before force pushing, rewriting published history, deleting a remote
+  branch or tag, or touching the signing key.
+
+- **The old push policy, kept for the shape of the mistake.** It read "commit
+  locally, never push, Jakob's call each time". It was
   asked and granted once, on 2026-09-05, for the 0.4.0 release: 28 commits and
   the tag went to `origin` and the GitHub Release was published. That grant was
   for that release and does not carry forward. 0.5.0 and 0.6.0 were both pushed

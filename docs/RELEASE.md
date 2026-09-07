@@ -72,13 +72,23 @@ not install anywhere; check which file you have before sending one to anybody.
 **must increase on every build anyone else receives**. `versionName` is the
 string a human reads.
 
-Currently `versionCode 9`, `versionName "0.6.0"`, both in
-`android/app/build.gradle`. Not 1.0: the roadmap has open items and everything
-has been verified on one handset by the person who wrote it.
+**Both live in `android/app/build.gradle`. Read them there.** This paragraph
+deliberately no longer restates them.
 
-This section said `versionCode 1` and `0.1.0` until 2026-09-05, six releases
-after that stopped being true. It is two numbers in one file and it still went
-stale, which is the argument for reading the file rather than this paragraph.
+It said `versionCode 1` and `0.1.0` until 2026-09-05, six releases after that
+stopped being true. It was then corrected to `9` and `0.6.0`, and was stale
+again within two days. Two numbers, one file, and a paragraph that exists only
+to duplicate them: it has now rotted twice and the honest fix is to stop copying
+the value rather than to copy it more carefully.
+
+Not 1.0: the roadmap has open items and everything has been verified on one
+handset by the person who wrote it.
+
+**A release is a tag AND a GitHub Release with the signed APK attached.**
+Pushing commits to `master` is not a release, and somebody looking at the
+Releases page will correctly conclude nothing shipped. That happened with
+feature 024 on 2026-09-06: every commit was on `origin` and the newest Release
+still said 0.6.0.
 
 ## How often
 
