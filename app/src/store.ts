@@ -201,6 +201,21 @@ export interface State {
    * therefore reads its title from the live document instead of from here.
    */
   readonly pages: readonly StoredPage[];
+  /**
+   * Whether the list of pages is showing.
+   *
+   * Held here rather than on the element, because the shell rebuilds its whole
+   * interface on every repaint and anything living only in a node is destroyed
+   * by the next keystroke. `<details>` groups get around that by being captured
+   * and restored around a render, which is a fair trick for something
+   * incidental and the wrong one for the panel the seller is currently looking
+   * at.
+   *
+   * On a screen wide enough to hold the list beside the editor this is ignored:
+   * there the list is simply present and there is nothing to open. It is the
+   * drawer's state, not the list's.
+   */
+  readonly sidebarOpen: boolean;
 }
 
 type Listener = (state: State) => void;
@@ -243,6 +258,7 @@ export function init(storageOk: boolean, doc?: Document, pageId?: string): State
         },
     storageOk,
     pages: [],
+    sidebarOpen: false,
   };
 
   // FR-086, and not awaited on purpose. Asking the browser to stop evicting us
@@ -430,6 +446,24 @@ export function setBusy(message: string): void {
  */
 export function clearBusy(): void {
   if (state.status.kind === "busy") set({ status: { kind: "idle" } });
+}
+
+/**
+ * Shows the list of pages.
+ *
+ * Immediate rather than deferred, for the reason `setBusy` is: the deferred
+ * path waits 200ms of quiet, and a panel that appears a fifth of a second after
+ * the tap reads as a tap that needs repeating.
+ */
+export function openSidebar(): void {
+  if (state.sidebarOpen) return;
+  set({ sidebarOpen: true });
+}
+
+/** Hides it. Does nothing, and repaints nothing, when it is already hidden. */
+export function closeSidebar(): void {
+  if (!state.sidebarOpen) return;
+  set({ sidebarOpen: false });
 }
 
 export function setSurface(surface: Surface): void {
