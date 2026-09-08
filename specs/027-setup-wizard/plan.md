@@ -6,9 +6,9 @@
 ## Summary
 
 A question by question front door that hands somebody a page with their own
-words already in it, instead of a form and a hope. Six questions, one idea per
-screen, every one skippable. The answers select one of the eight starting points
-that already ship and fill parts of it in.
+words already in it, instead of a form and a hope. Six question screens carrying
+seven answers, one idea each, every one skippable. The answers select one of the
+eight starting points that already ship and fill parts of it in.
 
 **This feature adds no schema and touches no engine code.** The audit in the
 spec checked every question Jakob asked against the contract and found that all
@@ -36,7 +36,8 @@ headless Chrome for the contrast gate
 chunk is a lazy dynamic import already covered by `setBusy`
 **Constraints**: Offline capable, 44 by 44 minimum touch targets, WCAG AA in both
 palettes, no horizontal scrolling at 390px
-**Scale/Scope**: One new surface, six questions, roughly 36 fields gaining a hint
+**Scale/Scope**: One new surface, six question screens, roughly 36 fields
+gaining a hint
 
 ## Constitution Check
 
@@ -98,9 +99,9 @@ engine/                        # NOT TOUCHED.
 
 ## Chunks
 
-Five chunks. Over the roughly three chunk threshold in `CLAUDE.md`, so **a
-holistic review over the whole diff before the feature is called done is
-mandatory, not optional.** Feature 024 is the reason that rule exists: its
+Five chunks of work plus a review, so six in all. Over the roughly three chunk
+threshold in `CLAUDE.md`, so **a holistic review over the whole diff before the
+feature is called done is mandatory, not optional.** Feature 024 is the reason that rule exists: its
 holistic review found two high severity defects that every per chunk review had
 passed, both of them seams where each side was internally correct.
 

@@ -82,7 +82,9 @@ dismiss it.
 - [ ] T026 [US1] Create `app/src/ui/wizard.ts` as a `div` with `role="dialog"`. **Not an `aside`**: `aria-allowed-role` fails that and the a11y gate catches it. Feature 025 paid for this finding; do not rediscover it.
 - [ ] T027 [US1] Set `inert` on the header and main by attribute while the wizard is open, the way `shell.ts` already does for the pages drawer. jsdom implements neither the `inert` property nor its behaviour, so it is asserted as an attribute.
 - [ ] T028 [US1] Add `wizardOpen`, `wizardStep` and `wizardAnswers` to `State` in `app/src/store.ts`, on the **immediate `set` path** the way `sidebarOpen` is. A surface that appears one repaint after the press reads as a dead button.
-- [ ] T029 [US1] Build the six questions from `data-model.md`. The selling mode question takes its words from the engine's exported `SELLING_MODE_WORDS`, so the word somebody picks is the word their page prints.
+- [ ] T029 [US1] Build the six question screens from `data-model.md`'s seven answer fields. `firstItem` and `firstPrice` share a screen; the other five have one each. The selling mode question takes its words from the engine's exported `SELLING_MODE_WORDS`, so the word somebody picks is the word their page prints.
+- [ ] T029a [US1] Assert the screen count in `app/tests/wizard.test.ts`: walking from the first question to the finish without typing anything passes at most seven screens. SC-002, which nothing counted before.
+- [ ] T029b [US1] `wantsPicture` decides which section is open when the page appears and changes nothing about the document itself. Test both: the section choice happens, and two documents differing only in that answer are byte identical.
 - [ ] T030 [US3] Going back a question keeps the answer already given. FR-126, and a test.
 - [ ] T031 [US3] Every question is skippable, and skipping every one still reaches the finish. FR-120 and FR-127.
 - [ ] T032 [US3] Dismiss the wizard on the device back gesture **before** it leaves the surface, in `app/src/surface-history.ts`, following what feature 025 settled for the sidebar. FR-133.
@@ -116,6 +118,8 @@ contrast gate green about a surface it never laid out.
 
 - [ ] T042 Extend `app/tests/a11y.test.ts` with the wizard on screen **at every question**, asserting no axe violations, every control named, and no placeholder.
 - [ ] T043 [P] Assert in `app/tests/a11y.test.ts` that the focus trap holds and that everything behind the wizard is `inert` while it is open.
+- [ ] T043a **FR-132, which nothing else asserts.** Add to `app/tests/a11y.test.ts`: every control on every wizard question meets the 44 by 44 minimum, checked the way the existing touch target assertion checks it. Constitution VI requires CI to fail on this, so driving it by eye in T051 is not the mechanism, only a second opinion.
+- [ ] T043b [P] Assert no horizontal overflow with the wizard open at 390px. The contrast gate runs a real browser at that width and is where a layout assertion can mean something.
 - [ ] T044 Extend `scripts/contrast.mjs` to open the wizard, count what it drew, and **refuse a pass if it cannot see it**, the way it now counts `folded` and `pages`. Record the before and after element counts in the commit.
 - [ ] T045 **Break the contrast guard.** Stop the gate opening the wizard and confirm it refuses to report a pass rather than passing with a smaller number. Quote the refusal.
 - [ ] T046 **Break the a11y addition.** Strip an accessible name from a wizard control and confirm the gate fires. Put it back.

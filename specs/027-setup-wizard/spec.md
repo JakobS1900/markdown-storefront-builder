@@ -131,11 +131,27 @@ with its name and price.
 
 ---
 
-### User Story 2 - Examples in the empty fields (Priority: P2)
+### User Story 2 - Examples for the empty fields (Priority: P2)
 
 Somebody who skipped the wizard, or who came back a week later to add a second
-item, meets an empty field and does not have to guess what belongs in it. The
-field shows an example of a real value.
+item, meets an empty field and does not have to guess what belongs in it. An
+example of a real value is on screen with the field.
+
+**Amended on 2026-09-08, before any code was written.** This story said "the
+field shows an example" and meant text inside the empty box. `research.md` R2
+found that the accessibility gate refuses a `placeholder` attribute outright,
+not merely one doing a label's job, and it is right to: placeholders vanish on
+focus and fail anyone who looks away mid sentence. It also found that the
+mechanism already exists and the coverage does not. `app/src/ui/forms.ts` has 49
+label sites and 13 hints, and **Price carries an example while Item, right next
+to it, carries nothing.**
+
+So the example goes in the field's hint, which is the thing this app already
+uses for exactly this and which no gate has to be weakened to allow. The promise
+to the person using it is unchanged. Recorded here rather than corrected
+silently, because a specification that quietly changes to match the code is
+worth nothing, which is the argument `specs/012-page-lifecycle/spec.md` makes
+against `011`.
 
 **Why this priority**: It answers the same complaint as the wizard, everywhere
 in the app at once, and it keeps working for the people the wizard never
@@ -149,13 +165,13 @@ meaningless, and that no field lost its label.
 
 1. **Given** an empty item row, **When** it is on screen, **Then** the Item and
    Price fields each show an example of a real value.
-2. **Given** a field showing an example, **When** somebody types, **Then** the
-   example is gone and only what they typed remains.
+2. **Given** a field showing an example, **When** somebody types, **Then** what
+   they typed is what the field holds, and the example never becomes content.
 3. **Given** a field showing an example, **When** the page is saved and
    compiled, **Then** the example is not in the saved page or the output.
 4. **Given** any field showing an example, **When** the accessibility gate runs,
-   **Then** the field still has its own label and the example is not doing the
-   label's job.
+   **Then** the field still has its own label, and no field anywhere carries a
+   `placeholder` attribute.
 
 ---
 
@@ -226,11 +242,12 @@ nothing was created and nothing was lost.
 - **FR-127**: Finishing with no answers at all MUST still produce a usable page.
 - **FR-128**: The starting point picker and the blank page MUST both remain
   reachable without answering a question.
-- **FR-129**: Every empty text field in the editor that has an obvious example
-  MUST show one, and the example MUST NOT be part of the saved page or the
-  compiled output.
-- **FR-130**: An example MUST NOT replace a field's label, and every field
-  showing one MUST keep its own accessible name.
+- **FR-129**: Every text field in the editor that has an obvious example MUST
+  show one in its hint, and the example MUST NOT be part of the saved page or
+  the compiled output. Amended, see User Story 2 and `research.md` R2.
+- **FR-130**: No field may carry a `placeholder` attribute. Every field keeps its
+  own `<label>`, and the example is additional to the label rather than a
+  substitute for it.
 - **FR-131**: Everything a person types into the wizard MUST reach the page
   through the same escaping path as every other authored string.
 - **FR-132**: The wizard MUST work at 390px with no horizontal scrolling, and
@@ -264,7 +281,11 @@ nothing was created and nothing was lost.
   value or is one where an example would mean nothing, and none of those
   examples appears in a saved page or a published one.
 - **SC-006**: The accessibility gate passes with the wizard on screen at every
-  question, in both the light and dark palettes.
+  question, and the contrast gate passes with the wizard measured in both the
+  light and dark palettes. Two gates, said separately on purpose: the
+  accessibility gate runs without layout and has no palettes, so a single
+  sentence covering both would be asking one of them for something it cannot
+  give.
 - **SC-007**: A page produced by answering nothing is indistinguishable from one
   produced by the starting point picker today.
 

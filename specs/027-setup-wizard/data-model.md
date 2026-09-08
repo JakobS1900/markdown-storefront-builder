@@ -25,7 +25,7 @@ is never written to IndexedDB.
 |---|---|---|---|
 | `sells` | one of the eight starter ids, or `other` | yes | which starting point is opened |
 | `storeName` | string | yes | `profile.displayName`, and `document.title` |
-| `wantsPicture` | boolean | yes | whether the About you section keeps its avatar field prompt |
+| `wantsPicture` | boolean | yes | which section is opened for editing when the page appears |
 | `firstItem` | string | yes | `tier.name` on the first row |
 | `firstPrice` | string | yes | `tier.price` on the first row |
 | `mode` | one of `in-stock`, `made-to-order`, `preorder`, `sold-out` | yes | `tier.availability` |
@@ -33,6 +33,18 @@ is never written to IndexedDB.
 
 Every field is optional, because FR-120 makes every question skippable and
 FR-127 requires that answering nothing still produces a usable page.
+
+**Seven fields, six screens.** `firstItem` and `firstPrice` are asked together,
+because an item without its price is half an answer and nobody thinks of them
+separately. FR-120's bound is seven screens; this uses six.
+
+**`wantsPicture` changes nothing about the document.** It was nearly specified
+as a field that alters what the page contains, which would have meant the wizard
+adding or removing a section based on a yes or no about something the person has
+not seen yet. Instead it decides which section is already open when the page
+appears, so somebody who said yes lands looking at the picture field rather than
+having to find it. If that turns out to be worth nothing, this field is the
+cheapest thing in the feature to delete.
 
 `mode` takes its four values from the contract rather than restating them. They
 are `tier.availability`'s enum as of feature 026, and the words shown to a person
