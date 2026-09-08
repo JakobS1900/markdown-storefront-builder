@@ -95,6 +95,22 @@
             "type": "string"
           },
           {
+            "name": "availability",
+            "required": false,
+            "type": "enum",
+            "values": [
+              "in-stock",
+              "made-to-order",
+              "preorder",
+              "sold-out"
+            ]
+          },
+          {
+            "name": "leadTime",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "blurb",
             "required": false,
             "type": "string"
@@ -295,5 +311,5 @@
       "type": "blockArray"
     }
   ],
-  "schemaVersion": 4
+  "schemaVersion": 5
 }

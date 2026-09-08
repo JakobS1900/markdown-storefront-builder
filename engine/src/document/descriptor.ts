@@ -15,7 +15,7 @@
  * change, not a tidy-up.
  */
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const BLOCK_KINDS = [
   "heading",
@@ -81,6 +81,43 @@ export const MENU_TIER_FIELDS = [
   // list at all. It sits beside the price rather than in the name, because
   // "Bananas, per lb" answers a different question from "$20 per lb".
   { name: "unit", type: "string", required: false },
+  // How the item reaches a buyer, and how long they wait for it.
+  //
+  // Beside `price` and `unit` because that is what they are: `unit` says what
+  // the money buys and these say when. All three qualify the offer rather than
+  // describing the thing, which is what `blurb` and `includes` below do.
+  //
+  // A price list could say what something cost and what the price bought, and
+  // could not say that the thing does not exist yet, or that it will be made
+  // after somebody pays, or that they will wait three weeks. Sellers worked
+  // around it with a `details` line reading "Made to order: 2 weeks", which is
+  // free text this app cannot read, lay out consistently, or ask about.
+  //
+  // THE VALUE SET IS SETTLED DELIBERATELY, BEFORE SHIPPING. The validator
+  // refuses a page carrying an enum value it does not recognise, so a fifth
+  // added in a later version would make new pages unreadable to builds already
+  // installed. Recoverable, FR-018 hands the bytes back, but not free.
+  //
+  // `sold-out` was specified out and put back the same day. The argument for
+  // leaving it out was that `price` is free text precisely because sellers
+  // write things that are not numbers, so "SOLD OUT" already had a home. Jakob
+  // overruled it: people use it a lot. A thing people do constantly through a
+  // field that was not built for it is a missing feature being worked around,
+  // not a convention that has settled. See specs/026-selling-modes/research.md.
+  //
+  // Same shape as `status` on a profile, which is an optional enum of three
+  // doing this job one level up. This adds an instance, not a mechanism.
+  {
+    name: "availability",
+    type: "enum",
+    required: false,
+    values: ["in-stock", "made-to-order", "preorder", "sold-out"],
+  },
+  // Text, for the reason `price` and `unit` are text. Sellers write "about 2
+  // weeks", "3 to 5 days" and "ships in March", and a date would refuse most of
+  // those or quietly discard what was typed. Meaningful on its own, too: how
+  // long something takes is worth saying even when the reason is not.
+  { name: "leadTime", type: "string", required: false },
   { name: "blurb", type: "string", required: false },
   { name: "includes", type: "stringArray", required: false },
   // Labelled facts, with the labels chosen by the seller. Colour, size, weight,

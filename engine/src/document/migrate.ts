@@ -134,10 +134,29 @@ function stampVersionFour(doc: Record<string, unknown>): Record<string, unknown>
  *   3. Add a fixture saved at version N and assert it loads and migrates.
  *   4. Regenerate the parity snapshot and read the diff.
  */
+/**
+ * A price row learns how the item reaches a buyer.
+ *
+ * The smallest a step can be, and the second one in a row to be exactly this.
+ * `availability` and `leadTime` are both optional, and the rule stated above for
+ * `imageUrl` applies to both: an absent optional field is never defaulted into
+ * existence, not as an empty string and not as a chosen mode, because absent and
+ * empty must not be able to mean the same thing.
+ *
+ * Choosing a default would be worse here than usual. Marking every existing row
+ * `in-stock` would put a claim on every page anybody has published, in the
+ * seller's name, that they never made. A commission list would start telling
+ * buyers the work was sitting on a shelf.
+ */
+function stampVersionFive(doc: Record<string, unknown>): Record<string, unknown> {
+  return { ...doc, schemaVersion: 5 };
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { from: 1, to: 2, apply: tierImagesToList },
   { from: 2, to: 3, apply: tierIdsByPosition },
   { from: 3, to: 4, apply: stampVersionFour },
+  { from: 4, to: 5, apply: stampVersionFive },
 ];
 
 /**
