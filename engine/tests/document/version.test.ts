@@ -82,12 +82,15 @@ describe("forward migration (FR-005, research D7)", () => {
     // mechanism was built early on the argument that it could not be added
     // later: by the time a second version exists there are already pages
     // written by a build with no migration path. That argument is now cashed,
-    // three steps deep now: version 2 opened the chain, and versions 3 and 4
-    // each added to it.
+    // four steps deep now: version 2 opened the chain, and 3, 4 and 5 each
+    // added to it. The last two stamp the version and change nothing, because
+    // both added only optional fields, and an absent optional field is never
+    // defaulted into existence.
     expect(MIGRATIONS.map((m) => [m.from, m.to])).toEqual([
       [1, 2],
       [2, 3],
       [3, 4],
+      [4, 5],
     ]);
   });
 

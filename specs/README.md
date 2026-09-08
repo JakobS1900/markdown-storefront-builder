@@ -46,6 +46,23 @@ answerable without reading fifty commit messages.
 | [021 starting points](021-starting-points/) | 2026-09-02 | **before** | yes | no | no | **yes** |
 | [022 bulk pricing](022-bulk-pricing/) | 2026-09-02 | **before** | yes | no | no | **yes** |
 | [023 bringing in a price list](023-import/) | 2026-09-04 | **before** | yes | no | no | **yes** |
+| [024 the menu file](024-menu-file/) | 2026-09-06 | **before** | yes | yes | no | **yes** |
+| [025 the pages sidebar](025-pages-sidebar/) | 2026-09-07 | **before** | yes | yes | no | no |
+| [026 selling modes](026-selling-modes/) | 2026-09-08 | **before** | yes | yes | no | no |
+
+024 is the fullest set in the repository: spec, plan, tasks, research, data
+model, contracts, a quickstart, an analysis and a holistic review. It is also
+the one whose holistic review earned its keep most plainly, finding two high
+severity defects that every per chunk review had passed, both of them seams
+where each side was internally correct. Read `024-menu-file/holistic-review.md`
+before concluding that per chunk reviews are enough.
+
+025 and 026 have no holistic review and that is a judgement, not an oversight.
+Each is small enough that the rule in `CLAUDE.md`, roughly three chunks, does
+not fire: 025 is one surface and 026 is two fields carried end to end. 026 in
+particular is a schema change whose cross boundary risk is exactly the thing the
+parity snapshot and the golden regeneration already measure, and both were run
+and are quoted in `docs/HANDOFF.md`.
 
 There is no 015. The number was skipped and nothing was lost: it is recorded
 here so nobody goes looking for a missing document.

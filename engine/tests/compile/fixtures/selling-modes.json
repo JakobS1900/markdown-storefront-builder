@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 5,
+  "target": "rentry",
+  "title": "Bench Bros",
+  "blocks": [
+    {
+      "id": "made",
+      "kind": "menu",
+      "heading": "Made to order",
+      "currency": "$",
+      "tiers": [
+        {
+          "id": "sign",
+          "name": "Carved sign",
+          "price": "80",
+          "availability": "made-to-order",
+          "leadTime": "about 2 weeks",
+          "blurb": "Oak, sealed for outdoors."
+        },
+        {
+          "id": "pin",
+          "name": "Enamel pin",
+          "price": "12",
+          "availability": "sold-out",
+          "leadTime": "back in about a month"
+        },
+        {
+          "id": "repair",
+          "name": "Repair",
+          "price": "40",
+          "leadTime": "3 to 5 days"
+        }
+      ]
+    },
+    {
+      "id": "shelf",
+      "kind": "menu",
+      "heading": "On the shelf",
+      "currency": "$",
+      "tiers": [
+        { "id": "keyring", "name": "Brass keyring", "price": "18", "availability": "in-stock" },
+        {
+          "id": "mug",
+          "name": "Spring mug",
+          "price": "25",
+          "availability": "preorder",
+          "leadTime": "ships in March"
+        }
+      ]
+    },
+    {
+      "id": "plain",
+      "kind": "menu",
+      "heading": "Nothing said",
+      "currency": "$",
+      "tiers": [
+        { "id": "sticker", "name": "Sticker", "price": "3", "unit": "each" },
+        { "id": "card", "name": "Card", "price": "5", "details": [{ "label": "Size", "value": "A6" }] }
+      ]
+    },
+    {
+      "id": "bulk",
+      "kind": "menu",
+      "heading": "By the quantity",
+      "currency": "$",
+      "tiers": [
+        {
+          "id": "oranges",
+          "name": "Oranges",
+          "price": "7",
+          "unit": "per lb",
+          "availability": "in-stock",
+          "leadTime": "picked to order",
+          "quantities": [{ "amount": "5 lb", "price": "30" }]
+        }
+      ]
+    }
+  ]
+}

@@ -51,6 +51,72 @@ describe("round trip is lossless (G2, FR-006)", () => {
   });
 });
 
+describe("a selling mode survives the trip (FR-108, FR-109)", () => {
+  function withModes(): Document {
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      target: "rentry",
+      blocks: [
+        {
+          id: "m",
+          kind: "menu",
+          heading: "Prices",
+          tiers: [
+            { id: "a", name: "Carved sign", price: "80", availability: "made-to-order", leadTime: "about 2 weeks" },
+            { id: "b", name: "Spring mug", price: "25", availability: "preorder", leadTime: "ships in March" },
+            { id: "c", name: "Keyring", price: "18", availability: "in-stock" },
+            { id: "d", name: "Enamel pin", price: "12", availability: "sold-out", leadTime: "back in about a month" },
+            // A wait with no mode. How long something takes is worth saying even
+            // when the reason is not, so this must survive on its own.
+            { id: "e", name: "Repair", price: "40", leadTime: "3 to 5 days" },
+            // And a row with neither, which is every row on every page that
+            // exists today. It must come back with neither, not with empties.
+            { id: "f", name: "Sticker", price: "3" },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("keeps both fields, on every mode", () => {
+    const out = roundTrip(withModes());
+    const menu = out.blocks[0];
+    if (menu === undefined || menu.kind !== "menu") throw new Error("expected a menu");
+
+    expect(menu.tiers.map((t) => t.availability)).toEqual([
+      "made-to-order",
+      "preorder",
+      "in-stock",
+      "sold-out",
+      undefined,
+      undefined,
+    ]);
+    expect(menu.tiers.map((t) => t.leadTime)).toEqual([
+      "about 2 weeks",
+      "ships in March",
+      undefined,
+      "back in about a month",
+      "3 to 5 days",
+      undefined,
+    ]);
+  });
+
+  it("leaves a row that has neither with neither, rather than with empties", () => {
+    const out = roundTrip(withModes());
+    const menu = out.blocks[0];
+    if (menu === undefined || menu.kind !== "menu") throw new Error("expected a menu");
+    const plain = menu.tiers[5] as unknown as Record<string, unknown>;
+
+    expect("availability" in plain).toBe(false);
+    expect("leadTime" in plain).toBe(false);
+  });
+
+  it("does not drift on a second pass", () => {
+    const once = serializeDocument(roundTrip(withModes()));
+    expect(serializeDocument(roundTrip(roundTrip(withModes())))).toBe(once);
+  });
+});
+
 describe("absent and empty stay different (FR-010)", () => {
   it("keeps an absent optional field absent", () => {
     const out = roundTrip(minimalDocument());

@@ -114,6 +114,36 @@ describe("the shell is accessible", () => {
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 
+  it("has no axe violations with a row's More details fold open", async () => {
+    // A blank row keeps that fold shut, and axe skips what is hidden, so every
+    // control inside it was going unscanned by the gate above: the cost, the
+    // unit, the quantity breakdown, the details, and now the two selling mode
+    // controls. This opens it the way the form itself does, by giving the row
+    // something to show.
+    const root = mount();
+    addBlock(blankBlock("menu"));
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+    updateBlock(block.id, {
+      ...block,
+      tiers: [
+        {
+          id: "sign",
+          name: "Carved sign",
+          price: "80",
+          availability: "made-to-order",
+          leadTime: "about 2 weeks",
+        },
+      ],
+    });
+    selectBlock(block.id);
+    renderShell(root);
+
+    // The gate is worthless if the fold turned out to be shut anyway.
+    expect(document.querySelector("fieldset.item details.more")?.hasAttribute("open")).toBe(true);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
   it("has no axe violations with the bulk pricing Apply panel open", async () => {
     // bulkPricingPanel returns nothing until a tier is selected, so a gate
     // that never selects one never renders the panel's three controls, its
@@ -722,6 +752,48 @@ describe("every control can be named and reached", () => {
     expect(hidden.length).toBeGreaterThan(0);
     for (const node of hidden) {
       expect(node.getAttribute("tabindex")).toBe("-1");
+    }
+  });
+
+  it("binds the controls inside a price row's fold to real labels too", () => {
+    // The label test above opens a profile, which has no fold and no rows. The
+    // controls a seller meets most are the ones on a price row, and until this
+    // existed none of them were checked.
+    const root = mount();
+    addBlock(blankBlock("menu"));
+    const block = getState().doc.blocks[0];
+    if (block === undefined || block.kind !== "menu") throw new Error("not a menu");
+    updateBlock(block.id, {
+      ...block,
+      tiers: [{ id: "sign", name: "Carved sign", price: "80", availability: "sold-out" }],
+    });
+    selectBlock(block.id);
+    renderShell(root);
+
+    const controls = [...document.querySelectorAll("fieldset.item :is(input, textarea, select)")];
+    expect(controls.length).toBeGreaterThan(5);
+    for (const control of controls) {
+      if (control.getAttribute("aria-hidden") === "true") continue;
+      const id = control.getAttribute("id");
+      expect(id).toBeTruthy();
+      expect(document.querySelector(`label[for="${id}"]`)).not.toBeNull();
+    }
+  });
+
+  it("gives every choice in a select words of its own", () => {
+    // An option with no text is a blank line in the list, which is unusable by
+    // sight and silent when read aloud. The empty VALUE is deliberate and is
+    // how the field clears; the empty LABEL would be the bug.
+    const root = mount();
+    addBlock(blankBlock("menu"));
+    addBlock(blankBlock("profile"));
+    selectBlock(getState().doc.blocks[0]?.id);
+    renderShell(root);
+
+    const options = [...document.querySelectorAll("select option")];
+    expect(options.length).toBeGreaterThan(4);
+    for (const option of options) {
+      expect((option.textContent ?? "").trim()).not.toBe("");
     }
   });
 

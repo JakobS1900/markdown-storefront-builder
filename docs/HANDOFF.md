@@ -4,13 +4,27 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-**Released**: `v0.6.0`, from `965fc5b`, versionCode 9. `v0.5.0` is `9f1ab0c`,
-versionCode 8. **Both tags are on `origin`**, and `origin/master` is at
-`965fc5b`, so every release through 0.6.0 is published.
+**Released**: `v0.8.0`, from `49ab971`, versionCode 12, versionName 0.8.0.
+`v0.7.1` is `d27f470` and `v0.7.0` is `108c4a7`. **All four tags through 0.8.0
+are on `origin`**, confirmed with `git ls-remote --tags origin` on 2026-09-08,
+and `origin/master` is at `49ab971`.
 
-This line said the opposite for part of 2026-09-06: that 0.5.0 and 0.6.0 were
-tagged locally only and nobody outside this machine had them. **That was wrong
-and it was written here without being checked.** It came from reading an earlier
+**Current branch is `026-selling-modes`, five commits ahead of `origin/master`
+and unpushed.** They are feature 026, which is finished except for the release:
+`7677876` and `f0ba7f4` the spec, `ee5dc12` schema version 5, `4950542` the
+output, `ce56f2d` the controls.
+
+**The push rule changed on 2026-09-07 and this file used to contradict it.**
+`CLAUDE.md` rule 3 now grants pushing, tagging and publishing releases as
+ordinary work, in Jakob's words, because the old rule composed badly with "tag
+often" and stranded 0.5.0 and 0.6.0 locally. Then 024 was pushed as commits and
+never released, so Jakob still saw 0.6.0 on the Releases page and reasonably
+concluded nothing had shipped. **Pushing commits is not shipping.** A feature is
+delivered when there is a tag and a Release with an APK on it.
+
+The "Released" line above said the opposite for part of 2026-09-06: that 0.5.0
+and 0.6.0 were tagged locally only and nobody outside this machine had them.
+**That was wrong and it was written here without being checked.** It came from reading an earlier
 version of this file, which recorded that the 0.4.0 push grant did not carry
 forward, and inferring from that that no later push happened. `git ls-remote
 --tags origin` settles it in one command and shows both tags present.
@@ -25,22 +39,30 @@ into this file without running a command against the remote.**
 carrying seventy commits and four days. A tag per feature or per handful of
 fixes, not a fortnight in one. The policy and the reasoning are in
 `docs/RELEASE.md` under "How often"; this line exists so a session that reads
-only the handoff still knows. Note it does NOT grant the push: that is still
-asked for every time.
+only the handoff still knows. It no longer needs to be asked for, per the rule
+change above.
 
-**Current state**: this file describes the tree at `965fc5b`, and
-`npm run verify` is green on it, run alone from PowerShell on 2026-09-06:
-**64 test files, 1092 tests, a11y 34, contrast 164 elements and 12 sections with
-0 failures in both light and dark, pwa update gate clean, exit code 0.**
+**Current state**: this file describes the tree at `ce56f2d`, and
+`npm run verify` is green on it, run whole from PowerShell on 2026-09-08:
+**74 test files, 1371 tests, a11y 53, contrast 404 elements and 12 sections with
+0 failures in both light and dark, menu file gate clean, pwa update gate clean,
+exit code 0.**
 
-Note the test count. This file said to expect 1081 and it is 1092, because two
-feature commits landed after the last handoff update and this file was not
-touched for either: `45edecb`, a blank price row asks for two things rather than
-five, and `4404756`, no bulk pricing controls until there are at least two rows
-to choose between. Both shipped, both tagged, neither recorded here until now.
-That is exactly the drift this project has already paid for twice, and it is
-worth one line of warning: **update this file when a feature lands, not when
-somebody remembers.**
+Note the contrast number: 404, not the 167 the last three sessions saw. The gate
+had never measured a price row. It opens whichever section offers itself first,
+which on the example is a Text block: one field, no rows, and zero `details`
+anywhere under `#surface`. So the cost, the unit, the quantity breakdown, the
+labelled details and every hint in that fold were unmeasured, and nothing said
+so, because a gate that measures less does not complain about it. `ce56f2d`
+opens Prices and every fold in it, counts `folded` fields, and refuses a run
+that cannot show at least five. **That is now the third time a gate here turned
+out to be green about something it never looked at.** The lesson is in the file:
+probe what the run actually laid out, do not infer it from the step that was
+supposed to lay it out.
+
+**Update this file when a feature lands, not when somebody remembers.** It went
+stale by three releases between 0.6.0 and 0.8.0 and described a push rule that
+had been reversed.
 
 Before those, feature 023 completed as `fa8eb28`, feature 022's missing holistic
 review ran (`b69266a` the test, `20d3192` the findings), two directly requested
@@ -49,7 +71,9 @@ regenerated screenshots), and `4d26e5f` fixed a real test failure that
 `npm run verify` caught on 2026-09-05, described under "Traps".
 
 The restyle that was sitting uncommitted is now `a3998c3`, with the twelve
-regenerated media files as `a9ecb4d`. **Working tree clean, nothing pushed.**
+regenerated media files as `a9ecb4d`. Both are long since pushed and released;
+the "nothing pushed" that used to end this line described 2026-09-06 and was
+left behind by three releases.
 
 The design review of it ran on 2026-09-05 and found four defects, all fixed and
 committed one apiece: `b940fd0` the detached tab bar, `6b8bc45` the seven solid
@@ -100,28 +124,77 @@ honest record of it.
 
 1. **Run `npm run verify` from PowerShell before anything else.** It is the
    check that tells you whether the tree is actually where this file says it is.
-   Expect 1081 tests, a11y 34, contrast clean in both palettes, pwa gate green.
-   If it fails, read "Traps" below before believing it: several of its failures
-   are environmental rather than real. It earned its place on 2026-09-05, when
-   it caught a real failure that had been latent for days and was NOT one of
-   the environmental ones. See the starters-picker entry under "Traps".
+   Expect 1371 tests, a11y 53, contrast clean in both palettes at 404 elements,
+   menu file and pwa gates green. If it fails, read "Traps" below before
+   believing it: several of its failures are environmental rather than real. It
+   earned its place on 2026-09-05, when it caught a real failure that had been
+   latent for days and was NOT one of the environmental ones. See the
+   starters-picker entry under "Traps".
 
-   Done on 2026-09-06 at `965fc5b`, green, numbers quoted under "Current state".
+   Done on 2026-09-08 at `ce56f2d`, green, numbers quoted under "Current state".
 
-2. **Release 024, or decide not to.** The feature is done and the tree is green.
-   What is outstanding is a version and a tag, and both are Jakob's calls.
+2. **Release 026.** This is the only thing left in the feature. Phases 1 to 4
+   are done except T028: bump the version and versionCode with the Edit tool,
+   build the signed APK, push, tag, and publish the Release with the APK on it.
+   `CLAUDE.md` rule 3 makes that ordinary work rather than something to ask
+   about. `docs/RELEASE.md` has the mechanics.
 
-   The phone currently carries `0.7.0-dev`, versionCode 10, which was bumped so
-   that unreleased work would not sit on the owner's device labelled as the
-   released 0.6.0. A real release means choosing the version, tagging it, and
-   asking about the push. `docs/RELEASE.md` has the policy, and "tag often" is
-   the standing instruction.
+   **Never `Set-Content` the version.** It writes a UTF-8 BOM into
+   `build.gradle` and Gradle then fails in about one second with no useful
+   message. That cost real time on 2026-09-07. Use Edit, and check the first
+   three bytes if a build dies instantly.
 
-   Also worth putting to Jakob before tagging: the FileProvider preview finding
-   under T058 below, which is a two line change in `MainActivity.java` and is
-   the only thing anybody will notice about the share sheet.
+   The phone carries versionCode 12 / 0.8.0, which is the released build, so
+   what goes on it next is the 026 build.
 
-3. **F5, the menu file, was the previous feature and is DONE.**
+   Also still unfixed and worth putting to Jakob at some point: the FileProvider
+   share sheet preview under T058 below, a two line change in
+   `MainActivity.java` and the only thing anybody notices about the share sheet.
+
+3. **Feature 026, selling modes, is DONE apart from the release.** How an item
+   reaches a buyer, and how long the buyer waits.
+
+   Where it came from: Jakob asked for a wizard that would ask what kind of
+   store somebody has and how they sell, and this is the schema half of that,
+   landed first on purpose so the wizard has something to write into.
+
+   | Commit | What |
+   |---|---|
+   | `7677876` | The spec, and the one decision expensive to revisit. |
+   | `f0ba7f4` | `sold-out` put back after being specified out. |
+   | `ee5dc12` | Schema version 5. The contract, alone. |
+   | `4950542` | The Availability column, and the goldens proving nothing moved. |
+   | `ce56f2d` | The two controls, and the contrast gate that had a hole in it. |
+
+   **`sold-out` is the decision worth reading.** It was specified out on the
+   argument that `price` is free text precisely so sellers can write things that
+   are not numbers, so "SOLD OUT" already had a home. Jakob overruled it the
+   same day: people use it a lot. The reasoning error is the carry-forward.
+   **A thing people do constantly through a field that was not built for it is a
+   missing feature being worked around, not a convention that has settled.**
+
+   **THE VALUE SET IS CLOSED AND CHANGING IT IS EXPENSIVE.** The validator
+   refuses a page carrying an enum value it does not recognise, so a fifth mode
+   added later makes new pages unreadable to builds already installed.
+   Recoverable, FR-018 hands the bytes back, but not free. `descriptor.ts` says
+   this at the field.
+
+   **Proved, not assumed, that no existing page moved.** All eight starting
+   points and the bundled example were compiled for all four targets against the
+   engine at `49ab971` and again at `ce56f2d`: 36 files, 57,648 bytes, byte
+   identical. That is T025 and it does not need redoing.
+
+   **Driven in a real browser on 2026-09-08**, which is T026. A row set to Made
+   to order with "about 2 weeks" produces
+   `| Carved oak sign | 80 | Made to order, about 2 weeks |` on the Copy tab,
+   the same in Preview and in the menu file preview, and a real 2,047 byte
+   `menu.html` of type `text/html` carrying that row. Clearing the mode back to
+   "Do not say" and emptying the wait removes the Availability column entirely
+   and returns the exact pre-026 bytes. The words in the dropdown are the words
+   the page prints, because both come from one exported map,
+   `SELLING_MODE_WORDS`.
+
+4. **F5, the menu file, is DONE** and was the feature before 025.
    Jakob decided this on 2026-09-06 in the session that writes it down, which is
    the rule item 3 below exists to enforce.
 
@@ -201,9 +274,26 @@ honest record of it.
    and `data:` URIs embedded in the markdown, which research D3 reversed before
    any code was written. `specs/024-menu-file/` is authoritative.
 
-4. **F4, the interview wizard, is UNGATED and is now the next FEATURE**, once
-   the release decision above is made. It was put behind 024 on 2026-09-06 and
-   024 is finished.
+5. **F4, the interview wizard, is UNGATED and is the next FEATURE** once 026 is
+   released. It was put behind 024 on 2026-09-06, and behind 025 and 026 after
+   that, and all three are finished.
+
+   **026 was carved out of it deliberately.** The wizard asks what somebody
+   sells and how, and had nowhere to write the answer. It does now. Specify the
+   wizard against the schema that exists rather than growing the schema inside a
+   surface feature.
+
+   **The pattern that should shape it, now seen four times.** Four things people
+   asked for already existed: the per item price table, headings, pages being
+   saved, and categories. Every one was a discoverability failure, and the fix
+   for one of them was a rename that changed no behaviour at all (`1e8013b`).
+   That is the strongest argument in the repo for what the wizard is for, and
+   also the strongest argument for checking, for each thing it would ask about,
+   whether the answer is a new feature or a name.
+
+   Jakob also asked for importing an existing messy menu, from rentry or
+   pastebin, as an entry path into the same wizard: paste, guess, confirm. He
+   chose that shape explicitly.
 
    Note before specifying it: 024 answered part of F4's problem by accident.
    The complaint F4 exists for is that a blank field with a label over it does
@@ -249,7 +339,7 @@ honest record of it.
    is the largest of the three answers to this, not the only one, and the spec
    should say why it is the right one rather than assume it. Ask Jakob before
    ruling the cheap ones out.
-5. **Drive the app before believing anything about how it looks.** The design
+6. **Drive the app before believing anything about how it looks.** The design
    review on 2026-09-05 is done and found four defects plus the docked
    add-a-section row, all fixed, none of which was visible in `docs/media`.
    (This item used to say three, while the top of this file enumerated four and
@@ -257,7 +347,7 @@ honest record of it.
    `e1138d9`, `b8efe30`, and `dc68870` for the dock.) That is the standing
    lesson: the stills are not evidence about the states that are broken. See
    "Traps".
-6. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
+7. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
    budget in the suite was squeezed and rerun to find which waits were load
    bearing. None of the seven carried the `starters-picker` defect, which was a
    deficit rather than a thin margin. `a11y` and `price-list-screen` pass at one
