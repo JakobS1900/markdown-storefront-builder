@@ -63,9 +63,9 @@ goldens can prove it.
 
 ## Phase 4: Proof and release
 
-- [ ] T025 Confirm the bundled example and all eight starting points still compile byte identically. They are the pages most like a seller's real one, and none of them uses these fields.
-- [ ] T026 Drive the app: set a mode and a wait, look at the Preview and the Copy tab, and save a menu file with them in it.
-- [ ] T027 [P] Update `docs/HANDOFF.md` and `specs/README.md`.
+- [x] T025 Confirm the bundled example and all eight starting points still compile byte identically. They are the pages most like a seller's real one, and none of them uses these fields.
+- [x] T026 Drive the app: set a mode and a wait, look at the Preview and the Copy tab, and save a menu file with them in it.
+- [x] T027 [P] Update `docs/HANDOFF.md` and `specs/README.md`.
 - [ ] T028 Release it. Bump the version with the Edit tool, never `Set-Content`, which writes a BOM that fails the Gradle build in one second with no useful message. Tag and publish with the signed APK, per `CLAUDE.md` rule 3.
 
 ---
