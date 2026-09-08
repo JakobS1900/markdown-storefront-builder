@@ -35,23 +35,39 @@ and a date type would refuse most of those or quietly discard what was typed.
 
 ---
 
-## D2: Three values, and why the fourth is missing
+## D2: Four values, after being specified as three and overruled
 
-**Decision**: `in-stock`, `made-to-order`, `preorder`. No `sold-out`.
+**Decision**: `in-stock`, `made-to-order`, `preorder`, `sold-out`.
 
-**This is the one decision here that is expensive to revisit.** The validator
-refuses a page carrying an enum value it does not recognise, so a value added
-later makes new pages unreadable to older builds. Recoverable, FR-018 hands the
-bytes back, but not free.
+**This was the one decision flagged as expensive to revisit**, and flagging it
+is what got it right. The validator refuses a page carrying an enum value it
+does not recognise, so a value added in a later version makes new pages
+unreadable to builds already installed. That is recoverable, FR-018 hands the
+exact bytes back, but it is a bad afternoon and it argues for settling the set
+before anything ships rather than after.
 
-`sold-out` is the obvious fourth and is deliberately absent. `price` is already
-free text specifically because sellers write things that are not numbers, and
-writing "SOLD OUT" in it is what they already do. A second way to say the same
-thing splits the practice: some rows would say it in the price and some in the
-mode, and a reader of the page would see two conventions.
+**It was originally specified WITHOUT `sold-out`,** on this reasoning: `price`
+is already free text specifically because sellers write things that are not
+numbers, so writing "SOLD OUT" in it is what they already do, and a second way
+to say the same thing would split the practice between rows that say it in the
+price and rows that say it in the mode.
 
-**If it turns out to be wanted**, the cost is a schema version and a migration,
-which this project has done twice in a fortnight and has fixtures for.
+**Jakob overruled it the same day: "people use that a lot."**
+
+That is first hand knowledge of the sellers this is for, and it is precisely the
+evidence the original argument lacked. The argument was not wrong that the
+workaround exists. It was wrong about what the workaround means. A thing people
+do constantly through a field that was not designed for it is a missing feature
+being worked around, not a convention that has settled. The same mistake, in the
+other direction, is what left the price breakdown called "Bulk pricing" for a
+year: a capability nobody could find, because the evidence for how people
+actually behave was not in the room.
+
+**Recorded rather than edited away**, because the reasoning that produced the
+wrong answer is reusable and the answer alone is not.
+
+**Sold out does not suppress a wait.** "Sold out, back in about two weeks" is a
+useful sentence. Nothing refuses a wait because of the mode beside it.
 
 ---
 

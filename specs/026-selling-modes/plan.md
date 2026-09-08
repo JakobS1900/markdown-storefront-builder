@@ -10,8 +10,14 @@ and how long a buyer waits. Both optional, both emitted beside the item, and
 completely invisible to every page that does not use them.
 
 Schema version 5, landing first and alone. `availability` is an optional enum
-with three values and `leadTime` is optional text, which is a shape the contract
-already expresses: `profile.status` is the same field one level up.
+with four values, `in-stock`, `made-to-order`, `preorder` and `sold-out`, and
+`leadTime` is optional text. That is a shape the contract already expresses:
+`profile.status` is the same field one level up.
+
+`sold-out` was specified out and put back on 2026-09-08 at Jakob's word, "people
+use that a lot", which is the evidence the original reasoning lacked. Research
+D2 has the whole exchange, because the reasoning that produced the wrong answer
+is reusable and the answer alone is not.
 
 This lands before the wizard because a wizard built first would ask these
 questions against fields that do not exist and write the answers into free text,

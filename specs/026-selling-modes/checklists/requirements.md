@@ -34,12 +34,23 @@
 Passed on the first pass. Three things are worth recording.
 
 **The one decision here that is expensive to revisit is the set of modes**, and
-it is called out in Assumptions rather than left implicit. Adding a value later
-is not free: the validator refuses a page carrying an enum value it does not
-know, so a seller who used a new mode on a new build and then opened the page on
-an older one would be refused. That is recoverable, FR-018 hands back the exact
-bytes, but it is a bad afternoon. Three values were chosen to match exactly what
-was described, and "sold out" was left out with a reason rather than forgotten.
+calling it out in Assumptions is what got it right rather than merely
+documented. Adding a value later is not free: the validator refuses a page
+carrying an enum value it does not know, so a seller who used a new mode on a new
+build and then opened the page on an older one would be refused. Recoverable,
+FR-018 hands back the exact bytes, but a bad afternoon.
+
+It was specified as three values with "sold out" left out and a reason attached.
+Jakob overruled it the same day, "people use that a lot", which is first hand
+knowledge of these sellers and exactly what the reasoning lacked. Four values.
+The exchange is kept in research D2 rather than tidied into the answer, because
+the argument that produced the wrong result is the reusable part: a thing people
+do constantly through a field that was not built for it is a missing feature
+being worked around, not a convention that has settled.
+
+**That is the value of flagging a decision as expensive rather than making it
+quietly.** Had it gone in as three without comment, the correction would have
+cost a schema version instead of an edit.
 
 **FR-110 is the requirement that makes this safe to build.** Every page in
 existence has neither field, so the whole feature has to be invisible to all of

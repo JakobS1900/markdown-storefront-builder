@@ -131,7 +131,7 @@ correctly in the output.
 ### Functional Requirements
 
 - **FR-108**: A price row MUST be able to record whether the item is in stock,
-  made to order, or a preorder.
+  made to order, a preorder, or sold out.
 - **FR-109**: A price row MUST be able to record how long a buyer waits,
   independently of which mode is set, including with no mode set at all.
 - **FR-110**: Both MUST be optional. A row with neither MUST compile to exactly
@@ -189,13 +189,28 @@ correctly in the output.
   would be fewer controls and would be wrong for exactly them. Setting many rows
   at once is a job for the bulk controls that already exist, and is not part of
   this feature.
-- **Three modes, not four.** In stock, made to order, preorder. "Sold out" is
-  deliberately absent: `price` is already free text precisely because sellers
-  write things like "DM me", and writing "SOLD OUT" there is what they already
-  do. Adding a competing way to say the same thing would split the practice
-  rather than serve it. This is the one decision here that is expensive to
-  revisit, because an older build refuses a page using a value it does not know,
-  so it is recorded rather than assumed.
+- **Four modes**: in stock, made to order, preorder, sold out.
+
+  This was specified as three, with "sold out" deliberately left out, on the
+  reasoning that `price` is already free text precisely because sellers write
+  things like "DM me", so writing "SOLD OUT" there is what they already do and a
+  second way to say it would split the practice.
+
+  **Jakob overruled it on 2026-09-08: "people use that a lot."** That is first
+  hand knowledge of the sellers this is for, and it is exactly the evidence the
+  original reasoning lacked. The argument was not wrong about the workaround
+  existing; it was wrong about what the workaround means. A thing people do
+  constantly through a field that was not designed for it is a missing feature,
+  not a settled convention.
+
+  It was worth deciding now rather than later, which is why it was raised as the
+  one expensive choice: an older build refuses a page carrying an enum value it
+  does not recognise, so a fourth value added in a later version would make new
+  pages unreadable to builds already installed.
+
+- **Sold out and a wait are not exclusive.** "Sold out, back in about two weeks"
+  is a useful sentence and the seller is entitled to write it. Nothing here
+  refuses a wait because of the mode it sits beside.
 - **The wait is text, not a date.** For the same reason `price` and `unit` are.
 - **Nothing is inferred.** A seller who has written "Made to order" into a
   details line keeps exactly what they wrote. The app does not read it, move it,
