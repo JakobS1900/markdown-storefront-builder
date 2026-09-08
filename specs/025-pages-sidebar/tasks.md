@@ -89,6 +89,38 @@ visiting the Build surface.
 
 ## Phase 4: Polish and proof
 
+**T027 and T029 are DONE.** The focus trap was broken on purpose and both wrap
+tests failed, so the containment is load bearing rather than decorative, which
+matters more here than usual: jsdom implements no `inert` behaviour, so the
+hand written trap is the only thing under test between a keyboard user and a
+page they cannot see.
+
+**The back gesture was verified on the handset on 2026-09-08**, which is the one
+thing jsdom cannot honestly observe. All three cases, on a release build signed
+with the real key:
+
+| Situation | Result |
+|---|---|
+| Drawer open on Build, back | Drawer closes, app stays resumed, still on Build |
+| Drawer closed on Build, back | App exits, exactly as before this feature |
+| Drawer open on Copy, back | Drawer closes and stays on Copy, no jump to Build |
+
+The second is the one that could have been broken silently: the drawer pushes a
+history entry, and if it had leaked, back from the first screen would have
+stopped leaving the app. It still leaves.
+
+**Also found and fixed in this phase, and it is the most valuable thing in it:
+the contrast gate had quietly got weaker.** Moving the page list took it from
+164 measured elements to 137, and nothing complained, because a gate that
+measures less does not say so. It opens the panel and demands it now, and
+measures 167.
+
+**Not verified on hardware: the pinned column.** It needs a window 1300 pixels
+wide and the reference device is a phone. The container choice is covered by
+tests and the panel's colours are measured by the contrast gate in both
+palettes, so what is unproven is how it looks at that width, not whether it is
+built.
+
 - [ ] T027 **Break the focus containment on purpose** and confirm the tests catch it. A trap nobody has escaped from is a trap nobody has tested, and this one is hand written precisely because the platform's version could not be tested at all.
 - [ ] T028 **Measure typing on the reference handset**, SC-014. The pinned panel is rebuilt on every repaint above 900 pixels and the drawer must cost nothing when closed. A rebuild measured 37ms on a Moto G7 and two per character dropped input outright, so this is the number that matters.
 - [ ] T029 Drive the app on the device: open the drawer on all three surfaces, switch pages, use the back gesture, and open it with the keyboard up. `docs/HANDOFF.md` has the checklist, including checking `mWakefulness` immediately before each capture and passing `-s` when an emulator is also attached.

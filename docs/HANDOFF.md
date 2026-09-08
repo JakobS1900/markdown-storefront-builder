@@ -432,6 +432,58 @@ to the system chooser. The fix the platform names is `Intent#createChooser` with
   `-s ZY2262PFGQ` or it fails with "more than one device". Worth adding to the
   checklist: the failure looks like a dead device rather than an ambiguous one.
 
+## Feature 025, the pages sidebar, is DONE and verified on the handset
+
+The page list is out of the Build surface and into one place reachable from all
+three: a drawer below 1300 pixels, a pinned column above it. There is exactly
+one of it; the old list was deleted rather than left beside the new one.
+
+**A second breakpoint at 1300 was added, and this feature's own plan said not
+to.** The arithmetic forced it: at 900 the editor already shares the width with
+the preview, and a third column would leave the three about 300 pixels each.
+Pinning at 1300 is purely additive, so nothing that happens at 900 today
+changed.
+
+**The drawer is hand written and that is not an oversight.** A `<dialog>` with
+`showModal()` gives a focus trap, escape, an inert background and top layer
+rendering for free. jsdom implements the `open` property and NEITHER method,
+proven by probe, and every user interface test here runs under jsdom. Building
+on it would mean asserting against a stub of the mechanism under test. Do not
+"simplify" this to a native dialog without re-running that probe.
+
+`inert` is set on the header, main and tab bar, which is what a browser acts on.
+**jsdom implements it neither as a property nor as behaviour**: an element inside
+an inert subtree still takes focus there. So the attribute is observed and the
+hand written focus containment is what is actually proved. Both exist because
+they fail in different places.
+
+**Three defects were found by tests rather than review**, which is the part
+worth carrying: an existing test caught that the drawer closed even when a page
+was REFUSED, hiding the list that seller most needs; the a11y gate caught
+`role="dialog"` on an `<aside>`, a role it is not allowed to take, which is the
+same `aria-allowed-role` rule this project met once before on an `li`; and
+writing the focus tests caught focus leaking to `document.body` on every
+repaint, escaping the trap entirely.
+
+**Verified on the Moto G7 on 2026-09-08**, release build, real key, all three
+back gesture cases: drawer open on Build closes the drawer and stays; drawer
+closed on Build still exits the app; drawer open on Copy closes and stays on
+Copy. That last one is what the jsdom test asserts by dispatching `popstate`,
+and the middle one is the pre-existing behaviour that the drawer's history entry
+could have broken silently.
+
+**The contrast gate had quietly got weaker and was fixed.** Moving the list took
+it from 164 measured elements to 137 with no complaint, because a gate that
+measures less does not say so. It opens the panel and demands at least one
+listed page now, and measures 167.
+
+**Categories already work and nobody knew.** Asked on 2026-09-08 whether a 3D
+print seller could group Star Wars prints separately from Halo prints. They can,
+today: a Prices section carries its own heading and you can add as many as you
+like. Verified by compiling one. **That is the FOURTH thing asked for that
+already existed**, after the per item price table, headings, and pages being
+saved. The pattern is the argument for the wizard doing more than onboarding.
+
 ## The forgery bug, 2026-09-06, worth reading before touching the renderer
 
 A product named `Keyring](https://tracker.example/pixel.png)` made the app build
