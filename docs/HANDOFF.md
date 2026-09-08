@@ -12,7 +12,12 @@ exists with the signed APK attached: 3,228,912 bytes, `isDraft: false`, checked
 with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
-Nothing is in progress. What is next is F4, the wizard, item 5 below.
+
+**In progress: feature 027, the setup wizard.** Branch `027-setup-wizard`,
+pushed, four commits, **specification and planning only, no implementation code
+yet.** Start at `specs/027-setup-wizard/tasks.md`, phase 2, which is the first
+thing with code in it. Read `research.md` first: it reverses part of the spec,
+and the spec now carries that amendment in its own text.
 
 The APK was verified before it was published, both ways the trap list demands:
 `assets/public/assets/index-C9AYi9o0.js` is inside it, matching what the build
@@ -285,9 +290,36 @@ honest record of it.
    and `data:` URIs embedded in the markdown, which research D3 reversed before
    any code was written. `specs/024-menu-file/` is authoritative.
 
-5. **F4, the interview wizard, is UNGATED and is the next FEATURE** once 026 is
-   released. It was put behind 024 on 2026-09-06, and behind 025 and 026 after
-   that, and all three are finished.
+5. **F4, the interview wizard, is now feature 027 and is SPECIFIED AND PLANNED**
+   as of 2026-09-08. `specs/027-setup-wizard/` has spec, plan, research,
+   data model, quickstart, tasks and a requirements checklist. Nothing is built.
+
+   **Three decisions Jakob made on 2026-09-08, in the session that writes them
+   down**, which is the rule the near miss below exists to enforce:
+
+   - The wizard's answers PICK one of the eight starting points and pre-fill it.
+     The picker stays reachable. Nothing that ships today is deleted.
+   - Pasting a whole messy existing page from rentry or pastebin is OUT, and
+     deferred to 028.
+   - Examples in empty fields are IN. "Fewer fields on first sight" is not.
+
+   **The audit is the most useful thing in the spec.** All ten questions Jakob
+   listed were checked against the contract and every answer already had
+   somewhere to go, so **027 adds no schema at all**. If a question turns out to
+   need a field that does not exist, stop and specify it separately, the way 026
+   was carved out rather than grown inside this feature.
+
+   **Research reversed one requirement before any code was written.** The
+   examples were specified as text inside the empty box; the a11y gate refuses a
+   `placeholder` outright, not just one doing a label's job. The mechanism
+   already exists as the field `hint`, and the app has 13 hints across 49 label
+   sites, with **Price carrying an example and Item, right beside it, carrying
+   nothing.** So that whole user story needs no new code. `research.md` R2 has
+   it, and the spec carries the amendment in its own text rather than only in
+   research.
+
+   It was put behind 024 on 2026-09-06, and behind 025 and 026 after that, and
+   all three are finished.
 
    **026 was carved out of it deliberately.** The wizard asks what somebody
    sells and how, and had nowhere to write the answer. It does now. Specify the
