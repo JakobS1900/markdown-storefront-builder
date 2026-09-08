@@ -16,9 +16,9 @@ ten answers already have somewhere to go. That is the whole shape of the work:
 it is a surface over a schema that is finished.
 
 The examples in empty fields turned out to be smaller still. `research.md` R2
-found the mechanism already exists, the app has 13 hints across 49 fields, and
-Price has an example while Item does not. So that half is hint text and a test,
-not code.
+found the mechanism already exists: of 21 text fields, ten had no hint and two
+more said only "One per line.", and Price carried an example while Item, right
+above it, carried nothing. So that half is hint text and a test, not code.
 
 ## Technical Context
 
@@ -36,8 +36,8 @@ headless Chrome for the contrast gate
 chunk is a lazy dynamic import already covered by `setBusy`
 **Constraints**: Offline capable, 44 by 44 minimum touch targets, WCAG AA in both
 palettes, no horizontal scrolling at 390px
-**Scale/Scope**: One new surface, six question screens, roughly 36 fields
-gaining a hint
+**Scale/Scope**: One new surface, six question screens, twelve fields gaining or
+gaining back a usable hint
 
 ## Constitution Check
 

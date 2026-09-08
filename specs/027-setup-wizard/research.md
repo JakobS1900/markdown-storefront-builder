@@ -64,12 +64,22 @@ invisible to some assistive technology, and fail anyone who looks away mid
 sentence. A wizard built to help people who cannot work out what to type is the
 worst possible feature to weaken that rule for.
 
-Then the audit that decided it. `app/src/ui/forms.ts` has 49 label sites and 13
-hints. **Price has an example and Item does not**, so the very first field
-anybody meets on a price row is blank with a bare word over it, while the field
-next to it says `Anything you like: "45", "from 45", or "DM me"`. That hint is
-the thing this user story is asking for, it already exists, it already works, and
-it is missing from about three quarters of the fields in the app.
+Then the audit that decided it. `app/src/ui/forms.ts` has **21 text fields. Ten
+had no hint at all, and two more had only "One per line."**, which says how to
+type and not what to type. So twelve of twenty one did not say what belongs in
+them.
+
+**Price has an example and Item does not**, so the very first field anybody
+meets on a price row was blank with a bare word over it, while the field
+immediately below it says `Anything you like: "45", "from 45", or "DM me"`. That
+hint is the thing this user story is asking for, it already exists, and it
+already works.
+
+**Corrected after the work was done.** This section first said "49 label sites
+and 13 hints". 49 was a count of the string `label:` in the file, which includes
+every button, so it was the wrong denominator and it made the gap look larger
+and vaguer than it is. The real shape is better for the argument, not worse:
+more than half the fields somebody types into said nothing useful.
 
 So this is the seventh instance of the pattern this project keeps meeting: the
 mechanism exists and the coverage does not. **User Story 2 needs no new code at

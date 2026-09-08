@@ -20,8 +20,8 @@ seen red is not evidence.
 
 ## Phase 1: Setup
 
-- [ ] T001 Run `npm run verify` from PowerShell, whole and unpiped, and record the numbers in the first commit message. It is what says the tree is where `docs/HANDOFF.md` claims.
-- [ ] T002 Confirm `engine/tests/document/parity.snapshot.json` is unchanged and stays that way. **A diff to it anywhere in this feature is a defect, not a step**: 027 adds no schema, and `SCHEMA_VERSION` stays at 5.
+- [x] T001 Run `npm run verify` from PowerShell, whole and unpiped, and record the numbers in the first commit message. It is what says the tree is where `docs/HANDOFF.md` claims.
+- [x] T002 Confirm `engine/tests/document/parity.snapshot.json` is unchanged and stays that way. **A diff to it anywhere in this feature is a defect, not a step**: 027 adds no schema, and `SCHEMA_VERSION` stays at 5.
 
 ---
 
@@ -34,15 +34,15 @@ not they ever touch the wizard.
 field either shows an example or is named in the exemption list, and no field
 lost its label.
 
-- [ ] T003 [US2] Write the failing test `app/tests/field-examples.test.ts`: render every section form and assert each text field either carries a hint containing a concrete example or appears in an explicit exemption list. It must fail now, because 36 of the 49 label sites in `app/src/ui/forms.ts` have no hint.
-- [ ] T004 [US2] In that same test, build the exemption list as data with **a written reason per entry**. A test that only counts hints can be satisfied with noise; the reason is what stops that.
-- [ ] T005 [US2] Add a hint with an example to `Item` in `app/src/ui/forms.ts`. It sits next to `Price`, which already says `Anything you like: "45", "from 45", or "DM me"`, and has nothing. It is the first field anybody meets on a price row.
-- [ ] T006 [P] [US2] Add hints to the remaining Prices fields that lack one in `app/src/ui/forms.ts`: `Description (optional)`, `What is included (optional)`, `Section heading (optional)`, `Currency (optional)`.
-- [ ] T007 [P] [US2] Add hints to the About you fields in `app/src/ui/forms.ts`: `Your name`, `One line about you (optional)`, `What to call it`, `Address`.
-- [ ] T008 [P] [US2] Add hints to the remaining section fields in `app/src/ui/forms.ts`: `Heading text`, `Text`, `Caption (optional)`.
-- [ ] T009 [US2] **Confirm no `placeholder` attribute was added anywhere.** FR-130, and `a11y.test.ts` already refuses one. Do not weaken that assertion: `research.md` R2 records why it is stricter than the spec first assumed.
-- [ ] T010 [US2] **Break the gate.** Remove the hint from `Item` and confirm `field-examples.test.ts` goes red naming that field, not just failing a count. Put it back. Quote the failure in the commit.
-- [ ] T011 [US2] Run `npm run verify` and commit Phase 2 alone. It is shippable at this point and should be treated as such.
+- [x] T003 [US2] Write the failing test `app/tests/field-examples.test.ts`: render every section form and assert each text field either carries a hint containing a concrete example or appears in an explicit exemption list. It must fail now: of the 21 text fields in `app/src/ui/forms.ts`, ten have no hint and two more say only "One per line.", which is the format rather than the content.
+- [x] T004 [US2] In that same test, build the exemption list as data with **a written reason per entry**. A test that only counts hints can be satisfied with noise; the reason is what stops that.
+- [x] T005 [US2] Add a hint with an example to `Item` in `app/src/ui/forms.ts`. It sits next to `Price`, which already says `Anything you like: "45", "from 45", or "DM me"`, and has nothing. It is the first field anybody meets on a price row.
+- [x] T006 [P] [US2] Add hints to the remaining Prices fields in `app/src/ui/forms.ts`: `Description (optional)`, `Section heading (optional)`, and rewrite `What is included (optional)`, whose entire hint was "One per line." `Currency (optional)` already had one and was left alone.
+- [x] T007 [P] [US2] Add hints to the About you fields in `app/src/ui/forms.ts`: `Your name`, `One line about you (optional)`, `What to call it`, and rewrite `How you take payment (optional)`, the second field whose entire hint was "One per line." `Address` already had one.
+- [x] T008 [P] [US2] Add hints to the remaining section fields in `app/src/ui/forms.ts`: `Heading text`, `Caption (optional)`, and the two other `Section heading (optional)` fields, each with an example from its own kind of section. `Text` already had one.
+- [x] T009 [US2] **Confirm no `placeholder` attribute was added anywhere.** FR-130, and `a11y.test.ts` already refuses one. Do not weaken that assertion: `research.md` R2 records why it is stricter than the spec first assumed.
+- [x] T010 [US2] **Break the gate.** Remove the hint from `Item` and confirm `field-examples.test.ts` goes red naming that field, not just failing a count. Put it back. Quote the failure in the commit.
+- [x] T011 [US2] Run `npm run verify` and commit Phase 2 alone. It is shippable at this point and should be treated as such.
 
 ---
 

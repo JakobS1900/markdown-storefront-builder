@@ -77,9 +77,10 @@ which opens the starter as a NEW page and leaves whatever was open alone.
 want keeps their one press path. The picker becomes reachable rather than
 primary, and it is not removed.
 
-**No placeholder may stand in for a label.** Constitution VI, and the a11y gate
-asserts it and is verified to fire. The examples this feature adds go inside
-empty fields as an example of a value; every field keeps its real `<label>`.
+**No field may carry a `placeholder` at all.** Constitution VI, and the a11y gate
+asserts it and is verified to fire. The examples this feature adds go in each
+field's hint, beside the label rather than instead of it, and every field keeps
+its real `<label>`. See User Story 2's amendment.
 
 **The engine is not touched.** Principle I. This is entirely an app surface over
 a schema that already exists.
@@ -142,9 +143,9 @@ field shows an example" and meant text inside the empty box. `research.md` R2
 found that the accessibility gate refuses a `placeholder` attribute outright,
 not merely one doing a label's job, and it is right to: placeholders vanish on
 focus and fail anyone who looks away mid sentence. It also found that the
-mechanism already exists and the coverage does not. `app/src/ui/forms.ts` has 49
-label sites and 13 hints, and **Price carries an example while Item, right next
-to it, carries nothing.**
+mechanism already exists and the coverage does not. Of the 21 text fields in
+`app/src/ui/forms.ts`, ten had no hint and two more said only "One per line.",
+and **Price carried an example while Item, right next to it, carried nothing.**
 
 So the example goes in the field's hint, which is the thing this app already
 uses for exactly this and which no gate has to be weakened to allow. The promise
