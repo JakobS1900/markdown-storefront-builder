@@ -13,11 +13,27 @@ with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
-**In progress: feature 027, the setup wizard.** Branch `027-setup-wizard`,
-pushed, four commits, **specification and planning only, no implementation code
-yet.** Start at `specs/027-setup-wizard/tasks.md`, phase 2, which is the first
-thing with code in it. Read `research.md` first: it reverses part of the spec,
-and the spec now carries that amendment in its own text.
+**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, pushed,
+six commits. Phases 1 and 2 are DONE. Phase 3 is next.**
+
+The one command that tells you which branch is live:
+
+```powershell
+git rev-parse --abbrev-ref HEAD   # expect 027-setup-wizard
+git log --oneline origin/master..HEAD
+```
+
+If that says `master`, check out `027-setup-wizard`. If the branch is gone, 027
+was merged and released while nobody updated this file, and `git log` on master
+is the truth.
+
+**Start at `specs/027-setup-wizard/tasks.md`, Phase 3, task T012.** Read
+`research.md` before anything else: it reverses part of the spec, and the spec
+carries that amendment in its own text rather than only in research.
+
+Phase 2, `4ebc443`, is **shippable on its own and is not yet released.** See
+"Blocked on Jakob" at the bottom: the question is whether to cut 0.9.1 for it
+before building the wizard, which was the entire reason for doing it first.
 
 The APK was verified before it was published, both ways the trap list demands:
 `assets/public/assets/index-C9AYi9o0.js` is inside it, matching what the build
@@ -61,14 +77,22 @@ fixes, not a fortnight in one. The policy and the reasoning are in
 only the handoff still knows. It no longer needs to be asked for, per the rule
 change above.
 
-**Current state**: this file describes the tree at `ce56f2d`, and
-`npm run verify` is green on it, run whole from PowerShell on 2026-09-08:
-**74 test files, 1371 tests, a11y 53, contrast 404 elements and 12 sections with
-0 failures in both light and dark, menu file gate clean, pwa update gate clean,
-exit code 0.**
+**Current state**: this file describes the tree at `4ebc443` on
+`027-setup-wizard`, and `npm run verify` is green on it, run whole from
+PowerShell on 2026-09-08:
+**75 test files, 1377 tests, a11y 53, contrast 411 elements, 45 fields, 32
+folded fields and 39 hints with 0 failures in both light and dark, menu file
+gate clean, pwa update gate clean, exit code 0.**
 
-Note the contrast number: 404, not the 167 the last three sessions saw. The gate
-had never measured a price row. It opens whichever section offers itself first,
+Those are the numbers to expect. If they are lower, something stopped rendering
+rather than something being fine.
+
+Note the contrast number: 411, not the 167 the last three sessions saw. It was
+404 at `ce56f2d` and rose to 411 when feature 027 phase 2 added hints, which is
+the gate confirming the new text is really being measured rather than assumed.
+
+The reason it moved at all: the gate had never measured a price row. It opens
+whichever section offers itself first,
 which on the example is a Text block: one field, no rows, and zero `details`
 anywhere under `#surface`. So the cost, the unit, the quantity breakdown, the
 labelled details and every hint in that fold were unmeasured, and nothing said
@@ -141,18 +165,40 @@ honest record of it.
 
 ## Next up, in order
 
-1. **Run `npm run verify` from PowerShell before anything else.** It is the
-   check that tells you whether the tree is actually where this file says it is.
-   Expect 1371 tests, a11y 53, contrast clean in both palettes at 404 elements,
-   menu file and pwa gates green. If it fails, read "Traps" below before
-   believing it: several of its failures are environmental rather than real. It
-   earned its place on 2026-09-05, when it caught a real failure that had been
-   latent for days and was NOT one of the environmental ones. See the
-   starters-picker entry under "Traps".
+1. **Check the branch, then run `npm run verify` from PowerShell.** The branch
+   command is at the top of this file. `verify` is the check that tells you
+   whether the tree is where this file says it is. Expect **1377 tests, a11y 53,
+   contrast clean in both palettes at 411 elements**, menu file and pwa gates
+   green. If it fails, read "Traps" below before believing it: several of its
+   failures are environmental rather than real. It earned its place on
+   2026-09-05, when it caught a real failure that had been latent for days and
+   was NOT one of the environmental ones. See the starters-picker entry.
 
-   Done on 2026-09-08 at `ce56f2d`, green, numbers quoted under "Current state".
+   Done on 2026-09-08 at `4ebc443`, green, numbers under "Current state".
 
-2. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
+2. **Feature 027 Phase 3, task T012, is the actual next piece of work.**
+   `specs/027-setup-wizard/tasks.md` has 58 tasks in seven phases; 11 are done.
+
+   Phase 3 is `app/src/ui/wizard-answers.ts`: a pure function from an answer set
+   to a `Document`, **with no DOM, no store and no IndexedDB in it**, and its
+   test deliberately has no `@vitest-environment jsdom` line. If that file ever
+   needs the DOM, the seam has moved to the wrong place.
+
+   Every real decision in the feature lives there, which is why it comes before
+   the surface: testing "which starter, where does the name go, how does a mode
+   reach a tier" through six screens of clicking would make all of it expensive
+   to check and easy to get wrong quietly.
+
+   The two assertions that matter most, both already written as tasks:
+
+   - **T013**: an empty answer set produces the chosen starter unchanged, and
+     compiles **byte identically** to opening that starter from the picker.
+   - **T017**: the store name reaches the **compiled output**, not merely the
+     field. `document.title` is never emitted, so a name written only there
+     looks right in the editor and is invisible to every buyer. T023 breaks this
+     on purpose to prove the test is checking the output and not the field.
+
+3. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
    of it: merged to master, pushed, tagged `v0.9.0`, Release published with the
    signed APK, installed and seen working on the handset. Details at the top.
 
@@ -167,7 +213,7 @@ honest record of it.
    `MainActivity.java` and the only thing anybody notices about the share sheet.
    It has now been carried past three releases without being raised.
 
-3. **Feature 026, selling modes, is DONE apart from the release.** How an item
+4. **Feature 026, selling modes, is DONE apart from the release.** How an item
    reaches a buyer, and how long the buyer waits.
 
    Where it came from: Jakob asked for a wizard that would ask what kind of
@@ -210,7 +256,7 @@ honest record of it.
    the page prints, because both come from one exported map,
    `SELLING_MODE_WORDS`.
 
-4. **F5, the menu file, is DONE** and was the feature before 025.
+5. **F5, the menu file, is DONE** and was the feature before 025.
    Jakob decided this on 2026-09-06 in the session that writes it down, which is
    the rule item 3 below exists to enforce.
 
@@ -290,9 +336,31 @@ honest record of it.
    and `data:` URIs embedded in the markdown, which research D3 reversed before
    any code was written. `specs/024-menu-file/` is authoritative.
 
-5. **F4, the interview wizard, is now feature 027 and is SPECIFIED AND PLANNED**
-   as of 2026-09-08. `specs/027-setup-wizard/` has spec, plan, research,
-   data model, quickstart, tasks and a requirements checklist. Nothing is built.
+6. **F4, the interview wizard, is now feature 027. Specified, planned, and
+   Phase 2 built** as of 2026-09-08. `specs/027-setup-wizard/` has spec, plan,
+   research, data model, quickstart, tasks and a requirements checklist.
+
+   **Phase 2 is done and is the whole of User Story 2**, `4ebc443`. It needed no
+   new code. Of the 21 text fields in `app/src/ui/forms.ts`, ten had no hint at
+   all and two more said only "One per line.", which is the format rather than
+   the content and is the complaint restated as help. Twelve of twenty one said
+   nothing useful, and Price had carried an example since feature 010 while
+   Item, the field directly above it and the first anybody meets, carried
+   nothing. All twelve now carry one.
+
+   `app/tests/field-examples.test.ts` refuses three things rather than one: a
+   missing hint, a hint giving only the format, and a **stale exemption** naming
+   a field that no longer exists. The exemption list carries a written reason
+   per entry and has exactly one, "What you paid", whose hint is a promise about
+   privacy that matters more than an example of a number. Proved by breaking it:
+   removing the Item hint reports `expected [ 'Item' ] to deeply equal []`,
+   naming the field rather than failing a count.
+
+   **The examples are invented** ("Ridgeline Carry", "Sourdough loaf", "Cash on
+   collection"). If Jakob's testers sell something specific enough that better
+   examples exist, each is a one line change.
+
+   Phases 3 to 7 are not built. Phase 3 is item 2 at the top of this list.
 
    **Three decisions Jakob made on 2026-09-08, in the session that writes them
    down**, which is the rule the near miss below exists to enforce:
@@ -382,7 +450,7 @@ honest record of it.
    is the largest of the three answers to this, not the only one, and the spec
    should say why it is the right one rather than assume it. Ask Jakob before
    ruling the cheap ones out.
-6. **Drive the app before believing anything about how it looks.** The design
+7. **Drive the app before believing anything about how it looks.** The design
    review on 2026-09-05 is done and found four defects plus the docked
    add-a-section row, all fixed, none of which was visible in `docs/media`.
    (This item used to say three, while the top of this file enumerated four and
@@ -390,7 +458,7 @@ honest record of it.
    `e1138d9`, `b8efe30`, and `dc68870` for the dock.) That is the standing
    lesson: the stills are not evidence about the states that are broken. See
    "Traps".
-7. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
+8. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
    budget in the suite was squeezed and rerun to find which waits were load
    bearing. None of the seven carried the `starters-picker` defect, which was a
    deficit rather than a thin margin. `a11y` and `price-list-screen` pass at one
@@ -415,6 +483,25 @@ during implementation", and the short version is worth carrying:
   test, and it was verified to discriminate.
 
 ## Verified live, do not re-probe
+
+- **Feature 026 works end to end in a real browser, 2026-09-08.** A row set to
+  Made to order with "about 2 weeks" produced
+  `| Carved oak sign | 80 | Made to order, about 2 weeks |` on the Copy tab, the
+  same in Preview and in the menu file preview, and a real 2,047 byte
+  `menu.html` of type `text/html` carrying
+  `<tr><td>Carved oak sign</td><td>80</td><td>Made to order, about 2 weeks</td></tr>`.
+  Clearing the mode back to "Do not say" and emptying the wait **removed the
+  Availability column entirely and returned the exact pre-026 bytes.**
+
+- **No existing page moved when 026 landed, and this was measured rather than
+  argued.** All eight starting points and the bundled example were compiled for
+  all four targets against the engine at `49ab971` and again at `ce56f2d`:
+  **36 files, 57,648 bytes, byte identical.** Do not redo this for 026.
+
+- **026 is on the handset and both controls were seen there.** Moto G7,
+  versionCode 13 / 0.9.0 confirmed by `dumpsys package`. A blank price row shows
+  Item and Price and nothing else, and `More details` holds the two new controls
+  with the select reading "Do not say".
 
 - **A gate can pass by moving its own ruler.** `scripts/menu-file.mjs` measures
   the saved file at 390 CSS pixels and fails on sideways scroll. Its first
@@ -666,6 +753,34 @@ distinction in the tree, and seller text can never become a node.**
 
 ## Traps that cost real time in this session
 
+- **`npm run dev -- --port 5177` does not work and fails confusingly.** npm
+  passes `5177` through as a positional argument, vite reads it as a root
+  directory, and you get a server on **5173 serving nothing**, which looks like
+  the app being broken rather than the command being wrong. Use
+  `npx vite --port 5177 --strictPort`, and read the port it prints.
+
+- **`git commit -m` with a line starting `--something` is parsed as a git
+  option.** A commit message whose line began `--muted` died with
+  `error: unknown option 'muted'`. PowerShell has no heredoc either, so the
+  reliable route for any real commit message is: write it to a file in the
+  scratchpad and `git commit -F <file>`.
+
+- **`rtk` mangles output and sometimes hangs.** It rewrote `grep` output into a
+  summary that dropped the matches, reported `grep: unknown option -- muted` for
+  a literal `--muted`, and once left a `Bash` call to hang until it was moved to
+  the background. When exact output matters, use the Grep and Read tools or run
+  the command through PowerShell.
+
+- **A `python` heredoc that both contains `\n` inside a string AND is matched
+  against source containing `\n` is worth avoiding.** One replacement failed for
+  reasons that took two attempts to unpick. Where a pattern would contain an
+  escape sequence, match on a line that does not, or use the Edit tool.
+
+- **Field ids are regenerated on every repaint.** Typing into `#f7` worked, then
+  a repaint moved the id and the next `fill` went into the wrong field silently.
+  When driving the app, address fields by their label, never by id. This was
+  already a known finding from an earlier session and it bit again anyway.
+
 - **`docs/media` is not evidence about a broken state.** The design review found
   three defects and regenerating all twelve files afterwards changed only
   `demo.gif` and `demo.mp4`. Ten stills came back byte identical, because none
@@ -809,8 +924,60 @@ distinction in the tree, and seller text can never become a node.**
   price list forms, took two seconds alone and blew the timeout in the full run.
   It was split: the DOM test checks drawing, a headless store test checks
   coverage.
+- **Probe what the run actually laid out. Do not infer it from the step that was
+  supposed to lay it out.** The contrast gate has now been caught twice: once
+  when 025 moved the page list into a drawer and it silently went 164 to 137
+  elements, and once when 026 found it had never opened a price row's fold at
+  all, so about a dozen controls had never had a computed colour. Both times
+  nothing failed, because **a gate that measures less does not complain about
+  it.** The fix each time was a counted guard, `pages` then `folded`, that
+  refuses a pass. The way it was found was dumping what the browser actually had
+  on screen, not reading the code that opens things.
+- **A thing people do constantly through a field that was not built for it is a
+  missing feature being worked around, not a convention that has settled.** From
+  `sold-out`, which was specified out on the argument that `price` is free text
+  so "SOLD OUT" already had a home. Jakob overruled it the same day: people use
+  it a lot. That is the reasoning error to watch for.
+- **Ask whether the answer is a new feature or a name.** Five things people
+  asked for already existed and were merely unfindable: the per item price
+  table, headings, pages being saved, categories, and pasting a price list. One
+  was fixed by a rename that changed no behaviour at all (`1e8013b`). Feature
+  027's spec audits every question it would ask against the schema before
+  specifying it, and found the whole feature needs no schema.
+- **A hint that gives only the format is not help.** Two fields shipped with
+  "One per line." as their entire hint, which says how to type and not what to
+  type. That is the complaint the whole of 027 exists for, restated as guidance.
+  `field-examples.test.ts` refuses it explicitly.
+- **A test that counts things can be satisfied with noise.** Every list-shaped
+  gate here carries a written reason per exemption, and fails on a stale
+  exemption naming something that no longer exists. Counting alone would have
+  been passed by twelve fields saying nothing useful.
 
 ## Deferred deliberately, do not "fix" without asking
+
+- **Pasting a whole messy existing page, from rentry or pastebin. This is 028
+  and Jakob chose to defer it on 2026-09-08.** Do not fold it into 027. Feature
+  023 already ships paste-guess-confirm for a price list INSIDE a Prices
+  section; the remaining gap is splitting a whole page into headings, about text
+  and prices, which is a different problem from asking questions.
+
+- **"Fewer fields on first sight" across the other section forms.** A real
+  answer to the same complaint as 027, explicitly NOT chosen for it on
+  2026-09-08. FR-092 already did it for price rows and that fix stuck. Do not
+  extend it to the other forms without asking.
+
+- **An example rendered inside an empty field's box.** 027 puts examples in the
+  field hint instead, and the reasoning is in `specs/027-setup-wizard/
+  research.md` R2. The in-box version is a real option that was rejected on cost
+  rather than on principle: it is a new mechanism in the most heavily tested
+  primitive in the app, and it must vanish on the first keystroke without ever
+  eating one. **If somebody watches a seller ignore the hints, this is the next
+  thing to try.**
+
+- **Any new schema field inside feature 027.** `SCHEMA_VERSION` stays at 5 and
+  `engine/tests/document/parity.snapshot.json` must not move. If a wizard
+  question turns out to need a field that does not exist, stop and specify it
+  separately, the way 026 was carved out rather than grown inside 027.
 
 - **F4, the interview wizard.** No longer deferred, but no longer next either.
   The gate opened on **2026-09-05**, not 2026-09-04. This line said 2026-09-04,
@@ -859,13 +1026,26 @@ distinction in the tree, and seller text can never become a node.**
   through Spec Kit, lock the pictures as an offline feature, relabel the buried
   `Bulk pricing` control rather than moving or reshaping it, and put the whole
   thing ahead of F4.
-- **Whether F4 is the right answer**, not whether the problem is real. The
-  problem is confirmed first hand on 2026-09-05: somebody could not figure out
-  what to write and got overwhelmed. What is not settled is that a wizard is the
-  fix. Fewer fields on first sight, and examples inside the fields rather than
-  hints above them, address the same complaint for a fraction of a new surface
-  with its own state machine. Jakob has not been asked to choose. Unlocks
-  specifying whatever wins.
+- **SHIP 0.9.1 FOR PHASE 2, OR WAIT? This is the live question.** Feature 027
+  Phase 2, `4ebc443`, answers the original complaint everywhere in the app with
+  no new surface and no new code, and it is committed and pushed but not
+  released. Putting it first was explicitly so it could be judged on its own
+  before the wizard was built, and that only pays if somebody actually sees it.
+  Cutting 0.9.1 costs a version bump, a build, a signature check and a tag.
+  Unlocks: knowing whether the wizard is still needed, or is needed differently.
+
+- **Whether F4 is the right answer is now SETTLED. Asked and answered on
+  2026-09-08**, in the session that writes it down, which is the rule the near
+  miss below exists to enforce. Jakob chose all three:
+
+  - the wizard's answers pick one of the eight starting points and pre-fill it,
+    and the picker stays reachable;
+  - pasting a whole messy existing page is out, and deferred to 028;
+  - examples in the empty fields are in, and "fewer fields on first sight" is
+    not.
+
+  So the cheap answers were not ruled out silently: one was taken and shipped as
+  Phase 2, and the other was declined on the record.
 - **Pushing is NO LONGER blocked on Jakob. Changed 2026-09-07.** He asked for
   the opposite: push, tag and publish releases as ordinary work, and stop asking.
   `CLAUDE.md` rule 3 carries the new policy and his words.
@@ -898,9 +1078,10 @@ distinction in the tree, and seller text can never become a node.**
   harness permission layer, not by anything in this project. Jakob ran it
   himself from the session prompt. If a session needs to push and is blocked the
   same way, that is the workaround, or a Bash permission rule for `git push`.
-- **Whether feature work should use branches at all.** Delivery has gone
-  straight to master since `Merge 009-imgur` on 2026-08-25, but
-  `.specify/extensions.yml` still runs a mandatory branch-creating hook before
-  every spec. This session created `023-import`, committed to master as
-  instructed, and deleted the branch. A stale `022-bulk-pricing` branch is still
-  there from the last time nobody decided.
+- **Whether feature work should use branches at all: SETTLED BY PRACTICE, not by
+  a decision anybody made.** 025, 026 and 027 each got a branch from the
+  mandatory `before_specify` hook, worked on it, and merged to master at release
+  with `--no-ff`. That is now three features in a row and it works, so treat it
+  as the way this repo does it rather than an open question. A stale
+  `022-bulk-pricing` branch is still on the remote from before that, and
+  deleting a remote branch still needs asking.
