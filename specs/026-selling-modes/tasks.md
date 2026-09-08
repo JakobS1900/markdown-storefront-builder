@@ -52,12 +52,12 @@ goldens can prove it.
 
 ## Phase 3: Setting it in the editor
 
-- [ ] T019 Write the failing test: a blank price row still asks for exactly two things, and the new controls are inside `More details` with the others.
-- [ ] T020 Add the two controls to the tier form in `app/src/ui/forms.ts`, inside the `More details` disclosure. **FR-092 from feature 024 forbids growing a blank row past two fields and it did not expire.** A select for the mode and a text field for the wait.
-- [ ] T021 The mode must be clearable back to nothing, and clearing must delete the field rather than store an empty value, so a cleared row is indistinguishable from one that never had it. Use the existing `withOptional` helper, which already does exactly this.
-- [ ] T022 Label them for what a seller would call them, not for what the app stores. "Made to order" is a phrase a seller uses; `made-to-order` is not.
-- [ ] T023 [P] Extend `app/tests/a11y.test.ts` with the new controls: real accessible names, 44 by 44, keyboard operable.
-- [ ] T024 Run `npm run verify` including `npm run contrast` in both palettes, and commit Phase 3.
+- [x] T019 Write the failing test: a blank price row still asks for exactly two things, and the new controls are inside `More details` with the others.
+- [x] T020 Add the two controls to the tier form in `app/src/ui/forms.ts`, inside the `More details` disclosure. **FR-092 from feature 024 forbids growing a blank row past two fields and it did not expire.** A select for the mode and a text field for the wait.
+- [x] T021 The mode must be clearable back to nothing, and clearing must delete the field rather than store an empty value, so a cleared row is indistinguishable from one that never had it. Use the existing `withOptional` helper, which already does exactly this.
+- [x] T022 Label them for what a seller would call them, not for what the app stores. "Made to order" is a phrase a seller uses; `made-to-order` is not.
+- [x] T023 [P] Extend `app/tests/a11y.test.ts` with the new controls: real accessible names, 44 by 44, keyboard operable.
+- [x] T024 Run `npm run verify` including `npm run contrast` in both palettes, and commit Phase 3.
 
 ---
 

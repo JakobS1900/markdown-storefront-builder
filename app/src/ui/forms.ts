@@ -5,6 +5,7 @@
  * contract gains a section type and nobody writes its form. That is the same
  * discipline the emitters use, for the same reason.
  */
+import { SELLING_MODE_WORDS } from "@mdsb/engine";
 import type { Block } from "@mdsb/engine";
 
 import { bulkPricingPanel, bulkPricingToolbar, bulkUndoOffer } from "./bulk-pricing.js";
@@ -15,6 +16,22 @@ import { formatMoney, parseMoney } from "../money.js";
 import { getState, newId, removeRow, selectedIdsIn, toggleTier, undoLast } from "../store.js";
 
 type OnChange = (next: Block) => void;
+
+/**
+ * The dropdown for how an item reaches a buyer.
+ *
+ * Built from the engine's own map rather than retyped, so the word a seller
+ * picks is the word the page prints. An empty first option is what makes the
+ * field clearable: a select with no way back to nothing is a field you can only
+ * set once, and the contract distinguishes absent from set.
+ *
+ * "Do not say" rather than "None", matching the profile's `status` above it,
+ * because none of these is a default and saying nothing is a real answer.
+ */
+const SELLING_MODES: readonly { value: string; label: string }[] = [
+  { value: "", label: "Do not say" },
+  ...Object.entries(SELLING_MODE_WORDS).map(([value, label]) => ({ value, label })),
+];
 
 /**
  * Move up, move down, and remove, for one row inside a section.
@@ -488,6 +505,8 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         open:
           (tier.cost ?? "") !== "" ||
           (tier.unit ?? "") !== "" ||
+          tier.availability !== undefined ||
+          (tier.leadTime ?? "") !== "" ||
           (tier.quantities ?? []).length > 0 ||
           (tier.details ?? []).length > 0,
         children: [
@@ -509,6 +528,30 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         value: tier.unit ?? "",
         hint: 'Leave empty for one of something. Or: "per lb", "each", "per hour".',
         onInput: (v) => editTier(i, (t) => withOptional(t, "unit", v)),
+      }),
+      // How the item reaches a buyer, and how long that takes. Both optional,
+      // both independent: a wait is worth saying when the reason is not.
+      //
+      // In the fold rather than beside Price, and that placement is the whole
+      // of FR-092 from feature 024, which did not expire because two more
+      // fields would be convenient at the top. A blank row asks for two things.
+      // The group opens itself over either of these once set, on the same rule
+      // the cost and the bulk price already follow.
+      //
+      // The option words are the words the page publishes, not a paraphrase of
+      // them. A seller choosing "Sold out" here reads "Sold out" in the
+      // Availability column, which is Principle VII at the size of a dropdown.
+      select({
+        label: "How you sell it (optional)",
+        value: tier.availability ?? "",
+        options: SELLING_MODES,
+        onChange: (v) => editTier(i, (t) => withOptional(t, "availability", v)),
+      }),
+      field({
+        label: "How long the buyer waits (optional)",
+        value: tier.leadTime ?? "",
+        hint: 'In your own words: "about 2 weeks", "3 to 5 days", "ships in March".',
+        onInput: (v) => editTier(i, (t) => withOptional(t, "leadTime", v)),
       }),
       // This was kept at the top level on the argument that it is the only
       // field here that changes how the whole section is laid out, and that a

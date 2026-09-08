@@ -203,6 +203,44 @@ async function loadRealContent() {
     "a section to open its fields",
   );
 
+  // And then the Prices section specifically, and every fold inside it.
+  //
+  // The step above opens whichever section offers itself first, which on the
+  // example is a Text block: one field, no rows, and no folds at all. So this
+  // gate has been reporting three fields and calling that an opened section,
+  // while the richest surface in the app went unmeasured. Not the price rows,
+  // not the row tools, not the cost, the unit, the quantity breakdown, the
+  // labelled details, and not the two selling mode controls from feature 026.
+  //
+  // Measured before the fix: 0 details anywhere under '#surface', 3 fields.
+  // That is the same failure the pages panel below records, found by probing
+  // what the run had actually laid out rather than by trusting that opening
+  // "a section" meant opening a representative one.
+  //
+  // Folds are opened by setting the property rather than by clicking each
+  // summary, because the shell's group restore only ever opens a group, so this
+  // survives the repaints that follow.
+  await waitFor(
+    `[...document.querySelectorAll('#surface button')].some(x => /^Open Prices/.test((x.textContent||'').trim()))
+      || document.querySelectorAll('#surface fieldset.item').length >= 1`,
+    "the example to offer its Prices section",
+  );
+  await evaluate(`(() => {
+    const b = [...document.querySelectorAll('#surface button')].find(x => /^Open Prices/.test((x.textContent||'').trim()));
+    if (b) b.click();
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface fieldset.item').length >= 1`,
+    "the Prices section to draw its rows",
+  );
+  await evaluate(`(() => {
+    for (const d of document.querySelectorAll('#surface details')) d.open = true;
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface details[open] .field').length >= 5`,
+    "the folded fields to be on screen",
+  );
+
   // And the pages panel, which is a surface of its own since feature 025.
   //
   // It moved out of the Build surface into a drawer, and this gate measured 164
@@ -269,6 +307,10 @@ async function auditScheme(scheme) {
       // Counted and demanded, so a panel that stops being drawn stops the run
       // rather than shrinking it.
       pages: document.querySelectorAll('.pages-panel .pages li').length,
+      // Counted for the same reason, and demanded below. A fold that stops
+      // opening takes about a dozen labels, hints and controls out of the
+      // measurement without failing anything.
+      folded: document.querySelectorAll('#surface details[open] .field').length,
     });
   })()`);
   return JSON.parse(result);
@@ -281,19 +323,19 @@ try {
   await send("Runtime.enable");
 
   for (const scheme of ["light", "dark"]) {
-    const { violations, checked, sections, fields, hints, pages } = await auditScheme(scheme);
+    const { violations, checked, sections, fields, hints, pages, folded } = await auditScheme(scheme);
     const nodes = violations.flatMap((v) => v.nodes);
     console.log(
-      `\n${scheme}: ${checked} elements, ${sections} sections, ${fields} fields, ${hints} hints, ${pages} pages listed, ${nodes.length} contrast failure(s)`,
+      `\n${scheme}: ${checked} elements, ${sections} sections, ${fields} fields, ${folded} folded fields, ${hints} hints, ${pages} pages listed, ${nodes.length} contrast failure(s)`,
     );
 
     // A run that measured the empty shell would pass and prove nothing, which
     // is the trap three tests fell into earlier in this project. The example
     // storefront has several sections and an opened one has several fields, so
     // this refuses to report a pass it did not earn.
-    if (sections < 3 || fields < 3 || pages < 1) {
+    if (sections < 3 || fields < 3 || pages < 1 || folded < 5) {
       console.error(
-        `  ${scheme}: only ${sections} sections, ${fields} fields and ${pages} listed pages on screen. Something did not render, so this run proves less than it claims.`,
+        `  ${scheme}: only ${sections} sections, ${fields} fields, ${folded} folded fields and ${pages} listed pages on screen. Something did not render, so this run proves less than it claims.`,
       );
       failed++;
     }
@@ -320,7 +362,11 @@ try {
 }
 
 if (failed > 0) {
-  console.error(`\nContrast gate FAILED: ${failed} element(s) below the WCAG AA ratio.`);
+  // "Problem", not "element below the ratio". `failed` counts the coverage
+  // refusals too, and a run stopped for measuring too little was reporting
+  // itself as a contrast violation: two failures at a ratio nobody could find,
+  // because there were none. The reason to look is printed above either way.
+  console.error(`\nContrast gate FAILED: ${failed} problem(s). See the lines above for which.`);
   process.exit(1);
 }
 console.log("\nContrast gate clean. Light and dark both pass WCAG AA.");

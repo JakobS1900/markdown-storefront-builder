@@ -410,7 +410,7 @@ function tierBlock(tier: Tier, currency: string | undefined, target: Target): st
  * Returns "" for a row that says neither, which is every row on every page that
  * existed before this feature, and is what keeps their output byte identical.
  */
-const MODE_WORDS: Record<NonNullable<Tier["availability"]>, string> = {
+export const SELLING_MODE_WORDS: Record<NonNullable<Tier["availability"]>, string> = {
   "in-stock": "In stock",
   "made-to-order": "Made to order",
   preorder: "Preorder",
@@ -418,7 +418,7 @@ const MODE_WORDS: Record<NonNullable<Tier["availability"]>, string> = {
 };
 
 function availabilityOf(tier: Tier): string {
-  const mode = tier.availability === undefined ? "" : MODE_WORDS[tier.availability];
+  const mode = tier.availability === undefined ? "" : SELLING_MODE_WORDS[tier.availability];
   const wait = tier.leadTime === undefined ? "" : tier.leadTime.trim();
 
   if (mode === "" && wait === "") return "";
