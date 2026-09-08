@@ -11,10 +11,11 @@ Payment: a\|b, &lt;b&gt;c&lt;/b&gt;
 
 ### \# not a heading
 
-| Item | Price | What you get |
-| --- | --- | --- |
-| A\|B | 1\|2 | line break. \*\*\*, \`\`\` |
-| Range &#126; and caret &#94; | &#36;45 to &#36;60 | &#126;&#126;not struck&#126;&#126; and a&#94;b |
+| Item | Price | Availability | What you get |
+| --- | --- | --- | --- |
+| A\|B | 1\|2 |  | line break. \*\*\*, \`\`\` |
+| Range &#126; and caret &#94; | &#36;45 to &#36;60 |  | &#126;&#126;not struck&#126;&#126; and a&#94;b |
+| Hostile wait | 10 | Made to order, 2\|3 weeks or so \*\*\* |  |
 
 | | |
 | --- | --- |

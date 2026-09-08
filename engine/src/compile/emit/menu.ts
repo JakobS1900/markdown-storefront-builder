@@ -323,6 +323,15 @@ function warnNoTables(blockId: string, target: Target, sink: DiagnosticSink): vo
  */
 function itemBody(tier: Tier, target: Target): string[] {
   const lines: string[] = [];
+  // First, because it is the thing that changes whether somebody buys at all.
+  // A buyer who reads the blurb, the pictures and the list of what is included
+  // before finding out the thing has not been made yet has read the wrong
+  // things first.
+  //
+  // Emitted here rather than in each caller so the per item layout and the
+  // no-tables fallback cannot drift apart, which is what this function is for.
+  const availability = availabilityOf(tier);
+  if (availability !== "") lines.push(escapeText(availability));
   if (tier.blurb !== undefined && tier.blurb !== "") lines.push(escapeText(tier.blurb));
   // On one line, separated by spaces, so they render as a row that wraps
   // rather than as a column of full width pictures somebody has to scroll
@@ -382,6 +391,42 @@ function tierBlock(tier: Tier, currency: string | undefined, target: Target): st
   return [...parts, ...itemBody(tier, target)].join("\n\n");
 }
 
+/**
+ * How the item reaches a buyer, in words a buyer reads.
+ *
+ * The stored value is `made-to-order` and the page says "Made to order",
+ * because nobody buying a carved sign should be reading the app's identifiers.
+ * The wait is passed through exactly as the seller typed it: somebody who wrote
+ * "about 2 weeks" must not find it title cased into "About 2 Weeks".
+ *
+ * The two read as one statement rather than two facts, FR-112, so "Made to
+ * order, about 2 weeks" is a sentence and not a pair of columns.
+ *
+ * A wait with no mode is emitted alone, because how long something takes is
+ * worth saying even when the reason is not. A mode of `sold-out` with a wait is
+ * emitted like any other: "Sold out, back in about a month" is a useful
+ * sentence and nothing here is entitled to refuse it.
+ *
+ * Returns "" for a row that says neither, which is every row on every page that
+ * existed before this feature, and is what keeps their output byte identical.
+ */
+const MODE_WORDS: Record<NonNullable<Tier["availability"]>, string> = {
+  "in-stock": "In stock",
+  "made-to-order": "Made to order",
+  preorder: "Preorder",
+  "sold-out": "Sold out",
+};
+
+function availabilityOf(tier: Tier): string {
+  const mode = tier.availability === undefined ? "" : MODE_WORDS[tier.availability];
+  const wait = tier.leadTime === undefined ? "" : tier.leadTime.trim();
+
+  if (mode === "" && wait === "") return "";
+  if (wait === "") return mode;
+  if (mode === "") return wait;
+  return `${mode}, ${wait}`;
+}
+
 function tierTable(
   tiers: readonly Tier[],
   currency: string | undefined,
@@ -411,8 +456,19 @@ function tierTable(
 
   const withDescriptions = tiers.some((t) => describe(t) !== "");
 
+  // And the same rule again for how the item reaches a buyer. Most rows in most
+  // price lists say nothing about it, and a column of empty cells on all of
+  // them would be a worse table for every seller who does not use it.
+  //
+  // Conditional is also what keeps this feature invisible to every page that
+  // existed before it. An unconditional column would move every golden file in
+  // the repository, and the diff worth reading would be buried in the diff that
+  // is not.
+  const withAvailability = tiers.some((t) => availabilityOf(t) !== "");
+
   const rows = tiers.map((t) => {
     const cells = [cell(t.name), cell(pricedAs(t, currency))];
+    if (withAvailability) cells.push(cell(availabilityOf(t)));
     if (withDescriptions) cells.push(describe(t));
     if (withDetails) {
       cells.push(realDetails(t).map((d) => `${cell(d.label)}: ${cell(d.value)}`).join(", "));
@@ -428,6 +484,9 @@ function tierTable(
   // combination, which is four strings for two optional columns and eight for
   // the next one somebody adds.
   const columns = ["Item", "Price"];
+  // Straight after Price, because it is about the offer rather than the thing:
+  // what it costs, then when you get it, then what it is.
+  if (withAvailability) columns.push("Availability");
   if (withDescriptions) columns.push("What you get");
   if (withDetails) columns.push("Details");
   if (withImages) columns.push("Example");

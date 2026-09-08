@@ -43,6 +43,13 @@
           "name": "Range ~ and caret ^",
           "price": "$45 to $60",
           "blurb": "~~not struck~~ and a^b"
+        },
+        {
+          "id": "wait-row",
+          "name": "Hostile wait",
+          "price": "10",
+          "availability": "made-to-order",
+          "leadTime": "2|3 weeks\nor so ***"
         }
       ]
     },
