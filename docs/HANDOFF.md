@@ -4,15 +4,29 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-**Released**: `v0.8.0`, from `49ab971`, versionCode 12, versionName 0.8.0.
-`v0.7.1` is `d27f470` and `v0.7.0` is `108c4a7`. **All four tags through 0.8.0
-are on `origin`**, confirmed with `git ls-remote --tags origin` on 2026-09-08,
-and `origin/master` is at `49ab971`.
+**Released**: `v0.9.0`, from `c0f58fc`, versionCode 13, versionName 0.9.0.
+`v0.8.0` is `49ab971`, `v0.7.1` is `d27f470`, `v0.7.0` is `108c4a7`. **Every tag
+through 0.9.0 is on `origin`**, confirmed with `git ls-remote --tags origin` on
+2026-09-08, `origin/master` is at `c0f58fc`, and the GitHub Release for 0.9.0
+exists with the signed APK attached: 3,228,912 bytes, `isDraft: false`, checked
+with `gh release view v0.9.0`.
 
-**Current branch is `026-selling-modes`, five commits ahead of `origin/master`
-and unpushed.** They are feature 026, which is finished except for the release:
-`7677876` and `f0ba7f4` the spec, `ee5dc12` schema version 5, `4950542` the
-output, `ce56f2d` the controls.
+**Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
+Nothing is in progress. What is next is F4, the wizard, item 5 below.
+
+The APK was verified before it was published, both ways the trap list demands:
+`assets/public/assets/index-C9AYi9o0.js` is inside it, matching what the build
+had just emitted, so it is not the stale-assets failure that nearly shipped in
+0.4.0; and `apksigner verify` reports v2 true, v3 true, and certificate digest
+`c952b39c...`, matching `docs/RELEASE.md`.
+
+Installed on the Moto G7 with `-r` over the previous release, no uninstall.
+`dumpsys package` reports versionCode 13, versionName 0.9.0. **Both new controls
+were seen on the handset**: a blank row still shows Item and Price and nothing
+else, and `More details` holds "How you sell it (optional)" as a native select
+reading "Do not say" with "How long the buyer waits (optional)" under it.
+`svc power stayon` was set back to false afterwards, because it is the owner's
+setting and not ours.
 
 **The push rule changed on 2026-09-07 and this file used to contradict it.**
 `CLAUDE.md` rule 3 now grants pushing, tagging and publishing releases as
@@ -133,23 +147,20 @@ honest record of it.
 
    Done on 2026-09-08 at `ce56f2d`, green, numbers quoted under "Current state".
 
-2. **Release 026.** This is the only thing left in the feature. Phases 1 to 4
-   are done except T028: bump the version and versionCode with the Edit tool,
-   build the signed APK, push, tag, and publish the Release with the APK on it.
-   `CLAUDE.md` rule 3 makes that ordinary work rather than something to ask
-   about. `docs/RELEASE.md` has the mechanics.
+2. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
+   of it: merged to master, pushed, tagged `v0.9.0`, Release published with the
+   signed APK, installed and seen working on the handset. Details at the top.
 
    **Never `Set-Content` the version.** It writes a UTF-8 BOM into
    `build.gradle` and Gradle then fails in about one second with no useful
    message. That cost real time on 2026-09-07. Use Edit, and check the first
-   three bytes if a build dies instantly.
+   three bytes if a build dies instantly. Done that way this time, and checked:
+   `97,112,112`, not `239,187,191`.
 
-   The phone carries versionCode 12 / 0.8.0, which is the released build, so
-   what goes on it next is the 026 build.
-
-   Also still unfixed and worth putting to Jakob at some point: the FileProvider
+   Still unfixed and worth putting to Jakob at some point: the FileProvider
    share sheet preview under T058 below, a two line change in
    `MainActivity.java` and the only thing anybody notices about the share sheet.
+   It has now been carried past three releases without being raised.
 
 3. **Feature 026, selling modes, is DONE apart from the release.** How an item
    reaches a buyer, and how long the buyer waits.
