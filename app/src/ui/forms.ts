@@ -846,7 +846,14 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
 
   return el("div", {}, [
     field({
-      label: "Your name",
+      // "Store name", matching the setup wizard's own question word for word.
+      // It read "Your name" until feature 027, and the wizard asked for a store
+      // name, so one answer had two names depending on which screen you met it
+      // on. Jakob chose to rename both rather than let them differ. The hint
+      // keeps "your name or the handle", because a person selling their own
+      // work IS the shop and the label should not imply they need to invent a
+      // trading name they do not have.
+      label: "Store name",
       value: block.displayName,
       hint: 'Your name or the handle people know you by: "Ridgeline Carry".',
       onInput: (displayName) => onChange({ ...nowBlock(block), displayName }),

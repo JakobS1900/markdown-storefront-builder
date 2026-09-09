@@ -31,6 +31,7 @@ import { announce, button, el, render, resetFieldIds } from "./dom.js";
 import { buildSurface } from "./build.js";
 import { exportSurface } from "./export.js";
 import { previewSurface } from "./preview.js";
+import { WIZARD_ID, syncWizardFocus, wizardLayer } from "./wizard.js";
 
 const SURFACES: { id: Surface; label: string }[] = [
   { id: "build", label: "Build" },
@@ -274,18 +275,23 @@ export function renderShell(root: HTMLElement): void {
 
   if (pinned) panes.unshift(pagesColumn(state));
 
-  // While the drawer is up, everything behind it is out of reach. `inert` is
+  // The setup wizard, which is a layer over all of it. It has no width to care
+  // about: there is one of it, and it is the same at every size.
+  const wizardOpen = state.wizardOpen;
+
+  // While either layer is up, everything behind it is out of reach. `inert` is
   // the platform's word for that and it is what a browser acts on. jsdom
   // implements it neither as a property nor as behaviour, so nothing here is
-  // proved by asserting the attribute; the focus containment inside the drawer
+  // proved by asserting the attribute; the focus containment inside the layer
   // is the guarantee the tests actually establish. Both exist because they fail
   // in different places.
-  const behind = drawerOpen ? { inert: "" } : {};
+  const covered = drawerOpen || wizardOpen;
+  const behind = covered ? { inert: "" } : {};
 
   // Set on the element rather than wrapped in one. `.tabs` is `position:
   // fixed`, and giving it a new parent is how it once ended up pinned to the
   // app instead of the viewport.
-  if (drawerOpen) tabs.setAttribute("inert", "");
+  if (covered) tabs.setAttribute("inert", "");
 
   const trigger = pinned
     ? undefined
@@ -315,6 +321,14 @@ export function renderShell(root: HTMLElement): void {
     el("main", { class: alongside ? "split" : undefined, ...behind }, panes),
     tabs,
     ...(drawerOpen ? [pagesDrawer(state)] : []),
+    // Last, so it is over the drawer in paint order as well as by z-index.
+    // Both really can be open at once: `drawerOpen` below is false while
+    // `sidebarOpen` is true on a window wide enough to pin the list, and
+    // nothing closes the sidebar when it becomes pinned, so `main` is reachable
+    // and the wizard can be opened from behind a list that is still open.
+    // `surface-history.ts` works the same case through for the back gesture and
+    // explains it at length there.
+    ...(wizardOpen ? [wizardLayer(state)] : []),
   );
 
   // After the render, because the nodes it moves focus to have just been made.
@@ -323,6 +337,27 @@ export function renderShell(root: HTMLElement): void {
   syncSidebarFocus(
     drawerOpen,
     root.querySelector<HTMLElement>(`.bar [aria-controls="${PANEL_ID}"]`),
+  );
+
+  // Second, and unlike the back gesture's ordering in `surface-history.ts`,
+  // this order is not load bearing. An earlier version of this comment claimed
+  // it was: that it gave the wizard the last word when both layers are up. It
+  // would not have. `syncSidebarFocus` runs first and takes focus itself
+  // whenever focus has been lost to the body, after which `lost` is false here
+  // and this call does nothing.
+  //
+  // It never arises. Both layers up means `drawerOpen`, which needs a narrow
+  // window, and a narrow window with the drawer open has `main` inert, so the
+  // wizard cannot be opened from behind it. The pair that IS reachable is the
+  // wizard over the PINNED column, and that column lives inside `main` and is
+  // inert while the wizard is up, so nothing in it can hold focus either way.
+  //
+  // Its trigger is drawn by the Build surface's empty state rather than by the
+  // shell, which is why this looks anywhere in the tree for it instead of in
+  // the header.
+  syncWizardFocus(
+    wizardOpen,
+    root.querySelector<HTMLElement>(`[aria-controls="${WIZARD_ID}"]`),
   );
 
   // Groups before the caret: a field inside a folded group cannot take focus.

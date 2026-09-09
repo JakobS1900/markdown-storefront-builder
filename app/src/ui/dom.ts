@@ -246,6 +246,61 @@ export function disclosure(opts: {
   return node;
 }
 
+/** Everything inside a layer that a keyboard can reach. */
+function focusable(panel: HTMLElement): HTMLElement[] {
+  return [
+    ...panel.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+    ),
+  ];
+}
+
+/**
+ * Keeps a keyboard inside one layer while it is open.
+ *
+ * This is the part `showModal()` would have done. Tab from the last control
+ * returns to the first and shift tab from the first goes to the last, so focus
+ * cannot walk out into a page the seller cannot see.
+ *
+ * It is also the guarantee that is actually TESTED. `inert` is set on
+ * everything behind a layer, which is the correct thing for a browser, and
+ * jsdom implements it neither as a property nor as behaviour: an element inside
+ * an inert subtree still takes focus there. Asserting the attribute would be
+ * asserting that a word is present, so this containment is what the tests prove
+ * and the attribute is what real browsers act on.
+ *
+ * CHUNK 4: this was private to `pages-sidebar.ts` until the wizard needed the
+ * same trap, and it was moved here rather than copied. A hand written focus
+ * trap is exactly the kind of thing that gets fixed in one copy and not the
+ * other, and this file is where the docstring at the top already says
+ * accessibility belongs: the property of the primitives, so a new screen gets
+ * it by default. Both layers' tests exercise it independently.
+ */
+export function trapFocus(panel: HTMLElement, event: KeyboardEvent): void {
+  if (event.key !== "Tab") return;
+
+  const stops = focusable(panel);
+  const first = stops[0];
+  const last = stops[stops.length - 1];
+  if (first === undefined || last === undefined) {
+    // Nothing to move between, so there is nowhere for Tab to go that is not
+    // out. Holding it here is still right: out is the page behind the layer.
+    event.preventDefault();
+    return;
+  }
+
+  const active = document.activeElement;
+  if (event.shiftKey && (active === first || active === panel)) {
+    event.preventDefault();
+    last.focus();
+    return;
+  }
+  if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 /** Replaces a container's children. */
 export function render(container: HTMLElement, ...children: Node[]): void {
   container.replaceChildren(...children);

@@ -938,6 +938,152 @@ fieldset.item > .btn.icon.danger {
   padding: 0;
 }
 
+/*
+ * The setup wizard: one question a screen, layered over everything.
+ *
+ * THE TRANSFORM RULE APPLIES HERE TOO, and for the same reason. Only
+ * `.wizard-panel` is transformed, and it contains nothing fixed. `.tabs` is
+ * `position: fixed` and a transform on any ancestor of it makes that ancestor
+ * its containing block, which is how the tab bar once pinned itself to the app
+ * instead of the viewport. The layer is a sibling of the tab bar, never a
+ * wrapper around it.
+ *
+ * BE PRECISE ABOUT WHAT THE TEST COVERS. `app/tests/wizard.test.ts` asserts
+ * that nothing in the RENDER PATH puts a transform on `#app`: it reads the
+ * inline style, and jsdom loads no stylesheet, so it cannot see a transform
+ * added in this file, which is how the bug actually shipped the first time. The
+ * rule above is held by reading it, not by the gate. The same sentence appears
+ * over the pages drawer and overclaims in the same way; worth correcting there
+ * too rather than leaving one honest copy and one confident one.
+ *
+ * A sheet at the bottom at every width, rather than a sheet on a phone and a
+ * centred box on a desktop. Centring wants `translate(-50%, -50%)`, which is a
+ * transform the entry animation would then have to preserve: an animated
+ * `transform` computes to a matrix rather than to the keyword, so the two
+ * fight, and the panel arrives off centre. One layout that is correct
+ * everywhere is worth more here than a second one that is prettier on a screen
+ * this app is not primarily used on.
+ */
+
+.wizard {
+  position: fixed;
+  inset: 0;
+  /* Above the pages drawer, which is 20. Both can be open at once: the sidebar
+     stays open when a widening window pins it, and the wizard can then be
+     opened from behind it. The wizard is the layer on top. */
+  z-index: 30;
+}
+
+.wizard-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+}
+
+.wizard-panel {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 0;
+  /* Centred by the margin rather than by a transform. See the note above. */
+  margin-inline: auto;
+  width: min(32rem, 100%);
+  /* CHUNK 4: MEASURE THIS ON THE HANDSET AT T052 BEFORE TRUSTING IT. Two
+     vertical risks that no gate here can see, both specific to this being the
+     only surface in the app whose text fields sit pinned to the bottom edge
+     rather than scrolling in normal flow.
+     First, the software keyboard. The default `interactive-widget` leaves a
+     fixed element anchored to the layout viewport, so the keyboard can sit over
+     a bottom anchored sheet, and scrolling inside the panel cannot rescue a
+     panel that is itself behind the keyboard. Four of the six questions are
+     text fields.
+     Second, `vh` is the LARGE viewport, so on a browser with a retracting URL
+     bar `92vh` measured up from the bottom can push this panel's own heading
+     above the visible area, where the internal scroll cannot reach it.
+     The candidate fixes are `92dvh` with this line kept as the fallback, and
+     `interactive-widget=resizes-content` on the viewport meta in `index.html`.
+     The meta is app wide, so it is not being changed on a reviewer's reasoning
+     alone. The Android shell has no URL bar, which is why this may not show
+     there and may show in an installed browser PWA. */
+  max-height: 92vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  box-shadow: var(--e2);
+  /* The bottom inset is real here, as it is for the tab bar and the add-a-
+     section dock. This panel is anchored to the bottom edge and its last row is
+     Back, Skip and Next, so without it the moves sit under the home indicator
+     on a gesture navigation handset. The drawer needs none of this because it
+     is full height with a scrolling list rather than an action row at the
+     bottom. */
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  animation: wizard-in 160ms ease-out;
+}
+
+@keyframes wizard-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Somebody who has asked not to be moved is not moved. The panel still
+   appears; it simply arrives rather than slides. */
+@media (prefers-reduced-motion: reduce) {
+  .wizard-panel {
+    animation: none;
+  }
+}
+
+/* The close control sits with the corner rather than across the top, since the
+   column stretches everything else to the full width. */
+.wizard-panel > .btn.icon {
+  align-self: flex-end;
+}
+
+.wizard-panel h2 {
+  font-size: var(--t-md);
+  margin: 0;
+}
+
+.wizard-progress,
+.wizard-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-sm);
+}
+
+/* The answers to one question. Full width buttons, so a thumb has a target
+   rather than a line of text, and so eight starting points read as a list
+   rather than as a paragraph. */
+.wizard-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wizard-choices li .btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--r-md);
+}
+
+/* Wrapping rather than shrinking. At 390px three controls have room; the rule
+   is here so that a longer word in another language moves one onto its own
+   line instead of pushing the panel wider than the screen. FR-132. */
+.wizard-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* Status */
 
 .status {

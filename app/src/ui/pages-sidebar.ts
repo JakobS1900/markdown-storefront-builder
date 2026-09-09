@@ -38,7 +38,9 @@ import {
 import { dismissSidebar } from "../surface-history.js";
 import { openBackup } from "../import.js";
 import { STARTERS } from "../starters/index.js";
-import { announce, button, disclosure, el } from "./dom.js";
+// The focus trap lives in `dom.ts` rather than here, since feature 027 gave the
+// app a second layer that needs exactly the same one. See its comment there.
+import { announce, button, disclosure, el, trapFocus } from "./dom.js";
 
 /** The id the trigger points at, and the thing focus moves into. */
 export const PANEL_ID = "pages-panel";
@@ -270,54 +272,6 @@ export function pagesPanelContents(state: State): Node[] {
   if (!showsEmptyState(state)) parts.push(starterPicker("starters-group"));
 
   return parts;
-}
-
-/** Everything inside the drawer that a keyboard can reach. */
-function focusable(panel: HTMLElement): HTMLElement[] {
-  return [
-    ...panel.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
-    ),
-  ];
-}
-
-/**
- * Keeps a keyboard inside the drawer while it is open.
- *
- * This is the part `showModal()` would have done. Tab from the last control
- * returns to the first and shift tab from the first goes to the last, so focus
- * cannot walk out into a page the seller cannot see.
- *
- * It is also the guarantee that is actually TESTED. `inert` is set on
- * everything behind the drawer, which is the correct thing for a browser, and
- * jsdom implements it neither as a property nor as behaviour: an element inside
- * an inert subtree still takes focus there. Asserting the attribute would be
- * asserting that a word is present, so the containment below is what the tests
- * prove and the attribute is what real browsers act on.
- */
-function trapFocus(panel: HTMLElement, event: KeyboardEvent): void {
-  if (event.key !== "Tab") return;
-
-  const stops = focusable(panel);
-  const first = stops[0];
-  const last = stops[stops.length - 1];
-  if (first === undefined || last === undefined) {
-    // Nothing to move between, so there is nowhere for Tab to go that is not
-    // out. Holding it here is still right: out is the page behind the drawer.
-    event.preventDefault();
-    return;
-  }
-
-  const active = document.activeElement;
-  if (event.shiftKey && (active === first || active === panel)) {
-    event.preventDefault();
-    last.focus();
-    return;
-  }
-  if (!event.shiftKey && active === last) {
-    event.preventDefault();
-    first.focus();
-  }
 }
 
 /**

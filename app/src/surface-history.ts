@@ -12,7 +12,7 @@
  * pushes nothing, so back from the first screen still leaves, which is what an
  * app is supposed to do.
  */
-import { closeSidebar, getState, setSurface, type Surface } from "./store.js";
+import { closeSidebar, closeWizard, getState, setSurface, type Surface } from "./store.js";
 
 const SURFACES: readonly string[] = ["build", "preview", "export"];
 
@@ -88,10 +88,64 @@ export function dismissSidebar(): void {
   else closeSidebar();
 }
 
+/**
+ * The same three things for the setup wizard, and for the same reasons.
+ *
+ * Written out rather than folded into one pair of functions taking a name. Two
+ * layers is not enough repetition to earn an abstraction over `history.state`,
+ * and the flag on the entry is the thing the `popstate` handler reads, so a
+ * generic version would only move the two names somewhere less obvious.
+ */
+export function rememberWizardOpen(): void {
+  const current = asSurface((history.state as { surface?: unknown } | null)?.surface);
+  history.pushState({ surface: current, wizard: true }, "");
+}
+
+/** Whether the entry on top of the stack is the wizard's own. */
+export function wizardOwnsHistory(): boolean {
+  return (history.state as { wizard?: unknown } | null)?.wizard === true;
+}
+
+/**
+ * Closes the wizard, however it was asked for: escape, the backdrop, the close
+ * control, or finishing. One path, so the entry pushed on opening is consumed
+ * exactly once and the stack cannot deepen by a press per open.
+ */
+export function dismissWizard(): void {
+  if (wizardOwnsHistory()) history.back();
+  else closeWizard();
+}
+
 /** Sends a system back gesture to the surface its history entry names. */
 export function startSurfaceHistory(): void {
   window.addEventListener("popstate", (event: PopStateEvent) => {
-    // The list of pages goes first, because it is what the seller is looking
+    // The wizard goes before the drawer, and the drawer before the surface.
+    // The rule is the same one 025 settled and it is about what the seller is
+    // looking at: dismiss the topmost thing, never navigate underneath it.
+    //
+    // CHECKING THE WIZARD FIRST IS LOAD BEARING, not tidiness, and an earlier
+    // version of this comment claimed the opposite: that both layers could
+    // never be up at once, so the order was merely stated. That was wrong, and
+    // the chunk 4 spec review found the path.
+    //
+    // `drawerOpen` in `shell.ts` is `state.sidebarOpen && !pinned`, and nothing
+    // sets `sidebarOpen` back to false when the window grows wide enough to pin
+    // the list. So: open the drawer on a narrow window, then widen it or rotate
+    // the device. `sidebarOpen` is still true while `drawerOpen` is false,
+    // which means `main` is not `inert`, which means the wizard's way in is
+    // live. Both are then open as far as this handler can see.
+    //
+    // With the order reversed, that back press would consume the wizard's own
+    // history entry to close a pinned sidebar nobody watched close, leaving the
+    // wizard on screen and the next press leaving the app. The wizard is the
+    // layer on top, by z-index and by the order the shell renders them, and
+    // back dismisses what is on top.
+    if (getState().wizardOpen) {
+      closeWizard();
+      return;
+    }
+
+    // The list of pages goes next, because it is what the seller is looking
     // at. Back with a drawer open means close the drawer, in every application
     // anybody has used, and navigating underneath it instead would move the
     // page they were about to choose from out from behind it.
