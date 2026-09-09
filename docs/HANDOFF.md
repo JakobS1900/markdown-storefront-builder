@@ -13,10 +13,15 @@ with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
-**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, eight
-commits, HEAD `cf0e404`, and `origin/027-setup-wizard` is at the same commit,
-checked with `git log --oneline -1 origin/027-setup-wizard` on 2026-09-08.
+**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, pushed,
+and `origin` has everything: verified with `git log --oneline -1
+origin/027-setup-wizard` on 2026-09-08, with a clean `git status`.
 Phases 1, 2 and 3 are DONE. Phase 4, the surface, is next.**
+
+`cf0e404` is the last commit with CODE in it, and it is the tree every number in
+this file describes. Anything after it on this branch is documentation, this
+sentence included, which is why HEAD will not match that hash and nothing is
+wrong when it does not.
 
 The one command that tells you which branch is live:
 
