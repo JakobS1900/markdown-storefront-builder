@@ -13,15 +13,17 @@ with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
-**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, pushed,
-and `origin` has everything: verified with `git log --oneline -1
-origin/027-setup-wizard` on 2026-09-08, with a clean `git status`.
-Phases 1, 2 and 3 are DONE. Phase 4, the surface, is next.**
+**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`.
+Phases 1, 2, 3 and 4 are DONE. Phase 5, the way in and the way out, is next.**
 
-`cf0e404` is the last commit with CODE in it, and it is the tree every number in
+`be5c8f7` is the last commit with CODE in it, and it is the tree every number in
 this file describes. Anything after it on this branch is documentation, this
 sentence included, which is why HEAD will not match that hash and nothing is
 wrong when it does not.
+
+**`be5c8f7` HAS NOT BEEN PUSHED YET.** Everything through `0927639` is on
+`origin`, verified on 2026-09-08. Push it, per `CLAUDE.md` rule 3, which grants
+pushing as ordinary work. Do not read the absence of a push as a decision.
 
 The one command that tells you which branch is live:
 
@@ -34,10 +36,20 @@ If that says `master`, check out `027-setup-wizard`. If the branch is gone, 027
 was merged and released while nobody updated this file, and `git log` on master
 is the truth.
 
-**Start at `specs/027-setup-wizard/tasks.md`, Phase 4, task T025.** Read
+**Start at `specs/027-setup-wizard/tasks.md`, Phase 5, task T035.** Read
 `research.md` before anything else: it reverses part of the spec, and the spec
-carries that amendment in its own text rather than only in research. R1 is the
-one Phase 4 turns on, and it is a list of findings feature 025 already paid for.
+carries that amendment in its own text rather than only in research. R3 is the
+one Phase 5 turns on, and R1 is what Phase 4 was built from.
+
+**Read the `CHUNK 4:` seam comment in `app/src/ui/wizard.ts` before writing any
+of Phase 5.** It names four things not to get wrong, and the third is the one
+that will otherwise be missed: **nothing in the app calls `rememberWizardOpen`
+yet**, so FR-133 is wired on one side only. `surface-history.ts` has the
+function and the `popstate` branch that consumes its entry, and only the tests
+call it, by hand. T036 must pair it with `openWizard()` at the trigger the way
+`shell.ts` pairs `rememberSidebarOpen()` with `openSidebar()`. Until it does,
+the first back gesture on the Build surface leaves the app rather than
+dismissing the wizard, because Build deliberately pushes no history of its own.
 
 **Phase 2 will NOT be released on its own.** Asked and answered on 2026-09-08:
 Jakob chose "Phase 3 now, release later", so the hints ship with the whole 027
@@ -86,22 +98,28 @@ fixes, not a fortnight in one. The policy and the reasoning are in
 only the handoff still knows. It no longer needs to be asked for, per the rule
 change above.
 
-**Current state**: this file describes the tree at `cf0e404` on
+**Current state**: this file describes the tree at `be5c8f7` on
 `027-setup-wizard`, and `npm run verify` is green on it, run whole and unpiped
-from PowerShell on 2026-09-08:
-**76 test files, 1431 tests, a11y 53, contrast 411 elements, 45 fields, 32
-folded fields and 39 hints with 0 failures in both light and dark, dash scan
-clean over 317 files, menu file gate clean, pwa update gate clean, exit code 0.**
+from PowerShell on 2026-09-09:
+**77 test files, 1464 tests, a11y 53, contrast 411 elements, 45 fields, 32
+folded fields and 39 hints with 0 failures in both light and dark, secret scan
+clean over 444 files, dash scan clean over 319 files, menu file gate clean, pwa
+update gate clean, exit code 0.**
 
 Those are the numbers to expect. If they are lower, something stopped rendering
 rather than something being fine.
 
-It was 75 files and 1377 tests at `4ebc443`. The 54 new ones are all
-`app/tests/wizard-answers.test.ts`. **a11y and contrast did NOT move, and that
-is the correct result rather than a gate that missed something**: Phase 3 adds
-one pure function and no surface at all, so there is nothing new for either
-gate to lay out. The gates start mattering again at Phase 6, which exists
-because they have twice been green about a surface they never drew.
+It was 76 files and 1431 tests at `0927639`. The 33 new ones are all
+`app/tests/wizard.test.ts`. **a11y and contrast did NOT move, and that is
+expected rather than a gate missing something**: neither one opens the wizard
+yet. That is Phase 6, T042 to T047, and it is now the load bearing phase of this
+feature, because a whole new modal surface with nine buttons on its first screen
+is measured by nothing at all until it lands. This project has three times found
+a gate green about a surface it never laid out.
+
+Before Phase 4 the same paragraph said the gates not moving was correct because
+Phase 3 added no surface. That was true then and is NOT true now. Phase 4 added
+the surface, and the gates still do not see it.
 
 Note the contrast number: 411, not the 167 the last three sessions saw. It was
 404 at `ce56f2d` and rose to 411 when feature 027 phase 2 added hints, which is
@@ -183,80 +201,101 @@ honest record of it.
 
 1. **Check the branch, then run `npm run verify` from PowerShell.** The branch
    command is at the top of this file. `verify` is the check that tells you
-   whether the tree is where this file says it is. Expect **1431 tests, a11y 53,
+   whether the tree is where this file says it is. Expect **1464 tests, a11y 53,
    contrast clean in both palettes at 411 elements**, menu file and pwa gates
    green. If it fails, read "Traps" below before believing it: several of its
    failures are environmental rather than real. It earned its place on
    2026-09-05, when it caught a real failure that had been latent for days and
    was NOT one of the environmental ones. See the starters-picker entry.
 
-   Done twice on 2026-09-08, green both times: at `4ebc443` before any work, and
-   again with Phase 3 on it. Numbers under "Current state".
+   Done twice on 2026-09-09, green both times: at `0927639` before any work at
+   the old numbers, and at `be5c8f7` with Phase 4 on it. Numbers under "Current
+   state".
 
-2. **Feature 027 Phase 4, task T025, is the actual next piece of work.**
-   `specs/027-setup-wizard/tasks.md` has 58 tasks in seven phases; 24 are done.
+2. **PUSH `be5c8f7`.** It is committed and not pushed. `CLAUDE.md` rule 3 makes
+   pushing ordinary work that does not need asking for, and this file's own
+   history is the reason the rule exists: 0.5.0 and 0.6.0 sat local because
+   nobody owned the re-ask.
 
-   Phase 4 is the surface, `app/src/ui/wizard.ts`. **Read `research.md` R1
-   first.** It is not analysis, it is a list of four findings feature 025 already
-   paid for with real time, and every one of them is binding: a `div` with
-   `role="dialog"` and NOT an `aside`, because `aria-allowed-role` fails that and
-   the a11y gate catches it; no native `<dialog>`, because jsdom has neither
-   `showModal` nor `inert` and testing against a stub of the mechanism under test
-   is how this project once shipped twenty one tests covering a panel that
-   displayed nothing; `div[tabindex="-1"]` does hold focus under jsdom, which is
-   what makes the trap testable; and the back gesture goes through
-   `surface-history.ts`.
+3. **Feature 027 Phase 5, task T035, is the actual next piece of work.**
+   `specs/027-setup-wizard/tasks.md` has 58 tasks in seven phases; 36 are done.
 
-   Two more that are easy to get wrong and are written down as tasks:
-   **T028**, the store state goes on the immediate `set` path the way
-   `sidebarOpen` does, because a surface that appears one repaint after the press
-   reads as a dead button. **T033**, restore focus on close and add the
-   `syncWizardFocus` equivalent, because focus leaking to `document.body` on
-   every repaint was a real defect in 025 and this is the same shape of code.
+   Phase 5 is the way in and the way out. **Read `research.md` R3 first**, and
+   then the `CHUNK 4:` seam comment at `finish()` in `app/src/ui/wizard.ts`,
+   which was written for exactly this task and names four things not to get
+   wrong. The two that will otherwise be missed:
 
-   **Phase 3 is DONE and its seam held.** `app/src/ui/wizard-answers.ts` is a
-   pure function from an answer set to a `Document`, with no DOM, no store and no
-   IndexedDB in it, and `app/tests/wizard-answers.test.ts` has no
-   `@vitest-environment jsdom` line and must never gain one. 54 tests.
+   - **Nothing calls `rememberWizardOpen`.** T036 pairs it with `openWizard()`
+     at the trigger, the way `shell.ts` pairs `rememberSidebarOpen()` with
+     `openSidebar()`. Until then FR-133 is wired on one side only and the first
+     back gesture on Build leaves the app instead of dismissing the wizard.
+   - **The trigger must carry `aria-controls="wizard-panel"` and sit inside
+     `#app`**, because `renderShell` finds it with `root.querySelector`. That
+     lookup is the one part of the focus restore nothing proves today: the test
+     supplies its own trigger, and it cannot do better, because `render` calls
+     `replaceChildren` on the root and destroys anything a test appends. T035 is
+     where that assertion finally becomes possible.
 
-   What it settled, so Phase 4 does not reopen any of it:
+   `finish()` currently closes the wizard and creates nothing. T037 replaces it
+   with `openBackup(serializeDocument(doc))` built from `documentFromAnswers`
+   and `starterIdFor`, wrapped in the same `setBusy` and offline `load()` catch
+   `starterPicker` already carries.
 
-   - An empty answer set produces the chosen starting point **byte identically**,
-     for all eight, both as stored bytes and as compiled output on every host.
-     Answering nothing costs nothing, and that is checked rather than intended.
-   - The store name reaches `profile.displayName` AND `document.title`, and
-     **T023 was run**: writing it only to `title` makes the compiled-output test
-     fail on every host while the title test still passes, which is exactly the
-     defect FR-121 exists to prevent.
-   - `wantsPicture` changes nothing about the document, by design. Phase 4 reads
-     it to decide which section is open when the page appears. T029b already
-     asserts the other half.
-   - **Two judgement calls were made that the spec did not settle**, both argued
-     in comments at the point they are made. First: when somebody names their own
-     item, the starting point's DESCRIPTION of the row is dropped (blurb,
-     includes, details, quantities, images, cost) while the OFFER is kept (price,
-     unit, availability, leadTime). The line is the contract's own, written at
-     `availability` in `descriptor.ts`. Without it, a seller who types "Carved
-     oak sign" gets a photograph of resin coasters and the words "tell me your
-     scent and colour preferences" under it. Second: answers are trimmed, and a
-     blank or whitespace-only answer counts as skipped rather than as an empty
-     string. **Both are worth a second opinion at T048.**
+   **Phase 4 is DONE and both its reviews ran.** `app/src/ui/wizard.ts` is the
+   layer, six screens, the moves and the keyboard handling, and it decides
+   nothing about what an answer means. 33 tests in `app/tests/wizard.test.ts`.
 
-   **Run Phase 4 through the chunk pipeline the way `CLAUDE.md` asks**: one
+   What the two reviews found and what was done, so none of it is reopened:
+
+   - **Escape out of a text field left the wizard on screen** while the store
+     said it was closed. `repaint` defers while a field holds focus and
+     reschedules every 200ms; Escape does not blur. Fixed in `closeWizard`
+     rather than at the Escape handler, because the back gesture arrives through
+     `popstate` with no pointer and had the identical bug. **The test for it is
+     the only one in that file that subscribes the renderer the way `main.ts`
+     does**, and therefore the only one that crosses the repaint deferral at
+     all. Do not "simplify" it to call `renderShell` by hand.
+   - **`sectionToOpen` returned the constant `"gallery"`** and five of the eight
+     starting points do not have one. It takes the starting point now and falls
+     back to the profile block, which every starter has and which carries
+     `avatarUrl`. Proved by reverting it: the test names `art-commissions`
+     rather than failing a count.
+   - The bottom safe area, a no-op guard on `setWizardStep`, a duplicated test
+     deleted, and three comments that claimed more than they could deliver.
+
+   **Two questions were deliberately left for T048**, not forgotten: whether
+   `sectionToOpen` belongs in `wizard-answers.ts` (the two reviewers disagreed),
+   and roughly 35 lines of focus-sync duplication between `wizard.ts` and
+   `pages-sidebar.ts` that the same argument used to justify sharing `trapFocus`
+   would also cover. Both are marked `CHUNK 4:` in the code.
+
+   **Answered by Jakob on 2026-09-09, do not re-ask.** The store name field is
+   called "Store name" in BOTH the wizard and the editor. It was "Your name" in
+   the editor, so one answer had two names depending on the screen. He chose to
+   rename both. `app/tests/typing.test.ts` and `app/tests/stale-edit.test.ts`
+   drive that field by label and were updated with it. Separately, all four
+   selling modes stay on the wizard's selling mode screen, "Sold out" included:
+   he was unsure, and keeping them is both the no-change answer and the one
+   FR-124 wants, since the list is read from the engine's own map.
+
+   **Run Phase 5 through the chunk pipeline the way `CLAUDE.md` asks**: one
    fresh implementer subagent for the chunk, then a fresh spec-compliance
-   reviewer, then a fresh code-quality reviewer. Phase 3 did not get that and
-   the reason is under "Traps", not a precedent. If a subagent dies on a rate
-   limit again, the fallback is the one used on 2026-09-08: do the work in
+   reviewer, then a fresh code-quality reviewer. **It is worth the tokens.**
+   Phase 4 ran it and the two reviewers between them found a bug that would have
+   shipped, a promise the screen made and could not keep for five of eight
+   starting points, and three comments that overclaimed. The implementer's own
+   report said Phase 4 was complete and correct.
+
+   **The rate limit is a real hazard here.** On 2026-09-08 an implementer died
+   on one, and on 2026-09-09 BOTH reviewers died on one, in parallel, before
+   reading a single file. Run the two reviewers SEQUENTIALLY rather than at
+   once. If one dies, the limit resets on a clock, so retrying is better than
+   the fallback. The fallback, if it comes to that, is to do the work in
    session, test first, and **write the debt into the code as a `CHUNK N:`
    comment** so T048 finds it. Do not quietly treat a dead subagent as a lighter
    process.
 
-   **The session before this one stopped HERE deliberately**, at a clean commit
-   boundary with the branch pushed, rather than starting Phase 4 with the
-   subagent pipeline down. That was Jakob's call and it is the reason Phase 4
-   has not been touched. There is no half-finished surface anywhere to find.
-
-3. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
+4. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
    of it: merged to master, pushed, tagged `v0.9.0`, Release published with the
    signed APK, installed and seen working on the handset. Details at the top.
 
@@ -271,7 +310,7 @@ honest record of it.
    `MainActivity.java` and the only thing anybody notices about the share sheet.
    It has now been carried past three releases without being raised.
 
-4. **Feature 026, selling modes, is DONE apart from the release.** How an item
+5. **Feature 026, selling modes, is DONE apart from the release.** How an item
    reaches a buyer, and how long the buyer waits.
 
    Where it came from: Jakob asked for a wizard that would ask what kind of
@@ -314,7 +353,7 @@ honest record of it.
    the page prints, because both come from one exported map,
    `SELLING_MODE_WORDS`.
 
-5. **F5, the menu file, is DONE** and was the feature before 025.
+6. **F5, the menu file, is DONE** and was the feature before 025.
    Jakob decided this on 2026-09-06 in the session that writes it down, which is
    the rule item 3 below exists to enforce.
 
@@ -394,7 +433,7 @@ honest record of it.
    and `data:` URIs embedded in the markdown, which research D3 reversed before
    any code was written. `specs/024-menu-file/` is authoritative.
 
-6. **F4, the interview wizard, is now feature 027. Specified, planned, and
+7. **F4, the interview wizard, is now feature 027. Specified, planned, and
    Phase 2 built** as of 2026-09-08. `specs/027-setup-wizard/` has spec, plan,
    research, data model, quickstart, tasks and a requirements checklist.
 
@@ -508,7 +547,7 @@ honest record of it.
    is the largest of the three answers to this, not the only one, and the spec
    should say why it is the right one rather than assume it. Ask Jakob before
    ruling the cheap ones out.
-7. **Drive the app before believing anything about how it looks.** The design
+8. **Drive the app before believing anything about how it looks.** The design
    review on 2026-09-05 is done and found four defects plus the docked
    add-a-section row, all fixed, none of which was visible in `docs/media`.
    (This item used to say three, while the top of this file enumerated four and
@@ -516,7 +555,7 @@ honest record of it.
    `e1138d9`, `b8efe30`, and `dc68870` for the dock.) That is the standing
    lesson: the stills are not evidence about the states that are broken. See
    "Traps".
-8. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
+9. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
    budget in the suite was squeezed and rerun to find which waits were load
    bearing. None of the seven carried the `starters-picker` defect, which was a
    deficit rather than a thin margin. `a11y` and `price-list-screen` pass at one
@@ -810,6 +849,45 @@ compiler's structure once they are the same characters. A node carries that
 distinction in the tree, and seller text can never become a node.**
 
 ## Traps that cost real time in this session
+
+**A repaint deferred while a text field has focus never lands, and that is how
+a closed surface stays on screen.** Found on 2026-09-09 by the chunk 4 code
+quality review, in the setup wizard. `repaint` in `store.ts` refuses to paint
+while a text input holds focus and reschedules itself every 200ms until that
+stops being true, which is correct and is what stops a keystroke rebuilding the
+shell. But a surface being REMOVED inverts that reasoning: there is no field
+left to protect. Escape does not blur, and neither does the back gesture, so
+either one set `wizardOpen: false` and then deferred the paint indefinitely. The
+panel stayed on screen and fully interactive against a store that said it was
+closed.
+
+**Every pointer path hid it**, because a real press blurs on the way in. Only
+the two keyboard-and-gesture paths were broken, and those are exactly the two a
+test suite driving `renderShell` by hand cannot see. **Fix it at the state
+change, not at the handler**, the way `repaint`'s own guard sits at the choke
+point rather than at its callers. Any layer added here that contains a text
+field has this bug until its close path blurs.
+
+**A test that calls the renderer directly has stepped over the bug.** Every DOM
+test in this project builds a host and calls `renderShell(host)` itself, which
+is fine for asserting what gets built and blind to everything between a state
+change and a paint. `app/tests/wizard.test.ts` has exactly one test that
+subscribes the renderer the way `main.ts` does, and it is the one that caught
+the above. It is worth having one of those per surface.
+
+**A function that cannot see what it is choosing from will choose wrong and say
+nothing.** `sectionToOpen` returned the constant `"gallery"` and five of the
+eight starting points ship without one, so the picture answer went nowhere for
+five of eight sellers while the screen promised it decided something. The
+signature was the defect rather than the body. Worth asking of any mapping
+function here: does it have enough in its arguments to be right, or is it right
+only for the case somebody happened to test?
+
+**Both review subagents can die on the same rate limit, in parallel, having read
+nothing.** Happened on 2026-09-09. The limit resets on a clock, so retrying is
+better than falling back to in-session review, and running the two reviewers
+SEQUENTIALLY rather than at once is what keeps one failure from costing both.
+
 
 - **A session rate limit kills subagents outright, and the chunk pipeline stops
   with it.** On 2026-09-08 the Phase 3 implementer subagent was dispatched and

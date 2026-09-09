@@ -78,18 +78,18 @@ away from.
 **Independent test**: Open it, answer, go back, see the answer still there,
 dismiss it.
 
-- [ ] T025 [US1] Write the failing test `app/tests/wizard.test.ts` covering: the layer opens, one question is on screen at a time, and the focus trap holds.
-- [ ] T026 [US1] Create `app/src/ui/wizard.ts` as a `div` with `role="dialog"`. **Not an `aside`**: `aria-allowed-role` fails that and the a11y gate catches it. Feature 025 paid for this finding; do not rediscover it.
-- [ ] T027 [US1] Set `inert` on the header and main by attribute while the wizard is open, the way `shell.ts` already does for the pages drawer. jsdom implements neither the `inert` property nor its behaviour, so it is asserted as an attribute.
-- [ ] T028 [US1] Add `wizardOpen`, `wizardStep` and `wizardAnswers` to `State` in `app/src/store.ts`, on the **immediate `set` path** the way `sidebarOpen` is. A surface that appears one repaint after the press reads as a dead button.
-- [ ] T029 [US1] Build the six question screens from `data-model.md`'s seven answer fields. `firstItem` and `firstPrice` share a screen; the other five have one each. The selling mode question takes its words from the engine's exported `SELLING_MODE_WORDS`, so the word somebody picks is the word their page prints.
-- [ ] T029a [US1] Assert the screen count in `app/tests/wizard.test.ts`: walking from the first question to the finish without typing anything passes at most seven screens. SC-002, which nothing counted before.
-- [ ] T029b [US1] `wantsPicture` decides which section is open when the page appears and changes nothing about the document itself. Test both: the section choice happens, and two documents differing only in that answer are byte identical.
-- [ ] T030 [US3] Going back a question keeps the answer already given. FR-126, and a test.
-- [ ] T031 [US3] Every question is skippable, and skipping every one still reaches the finish. FR-120 and FR-127.
-- [ ] T032 [US3] Dismiss the wizard on the device back gesture **before** it leaves the surface, in `app/src/surface-history.ts`, following what feature 025 settled for the sidebar. FR-133.
-- [ ] T033 [US1] Restore focus on close to the control that opened it, and add a `syncWizardFocus` equivalent so focus does not leak to `document.body` on every repaint. That leak was a real defect in 025 and the same shape of code causes it.
-- [ ] T034 [US1] Run `npm run verify` and commit Phase 4.
+- [x] T025 [US1] Write the failing test `app/tests/wizard.test.ts` covering: the layer opens, one question is on screen at a time, and the focus trap holds.
+- [x] T026 [US1] Create `app/src/ui/wizard.ts` as a `div` with `role="dialog"`. **Not an `aside`**: `aria-allowed-role` fails that and the a11y gate catches it. Feature 025 paid for this finding; do not rediscover it.
+- [x] T027 [US1] Set `inert` on the header and main by attribute while the wizard is open, the way `shell.ts` already does for the pages drawer. jsdom implements neither the `inert` property nor its behaviour, so it is asserted as an attribute.
+- [x] T028 [US1] Add `wizardOpen`, `wizardStep` and `wizardAnswers` to `State` in `app/src/store.ts`, on the **immediate `set` path** the way `sidebarOpen` is. A surface that appears one repaint after the press reads as a dead button.
+- [x] T029 [US1] Build the six question screens from `data-model.md`'s seven answer fields. `firstItem` and `firstPrice` share a screen; the other five have one each. The selling mode question takes its words from the engine's exported `SELLING_MODE_WORDS`, so the word somebody picks is the word their page prints.
+- [x] T029a [US1] Assert the screen count in `app/tests/wizard.test.ts`: walking from the first question to the finish without typing anything passes at most seven screens. SC-002, which nothing counted before.
+- [x] T029b [US1] `wantsPicture` decides which section is open when the page appears and changes nothing about the document itself. Test both: the section choice happens, and two documents differing only in that answer are byte identical.
+- [x] T030 [US3] Going back a question keeps the answer already given. FR-126, and a test.
+- [x] T031 [US3] Every question is skippable, and skipping every one still reaches the finish. FR-120 and FR-127.
+- [x] T032 [US3] Dismiss the wizard on the device back gesture **before** it leaves the surface, in `app/src/surface-history.ts`, following what feature 025 settled for the sidebar. FR-133.
+- [x] T033 [US1] Restore focus on close to the control that opened it, and add a `syncWizardFocus` equivalent so focus does not leak to `document.body` on every repaint. That leak was a real defect in 025 and the same shape of code causes it.
+- [x] T034 [US1] Run `npm run verify` and commit Phase 4.
 
 ---
 
