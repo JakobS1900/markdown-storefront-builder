@@ -13,7 +13,9 @@ with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
-**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, pushed.
+**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, eight
+commits, HEAD `cf0e404`, and `origin/027-setup-wizard` is at the same commit,
+checked with `git log --oneline -1 origin/027-setup-wizard` on 2026-09-08.
 Phases 1, 2 and 3 are DONE. Phase 4, the surface, is next.**
 
 The one command that tells you which branch is live:
@@ -79,7 +81,7 @@ fixes, not a fortnight in one. The policy and the reasoning are in
 only the handoff still knows. It no longer needs to be asked for, per the rule
 change above.
 
-**Current state**: this file describes the tree with Phase 3 on
+**Current state**: this file describes the tree at `cf0e404` on
 `027-setup-wizard`, and `npm run verify` is green on it, run whole and unpiped
 from PowerShell on 2026-09-08:
 **76 test files, 1431 tests, a11y 53, contrast 411 elements, 45 fields, 32
@@ -234,6 +236,20 @@ honest record of it.
      scent and colour preferences" under it. Second: answers are trimmed, and a
      blank or whitespace-only answer counts as skipped rather than as an empty
      string. **Both are worth a second opinion at T048.**
+
+   **Run Phase 4 through the chunk pipeline the way `CLAUDE.md` asks**: one
+   fresh implementer subagent for the chunk, then a fresh spec-compliance
+   reviewer, then a fresh code-quality reviewer. Phase 3 did not get that and
+   the reason is under "Traps", not a precedent. If a subagent dies on a rate
+   limit again, the fallback is the one used on 2026-09-08: do the work in
+   session, test first, and **write the debt into the code as a `CHUNK N:`
+   comment** so T048 finds it. Do not quietly treat a dead subagent as a lighter
+   process.
+
+   **The session before this one stopped HERE deliberately**, at a clean commit
+   boundary with the branch pushed, rather than starting Phase 4 with the
+   subagent pipeline down. That was Jakob's call and it is the reason Phase 4
+   has not been touched. There is no half-finished surface anywhere to find.
 
 3. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
    of it: merged to master, pushed, tagged `v0.9.0`, Release published with the
@@ -1082,6 +1098,12 @@ distinction in the tree, and seller text can never become a node.**
   not an unnecessary step.
 
 ## Blocked on Jakob
+
+**NOTHING BLOCKS PHASE 4.** As of 2026-09-08 there is no open question standing
+between a new session and task T025. Every entry below is either answered or is
+a rule, and the only thing still worth RAISING with him is the share sheet
+preview under T058, which has now been carried past three releases without being
+mentioned. That is a thing to mention, not a thing to wait on.
 
 - **Nothing blocks F5.** All four of its open questions were put to Jakob on
   2026-09-06 and answered in that session: build all three parts and route them
