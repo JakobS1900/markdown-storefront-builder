@@ -21,9 +21,9 @@ this file describes. Anything after it on this branch is documentation, this
 sentence included, which is why HEAD will not match that hash and nothing is
 wrong when it does not.
 
-**`be5c8f7` HAS NOT BEEN PUSHED YET.** Everything through `0927639` is on
-`origin`, verified on 2026-09-08. Push it, per `CLAUDE.md` rule 3, which grants
-pushing as ordinary work. Do not read the absence of a push as a decision.
+**`origin` has everything**, up to and including the documentation commit
+`97d0782`, verified with `git log --oneline -1 origin/027-setup-wizard` on
+2026-09-09 with a clean `git status`.
 
 The one command that tells you which branch is live:
 
@@ -212,10 +212,12 @@ honest record of it.
    the old numbers, and at `be5c8f7` with Phase 4 on it. Numbers under "Current
    state".
 
-2. **PUSH `be5c8f7`.** It is committed and not pushed. `CLAUDE.md` rule 3 makes
-   pushing ordinary work that does not need asking for, and this file's own
-   history is the reason the rule exists: 0.5.0 and 0.6.0 sat local because
-   nobody owned the re-ask.
+2. **Nothing is waiting to be pushed.** `origin/027-setup-wizard` is at
+   `97d0782`, confirmed on 2026-09-09 with `git log --oneline -1
+   origin/027-setup-wizard` after the push. `CLAUDE.md` rule 3 makes pushing
+   ordinary work that does not need asking for, and this file's own history is
+   the reason the rule exists: 0.5.0 and 0.6.0 sat local because nobody owned
+   the re-ask.
 
 3. **Feature 027 Phase 5, task T035, is the actual next piece of work.**
    `specs/027-setup-wizard/tasks.md` has 58 tasks in seven phases; 36 are done.
