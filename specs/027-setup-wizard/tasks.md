@@ -54,19 +54,19 @@ be tested without clicking through six screens.
 **Independent test**: Call it with an answer set, get a `Document`, compile it.
 No jsdom, no store, no IndexedDB.
 
-- [ ] T012 [US1] Write the failing test `app/tests/wizard-answers.test.ts`. No `@vitest-environment jsdom` line in it, deliberately: if this file ever needs the DOM, the seam has moved into the wrong place.
-- [ ] T013 [US1] **The assertion this half turns on**: an empty answer set produces the chosen starting point unchanged, and its compiled output is **byte identical** to opening that starter from the picker. Assert bytes, not shape.
-- [ ] T014 [US1] Create `app/src/ui/wizard-answers.ts` with the answer set type from `data-model.md` and a function to a `Document`. Every field optional, because every question is skippable.
-- [ ] T015 [US1] Map the "what do you sell" answer to one of the eight starter ids, with an explicit `other` that maps to a default. FR-122: no ninth set of page content is invented.
-- [ ] T016 [US1] Write the store name to `profile.displayName`, and to `document.title` as well. FR-121.
-- [ ] T017 [US1] **Test that the store name reaches the compiled output**, not merely the field. `title` is never emitted, and a name that appears in the editor and not in the output is the exact defect FR-121 exists to prevent.
-- [ ] T018 [US1] Write the first item and price to the starter's first tier, replacing what was there rather than appending a second row.
-- [ ] T019 [US1] Write the selling mode to `tier.availability` using the four values feature 026 defined, and the amount to `tier.unit`. FR-124: no parallel way of saying the same thing.
-- [ ] T020 [US1] A skipped question leaves the starter's own content alone and **writes no empty string**. An absent optional field and an empty one must not come to mean the same thing.
-- [ ] T021 [US1] A starter with no menu section takes no item. `Portfolio and about me` ships with no prices deliberately; the item is dropped rather than a Prices section being invented. Test it, so the behaviour is chosen rather than discovered later.
-- [ ] T022 [US1] **Grow the XSS corpus** by the store name, the item name and the price, per Constitution IV. Everything typed reaches the page through the same escaping path as every other authored string, and this feature contains no string template that produces Markdown.
-- [ ] T023 [US1] **Break the gate.** Write the store name only to `document.title` and confirm T017 fails. If it passes, it is checking the field rather than the output and is the wrong test.
-- [ ] T024 [US1] Run `npm run verify` and commit Phase 3.
+- [x] T012 [US1] Write the failing test `app/tests/wizard-answers.test.ts`. No `@vitest-environment jsdom` line in it, deliberately: if this file ever needs the DOM, the seam has moved into the wrong place.
+- [x] T013 [US1] **The assertion this half turns on**: an empty answer set produces the chosen starting point unchanged, and its compiled output is **byte identical** to opening that starter from the picker. Assert bytes, not shape.
+- [x] T014 [US1] Create `app/src/ui/wizard-answers.ts` with the answer set type from `data-model.md` and a function to a `Document`. Every field optional, because every question is skippable.
+- [x] T015 [US1] Map the "what do you sell" answer to one of the eight starter ids, with an explicit `other` that maps to a default. FR-122: no ninth set of page content is invented.
+- [x] T016 [US1] Write the store name to `profile.displayName`, and to `document.title` as well. FR-121.
+- [x] T017 [US1] **Test that the store name reaches the compiled output**, not merely the field. `title` is never emitted, and a name that appears in the editor and not in the output is the exact defect FR-121 exists to prevent.
+- [x] T018 [US1] Write the first item and price to the starter's first tier, replacing what was there rather than appending a second row.
+- [x] T019 [US1] Write the selling mode to `tier.availability` using the four values feature 026 defined, and the amount to `tier.unit`. FR-124: no parallel way of saying the same thing.
+- [x] T020 [US1] A skipped question leaves the starter's own content alone and **writes no empty string**. An absent optional field and an empty one must not come to mean the same thing.
+- [x] T021 [US1] A starter with no menu section takes no item. `Portfolio and about me` ships with no prices deliberately; the item is dropped rather than a Prices section being invented. Test it, so the behaviour is chosen rather than discovered later.
+- [x] T022 [US1] **Grow the XSS corpus** by the store name, the item name and the price, per Constitution IV. Everything typed reaches the page through the same escaping path as every other authored string, and this feature contains no string template that produces Markdown.
+- [x] T023 [US1] **Break the gate.** Write the store name only to `document.title` and confirm T017 fails. If it passes, it is checking the field rather than the output and is the wrong test.
+- [x] T024 [US1] Run `npm run verify` and commit Phase 3.
 
 ---
 

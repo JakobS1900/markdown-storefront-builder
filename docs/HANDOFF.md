@@ -13,8 +13,8 @@ with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
-**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, pushed,
-six commits. Phases 1 and 2 are DONE. Phase 3 is next.**
+**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`, pushed.
+Phases 1, 2 and 3 are DONE. Phase 4, the surface, is next.**
 
 The one command that tells you which branch is live:
 
@@ -27,13 +27,15 @@ If that says `master`, check out `027-setup-wizard`. If the branch is gone, 027
 was merged and released while nobody updated this file, and `git log` on master
 is the truth.
 
-**Start at `specs/027-setup-wizard/tasks.md`, Phase 3, task T012.** Read
+**Start at `specs/027-setup-wizard/tasks.md`, Phase 4, task T025.** Read
 `research.md` before anything else: it reverses part of the spec, and the spec
-carries that amendment in its own text rather than only in research.
+carries that amendment in its own text rather than only in research. R1 is the
+one Phase 4 turns on, and it is a list of findings feature 025 already paid for.
 
-Phase 2, `4ebc443`, is **shippable on its own and is not yet released.** See
-"Blocked on Jakob" at the bottom: the question is whether to cut 0.9.1 for it
-before building the wizard, which was the entire reason for doing it first.
+**Phase 2 will NOT be released on its own.** Asked and answered on 2026-09-08:
+Jakob chose "Phase 3 now, release later", so the hints ship with the whole 027
+release at the end. Do not cut a 0.9.1 for them and do not re-ask. The full
+entry is under "Blocked on Jakob".
 
 The APK was verified before it was published, both ways the trap list demands:
 `assets/public/assets/index-C9AYi9o0.js` is inside it, matching what the build
@@ -77,15 +79,22 @@ fixes, not a fortnight in one. The policy and the reasoning are in
 only the handoff still knows. It no longer needs to be asked for, per the rule
 change above.
 
-**Current state**: this file describes the tree at `4ebc443` on
-`027-setup-wizard`, and `npm run verify` is green on it, run whole from
-PowerShell on 2026-09-08:
-**75 test files, 1377 tests, a11y 53, contrast 411 elements, 45 fields, 32
-folded fields and 39 hints with 0 failures in both light and dark, menu file
-gate clean, pwa update gate clean, exit code 0.**
+**Current state**: this file describes the tree with Phase 3 on
+`027-setup-wizard`, and `npm run verify` is green on it, run whole and unpiped
+from PowerShell on 2026-09-08:
+**76 test files, 1431 tests, a11y 53, contrast 411 elements, 45 fields, 32
+folded fields and 39 hints with 0 failures in both light and dark, dash scan
+clean over 317 files, menu file gate clean, pwa update gate clean, exit code 0.**
 
 Those are the numbers to expect. If they are lower, something stopped rendering
 rather than something being fine.
+
+It was 75 files and 1377 tests at `4ebc443`. The 54 new ones are all
+`app/tests/wizard-answers.test.ts`. **a11y and contrast did NOT move, and that
+is the correct result rather than a gate that missed something**: Phase 3 adds
+one pure function and no surface at all, so there is nothing new for either
+gate to lay out. The gates start mattering again at Phase 6, which exists
+because they have twice been green about a surface they never drew.
 
 Note the contrast number: 411, not the 167 the last three sessions saw. It was
 404 at `ce56f2d` and rose to 411 when feature 027 phase 2 added hints, which is
@@ -167,36 +176,64 @@ honest record of it.
 
 1. **Check the branch, then run `npm run verify` from PowerShell.** The branch
    command is at the top of this file. `verify` is the check that tells you
-   whether the tree is where this file says it is. Expect **1377 tests, a11y 53,
+   whether the tree is where this file says it is. Expect **1431 tests, a11y 53,
    contrast clean in both palettes at 411 elements**, menu file and pwa gates
    green. If it fails, read "Traps" below before believing it: several of its
    failures are environmental rather than real. It earned its place on
    2026-09-05, when it caught a real failure that had been latent for days and
    was NOT one of the environmental ones. See the starters-picker entry.
 
-   Done on 2026-09-08 at `4ebc443`, green, numbers under "Current state".
+   Done twice on 2026-09-08, green both times: at `4ebc443` before any work, and
+   again with Phase 3 on it. Numbers under "Current state".
 
-2. **Feature 027 Phase 3, task T012, is the actual next piece of work.**
-   `specs/027-setup-wizard/tasks.md` has 58 tasks in seven phases; 11 are done.
+2. **Feature 027 Phase 4, task T025, is the actual next piece of work.**
+   `specs/027-setup-wizard/tasks.md` has 58 tasks in seven phases; 24 are done.
 
-   Phase 3 is `app/src/ui/wizard-answers.ts`: a pure function from an answer set
-   to a `Document`, **with no DOM, no store and no IndexedDB in it**, and its
-   test deliberately has no `@vitest-environment jsdom` line. If that file ever
-   needs the DOM, the seam has moved to the wrong place.
+   Phase 4 is the surface, `app/src/ui/wizard.ts`. **Read `research.md` R1
+   first.** It is not analysis, it is a list of four findings feature 025 already
+   paid for with real time, and every one of them is binding: a `div` with
+   `role="dialog"` and NOT an `aside`, because `aria-allowed-role` fails that and
+   the a11y gate catches it; no native `<dialog>`, because jsdom has neither
+   `showModal` nor `inert` and testing against a stub of the mechanism under test
+   is how this project once shipped twenty one tests covering a panel that
+   displayed nothing; `div[tabindex="-1"]` does hold focus under jsdom, which is
+   what makes the trap testable; and the back gesture goes through
+   `surface-history.ts`.
 
-   Every real decision in the feature lives there, which is why it comes before
-   the surface: testing "which starter, where does the name go, how does a mode
-   reach a tier" through six screens of clicking would make all of it expensive
-   to check and easy to get wrong quietly.
+   Two more that are easy to get wrong and are written down as tasks:
+   **T028**, the store state goes on the immediate `set` path the way
+   `sidebarOpen` does, because a surface that appears one repaint after the press
+   reads as a dead button. **T033**, restore focus on close and add the
+   `syncWizardFocus` equivalent, because focus leaking to `document.body` on
+   every repaint was a real defect in 025 and this is the same shape of code.
 
-   The two assertions that matter most, both already written as tasks:
+   **Phase 3 is DONE and its seam held.** `app/src/ui/wizard-answers.ts` is a
+   pure function from an answer set to a `Document`, with no DOM, no store and no
+   IndexedDB in it, and `app/tests/wizard-answers.test.ts` has no
+   `@vitest-environment jsdom` line and must never gain one. 54 tests.
 
-   - **T013**: an empty answer set produces the chosen starter unchanged, and
-     compiles **byte identically** to opening that starter from the picker.
-   - **T017**: the store name reaches the **compiled output**, not merely the
-     field. `document.title` is never emitted, so a name written only there
-     looks right in the editor and is invisible to every buyer. T023 breaks this
-     on purpose to prove the test is checking the output and not the field.
+   What it settled, so Phase 4 does not reopen any of it:
+
+   - An empty answer set produces the chosen starting point **byte identically**,
+     for all eight, both as stored bytes and as compiled output on every host.
+     Answering nothing costs nothing, and that is checked rather than intended.
+   - The store name reaches `profile.displayName` AND `document.title`, and
+     **T023 was run**: writing it only to `title` makes the compiled-output test
+     fail on every host while the title test still passes, which is exactly the
+     defect FR-121 exists to prevent.
+   - `wantsPicture` changes nothing about the document, by design. Phase 4 reads
+     it to decide which section is open when the page appears. T029b already
+     asserts the other half.
+   - **Two judgement calls were made that the spec did not settle**, both argued
+     in comments at the point they are made. First: when somebody names their own
+     item, the starting point's DESCRIPTION of the row is dropped (blurb,
+     includes, details, quantities, images, cost) while the OFFER is kept (price,
+     unit, availability, leadTime). The line is the contract's own, written at
+     `availability` in `descriptor.ts`. Without it, a seller who types "Carved
+     oak sign" gets a photograph of resin coasters and the words "tell me your
+     scent and colour preferences" under it. Second: answers are trimmed, and a
+     blank or whitespace-only answer counts as skipped rather than as an empty
+     string. **Both are worth a second opinion at T048.**
 
 3. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
    of it: merged to master, pushed, tagged `v0.9.0`, Release published with the
@@ -753,6 +790,31 @@ distinction in the tree, and seller text can never become a node.**
 
 ## Traps that cost real time in this session
 
+- **A session rate limit kills subagents outright, and the chunk pipeline stops
+  with it.** On 2026-09-08 the Phase 3 implementer subagent was dispatched and
+  died on its first request: "You've hit your session limit", HTTP 429, before
+  it had read a single file. It left nothing behind, so `git status` was clean
+  and there was no half-written module to find later.
+
+  **What was done instead, recorded because it is a deviation from `CLAUDE.md`
+  rather than a shortcut somebody preferred**: Phase 3 was written in the main
+  session, test first, with the red run and the T023 break both captured. What
+  it did NOT get is the two per chunk reviews the rules ask for, a fresh
+  spec-compliance reviewer and a fresh code-quality reviewer, because no agent
+  could be started at all. The same session that wrote it is the session that
+  checked it, which is the one thing that rule exists to prevent.
+
+  So **the holistic review at T048 is carrying two chunks' worth of scrutiny for
+  Phase 3**, and it is now more load bearing than it already was. There is a
+  `CHUNK 2:` comment at the top of `app/src/ui/wizard-answers.ts` saying so and
+  naming the two judgement calls to look at hardest. Do not delete that comment
+  until T048 has actually run.
+
+  The general lesson, worth more than this instance: **a chunk whose subagent
+  died is not a chunk that got a lighter process, it is a chunk carrying a debt.
+  Write the debt down where the next reader will hit it**, which is the code,
+  not only this file.
+
 - **`npm run dev -- --port 5177` does not work and fails confusingly.** npm
   passes `5177` through as a positional argument, vite reads it as a root
   directory, and you get a server on **5173 serving nothing**, which looks like
@@ -1026,13 +1088,20 @@ distinction in the tree, and seller text can never become a node.**
   through Spec Kit, lock the pictures as an offline feature, relabel the buried
   `Bulk pricing` control rather than moving or reshaping it, and put the whole
   thing ahead of F4.
-- **SHIP 0.9.1 FOR PHASE 2, OR WAIT? This is the live question.** Feature 027
-  Phase 2, `4ebc443`, answers the original complaint everywhere in the app with
-  no new surface and no new code, and it is committed and pushed but not
-  released. Putting it first was explicitly so it could be judged on its own
-  before the wizard was built, and that only pays if somebody actually sees it.
-  Cutting 0.9.1 costs a version bump, a build, a signature check and a tag.
-  Unlocks: knowing whether the wizard is still needed, or is needed differently.
+- **SHIP 0.9.1 FOR PHASE 2? ASKED AND ANSWERED on 2026-09-08: no, not on its
+  own.** Jakob chose "Phase 3 now, release later", so Phase 2, `4ebc443`, ships
+  as part of the whole 027 release at the end rather than as its own 0.9.1.
+
+  **Do not re-ask this and do not cut a 0.9.1 for Phase 2.** The question was
+  put with the cost of each option stated: a version bump, a build, a signature
+  check, a tag and a mid-feature merge to master against getting the hints in
+  front of him today.
+
+  What it means, said plainly so a later session does not treat it as an
+  oversight: **Phase 2 will never be judged on its own**, which was the stated
+  reason for building it first. That reason is now spent. It does not change
+  what Phase 2 is worth, and it does not reopen whether the wizard is needed,
+  which was settled separately on the same day and is recorded below.
 
 - **Whether F4 is the right answer is now SETTLED. Asked and answered on
   2026-09-08**, in the session that writes it down, which is the rule the near
