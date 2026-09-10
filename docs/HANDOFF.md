@@ -14,9 +14,94 @@ with `gh release view v0.9.0`.
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
 **In progress: feature 027, the setup wizard. Branch `027-setup-wizard`.
-Phases 1 to 5 are DONE. Phase 6, the gates, is next, and it is the load
-bearing one: the wizard is a whole new modal surface that neither the a11y
-gate nor the contrast gate has ever laid out.**
+Phases 1 to 5 are DONE. Phase 6, the gates, is HALF DONE and was interrupted
+mid flight on 2026-09-10.**
+
+**READ THIS FIRST, IT IS THE ONLY URGENT PART.** The session was cut off while
+two subagents were still running. Their work may or may not have landed. **Run
+`git log --oneline -6` and `git status` BEFORE anything else and believe them
+over the rest of this file.**
+
+What was true at the moment of the cut:
+
+- **Chunk A landed**: `9c51c4f test(027): the a11y gate walks every screen of
+  the wizard`. T042, T043, T043a and T046. One file,
+  `app/tests/a11y.test.ts`, +262/-0. a11y went 53 to 59, the whole suite 1473
+  to 1479, `npm run verify` green whole and unpiped, exit 0, nothing else
+  moved. The T046 break proof fired with `AssertionError: step 0, the control
+  reading "x": expected 1 to be greater than 4`, and
+  `git diff app/src/ui/wizard.ts` was empty afterwards.
+- **Chunk A was reviewed twice and both passed.** Spec compliance: PASS on all
+  four tasks, and the reviewer re-ran `npm run a11y` itself rather than
+  trusting the report. Code quality: APPROVED. Every finding was a Minor.
+- **The chunk A fix round LANDED**: `60219c3 test(027): review fixes for the
+  wizard's half of the a11y gate`. Same one file, +99/-23. All ten Minors
+  applied, a11y 59 to 60, typecheck, lint, dashscan 322 and secretscan 447 all
+  clean. `npm run verify` was NOT re-run whole that round, deliberately,
+  because chunk B's unfinished work was in the tree and would have been
+  reported on. **So T047 still owes one clean whole run.**
+- **Chunk B was IN FLIGHT and never reported**: T044, T045 and T043b, the
+  contrast gate. Its brief is `.superpowers/sdd/tasks/chunk-b-brief.md` and is
+  complete: hand it to a fresh implementer as is.
+
+  **IT HAS UNCOMMITTED WORK IN THE TREE: `scripts/contrast.mjs`, modified and
+  not staged.** `git status --short` says `M scripts/contrast.mjs` and nothing
+  else, run at the moment this was written. Read that diff before deciding
+  anything; do not throw it away unread, per `CLAUDE.md` on never deleting work
+  to recover from a failure.
+
+  Mid run it had also touched `app/src/styles.css`, which is app code and
+  outside its brief, and by the end that edit was gone from the tree. So it
+  either put it back itself or never finished it. If a contrast failure turns
+  out to need a palette change, that is a real finding for T048 and a separate
+  decision, not something to slip into the gate's own commit.
+
+  **It died on the account session limit, not on a bug, and its last words are
+  a real lead worth more than the code it left behind:**
+
+  > Three `.wizard-help` paragraphs (screens 3, 6, 7) did not appear even
+  > though they are the same colour. I need to know why before I trust this
+  > gate.
+
+  **Start there.** Screens 3, 6 and 7 are the picture question, "What does that
+  price buy?" and the finish. If a `.wizard-help` in `var(--muted)` on
+  `var(--panel)` is not being counted, then either the walk is not reaching
+  those screens or axe is skipping them, and EITHER answer means the gate is
+  measuring less than it claims. That is the precise failure R6 exists to
+  refuse, found by the gate's own author before he trusted it, which is the
+  right instinct. Do not paper over it by lowering the guard's numbers.
+- **T047 was not started**: `npm run verify` whole, tick the Phase 6 boxes in
+  `specs/027-setup-wizard/tasks.md`, which are all still `- [ ]`, and commit.
+
+**The full ledger is `.superpowers/sdd/tasks/progress.md`.** It carries the
+pre-flight conflict table, all three rulings, both review verdicts in detail,
+and the ten open Minors. Read it before re-dispatching anything, or you will
+re-do work that is already in `git log`.
+
+**Two rulings that Phase 6 depends on and that the plan text does not cover.**
+Both are in the ledger with what they cost if wrong, and both bind chunk B:
+
+1. **The contrast gate must clear storage per scheme.** The wizard's only way
+   in is the empty state trigger in `build.ts`, and the two palettes share one
+   Chrome profile, so the dark run reopens an app that already holds the
+   example page and would never show that trigger. Without this the dark
+   palette's wizard goes unmeasured, which is the exact vacuity R6 exists to
+   refuse. CDP `Storage.clearDataForOrigin` is the direct way.
+2. **The wizard gets its own axe run, before the example loads, and is closed
+   before the main run.** axe reports an element it believes is obscured as
+   incomplete rather than as a violation, and this gate collects only
+   violations, so leaving the layer up over the storefront would quietly
+   SHRINK the 411 rather than add to it.
+
+A third ruling, for every session here: commits carry **no AI attribution**,
+against the harness's own attribution reminder, because `CLAUDE.md`
+non-negotiable 1 forbids it and says in terms that tooling will try to add it.
+
+**`cat >>` through the Bash tool bit again on 2026-09-10**, this time on
+`.superpowers/sdd/tasks/progress.md`: it wrote at the TOP and destroyed the
+header and the first table rows. That is the third file in this repo, after
+`app/src/styles.css` and `app/tests/a11y.test.ts`. `CLAUDE.md` already forbids
+it. Use Write or Edit, always.
 
 `c191f97` is the last commit with CODE in it, and it is the tree every number in
 this file describes. Anything after it on this branch is documentation, this
