@@ -54,6 +54,7 @@ import {
 } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
+import { QUESTION_COUNT, WIZARD_ID, resetWizardFocusTracking } from "../src/ui/wizard.js";
 
 /**
  * Reads the stylesheet from disk.
@@ -362,6 +363,267 @@ describe("the starting point picker is accessible", () => {
 
     expect(document.querySelectorAll(".starters button").length).toBeGreaterThan(0);
     expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+});
+
+/**
+ * The setup wizard, feature 027.
+ *
+ * A `role="dialog"` layer with nine choices on its first screen, six question
+ * screens and a finish screen, and until this block existed the gate had never
+ * had one pixel of it on screen. That is this file's oldest failure, and
+ * `specs/027-setup-wizard/research.md` R6 records the two most recent times it
+ * landed anyway: feature 025 moved the page list into a drawer and the contrast
+ * gate quietly went from 164 elements to 137, and feature 026 found it had
+ * never opened a price row's fold at all. Nothing failed either time, because a
+ * gate that measures less does not complain about it.
+ *
+ * So every helper below proves the surface is really on screen before anything
+ * is asserted about it, and every screen is reached by pressing the control a
+ * seller presses rather than by writing to the store.
+ */
+describe("the setup wizard is accessible", () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+    init(true);
+    // Module state in `wizard.ts` outlives a test: it remembers whether the
+    // layer was open on the last repaint, and how many repaints the focus
+    // landing may still act on. Left alone, a test inherits the previous one's
+    // answer to both and the focus moves for reasons this file cannot see.
+    resetWizardFocusTracking();
+  });
+
+  function panel(): HTMLElement {
+    const found = document.getElementById(WIZARD_ID);
+    if (found === null) throw new Error("the wizard is not on screen");
+    return found;
+  }
+
+  /** Every button on the screen showing, in document order. */
+  function controls(): HTMLButtonElement[] {
+    return [...panel().querySelectorAll<HTMLButtonElement>("button")];
+  }
+
+  /** The name a person actually hears, which for a glyph is never its text. */
+  function nameOf(control: Element): string {
+    return (control.getAttribute("aria-label") ?? control.textContent ?? "").trim();
+  }
+
+  /**
+   * Opens the wizard through the real control, not through `openWizard()`.
+   *
+   * The trigger is drawn by the EMPTY STATE rather than by the shell, so it
+   * exists only on a page with nothing on it yet. Reaching past it to the store
+   * would leave the one way into this feature unrendered, and a gate green on a
+   * control it never built is the exact failure this file's docstring is about.
+   */
+  function open(root: HTMLElement): void {
+    renderShell(root);
+    const trigger = [...document.querySelectorAll("button")].find(
+      (control) => control.getAttribute("aria-controls") === WIZARD_ID,
+    );
+    if (trigger === undefined) {
+      throw new Error("the wizard trigger did not render on the empty state");
+    }
+    trigger.click();
+    // This harness renders on demand rather than subscribing, so the state
+    // change has to be drawn deliberately.
+    renderShell(root);
+    if (document.getElementById(WIZARD_ID) === null) {
+      throw new Error("the wizard did not render after its trigger was pressed");
+    }
+  }
+
+  /** Presses a control by name, and says what was there when there is none. */
+  function press(root: HTMLElement, name: string): void {
+    const control = controls().find((one) => nameOf(one) === name);
+    if (control === undefined) {
+      throw new Error(
+        `no control called "${name}" on this screen. What is here: ${controls()
+          .map(nameOf)
+          .join(", ")}`,
+      );
+    }
+    control.click();
+    renderShell(root);
+  }
+
+  /**
+   * Walks every screen the wizard has, handing each one to `visit`.
+   *
+   * Steps 0 to `QUESTION_COUNT` inclusive, which is seven screens counting the
+   * finish. Driven off the count rather than off the literal six, so a seventh
+   * question added later is measured without anybody remembering to come back
+   * here: that is the difference between this gate and one that silently
+   * measures less than it did yesterday.
+   *
+   * Forward by pressing Next, which is the path a seller takes. Each screen has
+   * to prove it rendered before it is visited, or a `Next` that stopped working
+   * would leave this walking the same screen seven times and reporting green.
+   */
+  async function walk(
+    root: HTMLElement,
+    visit: (step: number) => Promise<void> | void,
+  ): Promise<void> {
+    open(root);
+    for (let step = 0; step <= QUESTION_COUNT; step += 1) {
+      if (step < QUESTION_COUNT) {
+        const progress = panel().querySelector(".wizard-progress")?.textContent ?? "";
+        const expected = `Question ${String(step + 1)} of ${String(QUESTION_COUNT)}`;
+        if (progress !== expected) {
+          throw new Error(
+            `step ${String(step)} did not render: expected "${expected}", found "${progress}"`,
+          );
+        }
+        // And that it rendered something to answer WITH. A question carries
+        // either a list of choices or one or more fields, and a heading with a
+        // Back, Skip and Next under it would satisfy every check above while
+        // the nine choices this feature exists for went unmeasured. That is R6
+        // in one sentence: a gate that measures less does not complain.
+        const answerable =
+          panel().querySelectorAll(".wizard-choices li").length +
+          panel().querySelectorAll(".field :is(input, textarea, select)").length;
+        if (answerable === 0) {
+          throw new Error(`step ${String(step)} rendered its question but nothing to answer it with`);
+        }
+      } else if (!controls().some((one) => nameOf(one) === "Make my page")) {
+        throw new Error("the finish screen did not render");
+      }
+
+      await visit(step);
+      if (step < QUESTION_COUNT) press(root, "Next");
+    }
+  }
+
+  it("has no axe violations on any question, or on the finish", async () => {
+    // FR-119 and Principle VI. Seven screens, each one scanned where it stands.
+    const root = mount();
+    await walk(root, async (step) => {
+      expect((await violations()).map((v) => v.id), `step ${String(step)}`).toEqual([]);
+    });
+  });
+
+  it("gives every control on every question a real accessible name", async () => {
+    const root = mount();
+    await walk(root, (step) => {
+      const buttons = controls();
+      expect(buttons.length, `step ${String(step)}`).toBeGreaterThan(0);
+
+      for (const control of buttons) {
+        // Named in the message as well as counted, because a failure here is
+        // read by somebody who has to go and find the control, and "step 0" on
+        // a screen of eleven buttons does not tell them which one.
+        const where = `step ${String(step)}, the control reading "${control.textContent ?? ""}"`;
+        expect(nameOf(control), where).not.toBe("");
+        // The close control is the reason this is not "has some text". It draws
+        // a "×" and nothing else, so its text passes a length check while
+        // saying nothing at all read aloud, and only `aria-label` makes it a
+        // name somebody can act on.
+        if (control.classList.contains("icon")) {
+          const label = control.getAttribute("aria-label") ?? "";
+          expect(label.length, where).toBeGreaterThan(4);
+          expect(label, where).not.toBe(control.textContent);
+        }
+      }
+
+      for (const control of panel().querySelectorAll("input, textarea, select")) {
+        const id = control.getAttribute("id");
+        expect(id, `step ${String(step)}`).toBeTruthy();
+        expect(
+          document.querySelector(`label[for="${id ?? ""}"]`),
+          `step ${String(step)}`,
+        ).not.toBeNull();
+      }
+    });
+  });
+
+  it("does not use a placeholder in place of a label on any question", async () => {
+    // FR-130, and research R2 is why it is worth a test of its own. The
+    // examples in these fields are hints, sitting beside a real label and read
+    // out with it. A placeholder is neither: it disappears the moment somebody
+    // types, and it is the first thing anybody "helpfully" reaches for here.
+    const root = mount();
+    await walk(root, (step) => {
+      for (const control of panel().querySelectorAll("input, textarea")) {
+        expect(control.getAttribute("placeholder"), `step ${String(step)}`).toBeNull();
+      }
+    });
+  });
+
+  it("meets the 44 by 44 touch target minimum on every control of every question", async () => {
+    // FR-132, which nothing else in this repository asserts. Constitution VI
+    // wants CI to fail on it, so driving the wizard by eye on the handset is a
+    // second opinion rather than the mechanism.
+    //
+    // jsdom lays nothing out, so a computed size here would be a number that
+    // means nothing. This asserts the PAIR that produces the size, the way the
+    // menu file control's assertion does: the control carries the class, and
+    // the class carries the minimum in the stylesheet.
+    const css = await stylesheet();
+    expect(css).toMatch(/\.btn\s*\{[^}]*min-height: var\(--tap\)/);
+    expect(css).toMatch(/\.btn\s*\{[^}]*min-width: var\(--tap\)/);
+    // A text field takes the full width of the panel rather than a 44 pixel
+    // minimum, so the horizontal half of the rule is `width: 100%` here. A
+    // `min-width` on it would be a floor it is never anywhere near.
+    expect(css).toMatch(/\.field input[^{]*\{[^}]*width: 100%/);
+    expect(css).toMatch(/\.field input[^{]*\{[^}]*min-height: var\(--tap\)/);
+
+    const root = mount();
+    await walk(root, (step) => {
+      for (const control of controls()) {
+        expect(control.classList.contains("btn"), `${String(step)}: ${nameOf(control)}`).toBe(true);
+      }
+      for (const control of panel().querySelectorAll("input, textarea, select")) {
+        // The wrapper is what the rule above is written against, so a field
+        // built by hand outside `field()` fails here rather than shipping a
+        // 20 pixel box nobody can hit.
+        expect(
+          control.parentElement?.classList.contains("field"),
+          `${String(step)}: ${control.getAttribute("id") ?? "unnamed"}`,
+        ).toBe(true);
+      }
+    });
+  });
+
+  it("marks everything behind the wizard inert while it is open", () => {
+    // The attribute is what a browser acts on. jsdom implements `inert` neither
+    // as a property nor as behaviour, proven by probe in feature 025 and
+    // recorded in research R1, so this asserts only that the word is applied.
+    // The guarantee actually TESTED is the focus containment below. Both exist
+    // because they fail in different places.
+    const root = mount();
+    open(root);
+    for (const selector of ["header.bar", "main", "nav.tabs"]) {
+      expect([selector, root.querySelector(selector)?.hasAttribute("inert")]).toEqual([
+        selector,
+        true,
+      ]);
+    }
+  });
+
+  it("holds the keyboard inside the panel", () => {
+    // What `showModal()` would have given for nothing, done by hand, and the
+    // only thing standing between a keyboard user and a page they cannot see.
+    const root = mount();
+    open(root);
+    const stops = [
+      ...panel().querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ];
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    if (first === undefined || last === undefined) throw new Error("nothing to tab between");
+
+    last.focus();
+    panel().dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(first);
+
+    first.focus();
+    panel().dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }),
+    );
+    expect(document.activeElement).toBe(last);
   });
 });
 
