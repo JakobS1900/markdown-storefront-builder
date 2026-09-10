@@ -255,6 +255,39 @@ pending whether F1 is used, both for the reasons recorded in
       cost`, erasing every marked-up row's margin, so it now starts blank and
       stays disabled until the seller has decided.
 
+## Known gaps, named so they are not rediscovered
+
+**There is no way to open a Markdown or plain text file as a whole page.**
+Raised by Jakob on 2026-09-09 as "why can't I import text". What exists today,
+and why it is not the same thing:
+
+| Control | Takes | Where |
+|---|---|---|
+| Open a price list from this device | `.csv .tsv .txt .md` | inside a Prices section, behind "Paste a price list" |
+| Open a backup from this device | `.json` only | the Copy tab |
+
+So a `.md` file can already be opened, but only into a price section, and only
+as price rows. The Copy tab's import is JSON only on purpose: `openBackup` runs
+`parseDocument`, which validates against the schema and refuses anything that is
+not a saved page.
+
+**Widening that file picker to accept `.md` would be worse than the gap.** Every
+such file would be refused by the validator and the seller would see "That file
+is not a saved page", so the feature would look broken rather than absent.
+
+**The real shape of the work is a parser, not a file input.** The engine
+compiles a document to Markdown and never the other way, so importing means
+Markdown to blocks, plus a policy for text that maps to no block kind. It is
+feature 028, to be specified properly after 027 ships.
+
+**Start it from pasting, not from a file.** Jakob's words: "a lot of users will
+just copy the entire thing from their pastebin/text host and send that clear
+text anyway." The primary case is somebody selecting their whole page on rentry
+or text.is and pasting it, the way `price-list-paste.ts` is built around a paste
+box with the file picker as the secondary path. A parser also has to survive
+text that has been round tripped through a paste host, which may not be byte
+identical to what this app emitted.
+
 ## Explicitly deferred
 
 Accounts, cloud sync, direct publish via host APIs, custom output CSS,

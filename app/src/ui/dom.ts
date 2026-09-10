@@ -269,7 +269,7 @@ function focusable(panel: HTMLElement): HTMLElement[] {
  * asserting that a word is present, so this containment is what the tests prove
  * and the attribute is what real browsers act on.
  *
- * CHUNK 4: this was private to `pages-sidebar.ts` until the wizard needed the
+ * This was private to `pages-sidebar.ts` until the wizard needed the
  * same trap, and it was moved here rather than copied. A hand written focus
  * trap is exactly the kind of thing that gets fixed in one copy and not the
  * other, and this file is where the docstring at the top already says

@@ -27,13 +27,23 @@
  * an `aside`, because `aria-allowed-role` fails that and the a11y gate catches
  * it.
  */
-import { SELLING_MODE_WORDS } from "@mdsb/engine";
+import { SELLING_MODE_WORDS, serializeDocument } from "@mdsb/engine";
 import type { Document } from "@mdsb/engine";
 
-import { answerWizard, setWizardStep, type State } from "../store.js";
+import { openBackup } from "../import.js";
+import {
+  answerWizard,
+  clearBusy,
+  getState,
+  selectBlock,
+  setBusy,
+  setWizardStep,
+  type State,
+} from "../store.js";
 import { STARTERS } from "../starters/index.js";
 import { dismissWizard } from "../surface-history.js";
-import { button, el, field, trapFocus } from "./dom.js";
+import { announce, button, el, field, trapFocus } from "./dom.js";
+import { documentFromAnswers, starterIdFor } from "./wizard-answers.js";
 import type { SellingMode, WizardAnswers } from "./wizard-answers.js";
 
 /** The id the trigger points at, and the thing focus moves into. */
@@ -55,7 +65,8 @@ interface Question {
 /**
  * A list of answers to one question, each of which is also the way forward.
  *
- * CHUNK 4: that a choice also advances is a judgement the spec does not make.
+ * That a choice also advances is a judgement the spec does not make, and this
+ * is the one it makes.
  *
  * Pressing a choice records it and moves on in one press, which is what a
  * wizard is for: a screen carrying one idea should not also carry a separate
@@ -264,10 +275,10 @@ const FINISH = QUESTIONS.length;
  * feature wants open in either case, and inventing one to make the two
  * different would be choosing on somebody's behalf.
  *
- * CHUNK 4: nothing calls this yet. Phase 5 (T037) reads it when the page is
- * opened and passes the id to `selectBlock`, which is the point at which it
- * starts mattering. It is exported and tested now because the answer it depends
- * on is recorded now.
+ * `finish` below reads this once the page has opened and hands the id to
+ * `selectBlock`. That call is the whole of what this decides, and its order
+ * matters: `adopt` clears the selection, so selecting before the page opens
+ * loses the answer without saying so.
  *
  * CHUNK 4: the spec-compliance review argued this belongs in
  * `wizard-answers.ts` rather than here, since taking a `Document` makes it a
@@ -283,48 +294,156 @@ export function sectionToOpen(starter: Document, answers: WizardAnswers): string
 }
 
 /**
- * CHUNK 4: THE SEAM PHASE 5 LANDS IN, and the only thing here left unfinished
- * on purpose.
+ * What the wizard says when it could not make the page.
  *
- * T037 replaces this body with `openBackup(serializeDocument(doc))`, built from
- * `documentFromAnswers` and the starting point `starterIdFor` names, wrapped in
- * the same `setBusy` and offline `load()` catch that `starterPicker` already
- * carries. That is FR-123: the wizard creates its page the same way the picker
- * does, as a NEW page, leaving whatever was open untouched.
+ * Its own sentence rather than the one `openBackup` returns. That message is
+ * written for a file somebody chose off their device ("That file is not a saved
+ * page"), which is nonsense to a person who has just answered six questions and
+ * pressed one button. `starterPicker` meets the same problem and answers it half
+ * way, by catching only the rejection and letting a resolved failure through in
+ * the import's words.
  *
- * FOUR THINGS THE NEXT IMPLEMENTER MUST NOT GET WRONG:
- *
- *   - Read `getState().wizardAnswers` BEFORE dismissing. `closeWizard` throws
- *     the answers away by design, so a dismiss on the way in leaves nothing to
- *     build a page from.
- *   - Dismiss only once the page has actually opened, the way `starterPicker`
- *     calls `dismissSidebar()` inside the success branch and not before. A
- *     failure with the wizard already gone leaves the message with nothing on
- *     screen to explain it.
- *   - **Call `rememberWizardOpen()` at the trigger, immediately before
- *     `openWizard()`**, exactly as `shell.ts` pairs `rememberSidebarOpen()`
- *     with `openSidebar()`. `surface-history.ts` has the function and the
- *     `popstate` branch that consumes its entry, and NOTHING IN THE APP CALLS
- *     IT: only the tests do, by hand. Until T036 pairs them, FR-133 is wired on
- *     one side only, and the first back gesture on the Build surface leaves the
- *     app before any `popstate` fires, because Build deliberately pushes
- *     nothing. Found by the chunk 4 spec review, not by a test, because the
- *     test supplies the entry itself.
- *   - **The trigger must carry `aria-controls="wizard-panel"` and must be
- *     inside `#app`.** `renderShell` finds it with `root.querySelector`, and
- *     that lookup is the one part of the focus restore nothing proves today:
- *     the test at `wizard.test.ts` supplies its own trigger and says so. It
- *     cannot do better within this chunk, because `render` calls
- *     `replaceChildren` on the root, so a trigger a test appends is destroyed
- *     by the next repaint. The control Phase 5 draws is what makes that path
- *     testable, and T035 is where the assertion belongs.
- *
- * Until then this closes the wizard and creates nothing, which is honest rather
- * than convenient: FR-125 says abandoning must create nothing, and an
- * unfinished finish is indistinguishable from abandoning.
+ * CHUNK 5: this goes further than that precedent and turns EVERY failure into
+ * this sentence, which is a judgement the spec does not make. The argument for
+ * it: a resolved `{ ok: false }` here can only mean `serializeDocument` produced
+ * something `parseDocument` refuses, which is a bug in this app rather than
+ * anything the seller did, and no wording about their file can describe it. The
+ * argument against: it is the only place in the app that discards a message the
+ * storage layer wrote, and a real defect would reach the seller as this
+ * sentence rather than as the parser's complaint. Nothing is lost that a person
+ * could have acted on either way, and "nothing has been changed" is the part
+ * that is true in both cases.
  */
+const COULD_NOT_MAKE = "Your page could not be made. Nothing has been changed.";
+
+/**
+ * Turns the answers into a page, the same way the starting point picker does.
+ *
+ * FR-123 and Principle V: `openBackup` opens what it is given as a NEW page
+ * under its own id, so whatever was on screen is untouched and still saved. The
+ * wizard never writes into the live document, which is what makes abandoning
+ * halfway (FR-125) cost nothing rather than needing an undo of everything.
+ *
+ * THE THREE THINGS THAT WERE EASY TO GET WRONG HERE, all three found before
+ * this was written rather than after, and all three still true of anything that
+ * edits this function:
+ *
+ *   - **The answers are read before anything is dismissed.** `closeWizard`
+ *     throws them away by design, so a dismiss on the way in would leave
+ *     nothing to build a page from. `answers` is captured on the first line for
+ *     that reason and the rest of this function uses the capture, not the
+ *     store.
+ *   - **The dismiss happens only in the success branch**, the way
+ *     `starterPicker` calls `dismissSidebar()` only when a page really opened.
+ *     A failure with the layer already gone leaves a message on a screen with
+ *     nothing on it to explain what the message is about.
+ *   - **`selectBlock` runs after `openBackup` has resolved**, and this is the
+ *     one that had already nearly been lost twice. `adopt` sets
+ *     `selectedBlockId: undefined` as part of opening a page, deliberately,
+ *     because block ids survive a reopen and a stale selection can go on
+ *     matching rows in a document nobody touched. Selecting the section before
+ *     that lands means `wantsPicture` is silently wiped and the answer does
+ *     nothing at all, while the screen that asked for it promised otherwise.
+ *
+ * The busy line and the catch are `starterPicker`'s, for the reason it gives at
+ * length: `load()` is a dynamic import of a lazy chunk, about thirty ticks
+ * cold, and without something on screen the press reads as a dead button. The
+ * catch covers a rejection, which is the offline `load()` and a
+ * `serializeDocument` throw.
+ *
+ * A DOUBLE PRESS IS GUARDED, and the reasoning that said it need not be was
+ * wrong in a way worth keeping. It read: the worst a second press can do is
+ * leave one spare saved page, nothing is lost or overwritten, so match
+ * `starterPicker` and do not bother. The page half was right and the history
+ * half was never checked.
+ *
+ * `dismissWizard` goes through `history.back()`, which is asynchronous. Both
+ * presses land before the first finishes, because the work is a dynamic import
+ * and an IndexedDB write, and the `setBusy` repaint rebuilds this button
+ * enabled. The second chain therefore still sees `wizardOwnsHistory()` as true
+ * and queues a SECOND back. The first spends the wizard's own entry and the
+ * second spends the entry underneath it, which on the Build surface is the one
+ * whose consumption leaves the app. So the real worst case was closing the app
+ * on somebody who tapped twice, not a spare page.
+ *
+ * Disabling the button cannot fix it, which is why the guard is a module flag.
+ * `setBusy` repaints, `render` calls `replaceChildren`, and the disabled button
+ * is replaced by a freshly drawn enabled one before a thumb could land again.
+ * That is worth knowing beyond here: the example button on the empty state
+ * guards itself exactly that way and is defeated exactly that way, and only its
+ * lighter consequence has hidden it.
+ *
+ * The flag survives the repaint because it is module state, the same reason
+ * `wasOpen` below is, and `finally` clears it on every path including a
+ * rejection.
+ */
+let making = false;
+
 function finish(): void {
-  dismissWizard();
+  // One at a time. See above: the second press spends a history entry that
+  // belongs to the surface underneath, and back from Build leaves the app.
+  if (making) return;
+
+  // First, before anything can dismiss the layer. See above.
+  const answers = getState().wizardAnswers;
+  const starter = STARTERS.find((one) => one.id === starterIdFor(answers));
+
+  if (starter === undefined) {
+    // Unreachable as the code stands: every id `starterIdFor` can return comes
+    // from `STARTERS` itself, or is `DEFAULT_STARTER_ID`, which
+    // `wizard-answers.test.ts` asserts the loader actually found. Handled as an
+    // ordinary failure rather than thrown, because a person pressing "Make my
+    // page" is owed a sentence and not a stack trace, and because the assertion
+    // that keeps it unreachable lives in another file.
+    announce(COULD_NOT_MAKE);
+    return;
+  }
+
+  making = true;
+  setBusy("Making your page");
+  void starter
+    .load()
+    .then((template) => {
+      const doc = documentFromAnswers(template, answers);
+      // Read from the document being opened rather than from the template.
+      // They carry the same block ids, since `documentFromAnswers` rewrites
+      // fields and never mints an id, but the id this hands to `selectBlock`
+      // has to name a block in the page that actually appears.
+      const section = sectionToOpen(doc, answers);
+      return openBackup(serializeDocument(doc)).then((result) => ({
+        ok: result.ok,
+        section,
+      }));
+    })
+    .catch(() => ({ ok: false, section: undefined }))
+    .then(({ ok, section }) => {
+      clearBusy();
+      if (!ok) {
+        announce(COULD_NOT_MAKE);
+        return;
+      }
+      // After the page has opened, never before it. `adopt` clears the
+      // selection on its way in, and a `selectBlock` in front of it is wiped
+      // without a word: proved by moving this line up, which turns the picture
+      // answer into `undefined` and leaves every other assertion green.
+      //
+      // Before the dismiss rather than after it, which is a smaller point and
+      // still worth the order. Dismissing can close the layer synchronously,
+      // when no history entry was taken, and that repaint runs the focus
+      // landing. With the selection not yet made, the landing has nothing
+      // better to aim at than the first row of the page, and only a later
+      // repaint corrects it. Selecting first means the first attempt is already
+      // right, and the two ways out of the layer stop differing for no reason.
+      if (section !== undefined) selectBlock(section);
+      dismissWizard();
+      announce(`Made your page from ${starter.label}. Change anything you like.`);
+    })
+    // On every path, including the rejection above, or a failed attempt would
+    // lock the button for the life of the module and the wizard could never
+    // finish again.
+    .finally(() => {
+      making = false;
+    });
 }
 
 /** Back, skip and forward, the same three on every question. */
@@ -338,7 +457,7 @@ function moves(step: number, question: Question): HTMLElement {
     // nothing behind it and a control that cannot do anything is still a
     // control a thumb has to skip past.
     ...(step === 0 ? [] : [button({ label: "Back", onClick: () => goTo(step - 1) })]),
-    // CHUNK 4: skip is not another Next. It takes the answer back as well as
+    // Skip is not another Next. It takes the answer back as well as
     // moving on, which is what makes it safe on a question somebody has walked
     // back to and decided against: FR-120 says every question is skippable, and
     // a skipped question has to leave the starting point's own content alone.
@@ -465,6 +584,29 @@ export function wizardLayer(state: State): HTMLElement {
  */
 let wasOpen = false;
 
+/**
+ * How many more repaints the landing below may act on.
+ *
+ * A plain flag was the first version and could not be cleared: nothing survives
+ * a repaint, so "focus is on the body" is true at the start of essentially
+ * every render, and a landing that retried whenever that held would retry for
+ * the life of the page and pull focus off whatever a person had tabbed to.
+ *
+ * A wall clock was the second, and this is a countdown instead because repaints
+ * are the thing actually being bounded. Opening a page fires a short burst of
+ * them and this has to survive the burst; a duration was only ever a proxy for
+ * that, chosen to be comfortably longer, unverified because nothing tests an
+ * expiry, and a clock read on the render path in a project whose engine bans
+ * `Date.now` on principle. A count bounds the real quantity, is deterministic,
+ * and can be asserted.
+ *
+ * It is spent only on repaints where focus is on the body, so a burst that
+ * settles early costs nothing, and it stops either when something else holds
+ * focus or when the allowance runs out.
+ */
+let landingLeft = 0;
+const LANDING_REPAINTS = 4;
+
 export function syncWizardFocus(open: boolean, trigger: HTMLElement | null): void {
   // Two reasons to take focus, and the second is not obvious. It is also the
   // one that does the most work here, because moving between questions
@@ -486,12 +628,84 @@ export function syncWizardFocus(open: boolean, trigger: HTMLElement | null): voi
   if (open && (!wasOpen || lost)) {
     document.getElementById(WIZARD_ID)?.focus({ preventScroll: true });
   } else if (!open && wasOpen) {
-    trigger?.focus({ preventScroll: true });
+    // The trigger, when there still is one. Closing without finishing leaves
+    // the empty state exactly as it was, so the control is redrawn and focus
+    // goes straight back to where it came from.
+    //
+    // FINISHING DESTROYS IT. The trigger is drawn by the empty state, and a
+    // finished wizard has just replaced that empty state with a page, so
+    // `renderShell` finds nothing by `aria-controls` and hands this a null.
+    // Focus then sat on the body: somebody answered six questions, pressed the
+    // one button, and was put at the top of a document they had never seen with
+    // nothing to say where they were. The comment at the trigger in `build.ts`
+    // used to claim this could not happen, and was corrected in the same change
+    // as this. It went unseen because the assertion that covers it was written
+    // for the close path next door.
+    if (trigger !== null) trigger.focus({ preventScroll: true });
+    else landingLeft = LANDING_REPAINTS;
   }
   wasOpen = open;
+
+  // The landing, which cannot be done in one go. Focusing once works and then
+  // stops being true: opening a page fires several more repaints of its own,
+  // each calls `replaceChildren`, and the control focused a moment ago is gone
+  // with focus back on the body. Only fields are put back, by `restoreCaret`,
+  // which runs after this and therefore wins whenever a caret is what is really
+  // being restored.
+  //
+  // Guarded on the wizard being CLOSED as well as on the allowance. `lost` is
+  // read at the top of this function and is stale by here: the branch above may
+  // have just focused the panel while `lost` still reads true. Without the
+  // guard, an allowance still standing when the wizard reopened would pull
+  // focus straight back out of the layer and onto a control in the inert
+  // surface behind it. Unreachable today only because an armed allowance
+  // implies the empty state is gone, which implies there is no trigger to
+  // reopen from, and that is an accident of `showsEmptyState` rather than a
+  // guarantee this should rest on.
+  if (!open && landingLeft > 0) {
+    if (!lost) landingLeft = 0;
+    else {
+      landingLeft -= 1;
+      intoTheNewPage()?.focus({ preventScroll: true });
+    }
+  }
 }
 
-/** Test seam: the focus tracker is module state and a test needs it reset. */
+/**
+ * Where focus lands when the wizard has just made a page and gone.
+ *
+ * The section the picture answer opened, when there is one, because that is the
+ * whole of what that answer does: somebody who said yes should be looking at a
+ * picture field rather than hunting for it, and "looking at" is focus for
+ * anybody not using their eyes. Otherwise the first section of the new page,
+ * which is the top of the thing they just made.
+ *
+ * Read out of the document rather than remembered from `finish`, because the
+ * repaint that closes the layer destroys whatever was focused before it and
+ * this runs after that repaint. A node captured earlier would be stale.
+ */
+function intoTheNewPage(): HTMLElement | null {
+  // Asked for by id rather than by "whichever row carries an `aria-controls`".
+  // That shorter selector worked, and only because `build.ts` sets the
+  // attribute on a row ONLY while that row is selected, which it does for an
+  // unrelated reason: a dangling reference to a form that is not rendered. So
+  // the right answer came out of a decision made somewhere else about something
+  // else, and anyone who later decides a dangling `aria-controls` is acceptable
+  // turns this into "the first block on the page", silently, on the one path in
+  // this feature nobody looks at.
+  const selected = getState().selectedBlockId;
+  const open =
+    selected === undefined
+      ? null
+      : document.querySelector<HTMLElement>(`#surface [aria-controls="editor-${selected}"]`);
+  // Nothing selected means the picture question was skipped or answered no, and
+  // then the top of the page they just made is the honest place to be.
+  return open ?? document.querySelector<HTMLElement>("#surface .blocks button");
+}
+
+/** Test seam: this module keeps state across repaints and a test needs it reset. */
 export function resetWizardFocusTracking(): void {
   wasOpen = false;
+  landingLeft = 0;
+  making = false;
 }

@@ -88,3 +88,15 @@ Follow `docs/WORKFLOW.md`. The traps that have each cost real time here:
 What to look at on the handset, at 390px in both palettes: every question fits
 without horizontal scrolling, every control clears 44 by 44, and the device back
 gesture dismisses the wizard before it leaves the surface rather than after.
+
+**Press "Make my page" twice, quickly, and confirm the app is still open.** This
+is the one consequence in the feature that no test here can reach. `finish`
+guards the second press with a module flag, and the reason the guard exists is
+that without it both chains call `dismissWizard`, `history.back()` is
+asynchronous, and the second one spends the history entry belonging to the
+surface underneath. On Build there is nothing underneath by design, so a real
+WebView finishes the activity: the app closes on somebody who tapped twice.
+jsdom clamps `back()` at the first entry instead of leaving, so the whole
+consequence is invisible under test and a first attempt to assert it wrote a
+line that could not fail. One page should open, and the app should still be
+running.

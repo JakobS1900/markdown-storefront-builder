@@ -987,7 +987,9 @@ fieldset.item > .btn.icon.danger {
   /* Centred by the margin rather than by a transform. See the note above. */
   margin-inline: auto;
   width: min(32rem, 100%);
-  /* CHUNK 4: MEASURE THIS ON THE HANDSET AT T052 BEFORE TRUSTING IT. Two
+  /* T052, NOT a review question: MEASURE THIS ON THE HANDSET. Marked as a
+     chunk carry-forward at first, which was wrong. No reading of the code can
+     settle it and it should not take up the holistic review's attention. Two
      vertical risks that no gate here can see, both specific to this being the
      only surface in the app whose text fields sit pinned to the bottom edge
      rather than scrolling in normal flow.

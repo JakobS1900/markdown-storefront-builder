@@ -73,7 +73,15 @@ function sizeOf(html: string): string {
  */
 function menuFileControl(): HTMLButtonElement {
   const control: HTMLButtonElement = button({
-    label: "Save a menu you can send",
+    // "Export menu", Jakob's words on 2026-09-09, and the reason is worth
+    // keeping because it is the sixth instance of one pattern in this project.
+    // This button writes a real `menu.html` of type `text/html`, which is the
+    // whole of feature 024 and has shipped since 0.7.0. It was called "Save a
+    // menu you can send", the word "export" appeared nowhere on it, and Jakob
+    // asked where the export to HTML feature was. The feature existed and the
+    // name did not let anyone find it, which is exactly what `specs/027` opens
+    // by describing and what a rename fixed the last time.
+    label: "Export menu",
     onClick: () => {
       const doc = getState().doc;
       control.disabled = true;

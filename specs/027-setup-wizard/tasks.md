@@ -101,13 +101,13 @@ anybody work they had already done.
 **Independent test**: Open a page with real content, run the wizard, and confirm
 that page is untouched whether you finish or abandon.
 
-- [ ] T035 [US1] Write the failing test: the empty state offers the wizard **and** still offers the starting point picker. FR-128. If the picker is gone or is behind the wizard, this fails.
-- [ ] T036 [US1] Add the entry point in `app/src/ui/build.ts`, beside `starterPicker` rather than in front of it.
-- [ ] T037 [US1] Finish by calling `openBackup(serializeDocument(doc))`, the same path `starterPicker` uses. FR-123. Do not write answers into the live document.
-- [ ] T038 [US1] Inherit the failure handling from `starterPicker`: `setBusy` before the lazy `load()`, and the offline catch that changes nothing and says so.
-- [ ] T039 [US3] **The seam test, and the one most worth writing.** Open a page with real content, run the wizard halfway, abandon, and assert the page is byte identical. Then run it to completion and assert the same, with the new page opened alongside. FR-125 and Principle V.
-- [ ] T040 [US3] Abandoning writes nothing to IndexedDB. Assert on the store contents, not on the absence of an error.
-- [ ] T041 [US1] Run `npm run verify` and commit Phase 5.
+- [x] T035 [US1] Write the failing test: the empty state offers the wizard **and** still offers the starting point picker. FR-128. If the picker is gone or is behind the wizard, this fails. In `app/tests/wizard-entry.test.ts`, a new file: everything in it crosses a seam into storage and needs `fake-indexeddb`, which `wizard.test.ts` deliberately has none of.
+- [x] T036 [US1] Add the entry point in `app/src/ui/build.ts`, beside `starterPicker` rather than in front of it. It carries `aria-controls`, so the focus restore is proved from the real control at last, and it pairs `rememberWizardOpen()` with `openWizard()`, which nothing in the app did before.
+- [x] T037 [US1] Finish by calling `openBackup(serializeDocument(doc))`, the same path `starterPicker` uses. FR-123. Do not write answers into the live document.
+- [x] T038 [US1] Inherit the failure handling from `starterPicker`: `setBusy` before the lazy `load()`, and the offline catch that changes nothing and says so.
+- [x] T039 [US3] **The seam test, and the one most worth writing.** Open a page with real content, run the wizard halfway, abandon, and assert the page is byte identical. Then run it to completion and assert the same, with the new page opened alongside. FR-125 and Principle V.
+- [x] T040 [US3] Abandoning writes nothing to IndexedDB. Assert on the store contents, not on the absence of an error.
+- [x] T041 [US1] Run `npm run verify` and commit Phase 5.
 
 ---
 
