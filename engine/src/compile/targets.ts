@@ -29,6 +29,8 @@ export const PORTABLE: Target = {
     tables: true,
     hardBreak: "spaces",
     localImages: false,
+    strikethrough: false,
+    highlight: false,
     escapeStyle: "commonmark",
   },
   sources: {
@@ -40,6 +42,10 @@ export const PORTABLE: Target = {
     tables: "GFM specification, pipe tables. Part of the declared portable baseline",
     thematicBreak: "CommonMark specification, thematic break. Chosen over --- per review R-1",
     escapeStyle: "CommonMark specification, backslash escapes for ASCII punctuation",
+    strikethrough:
+      "A JUDGEMENT FROM THE DECLARED BASELINE, NOT AN OBSERVATION, and recorded as one. The constitution defines this target as 'a strict CommonMark plus GFM tables baseline'. Strikethrough is a GFM extension, but that wording names GFM TABLES specifically, and it is the same wording tables:true was justified on. Writing true here would widen the declared baseline by inference, which the header of this file refuses: assuming support produces broken pages while assuming absence produces safe ones. The cost of being wrong is one plain word and a warning on the .md file download, not a broken page, and correcting it is a one line data change with a citation. See docs/research/2026-09-11-marks-verification.md",
+    highlight:
+      "CommonMark and GFM both lack any highlight construct, so there is nothing to cite support from. This is the first capability in this file whose honest answer for the baseline is no, and it is why the fallback exists rather than being theoretical",
     maxBytes: "Not applicable. A specification has no page size limit",
   },
 };
@@ -63,6 +69,8 @@ export const RENTRY: Target = {
     tables: true,
     hardBreak: "spaces",
     localImages: false,
+    strikethrough: true,
+    highlight: true,
     escapeStyle: "commonmark",
   },
   sources: {
@@ -73,6 +81,10 @@ export const RENTRY: Target = {
     tables: "rentry.co/how documents pipe tables, with --: and :--: alignment",
     thematicBreak: "Standard Markdown, no documented divergence. *** per review R-1",
     escapeStyle: "Observed in rentry's live preview on 2026-08-31, one line per character: the backslash was consumed for ` * _ { } [ ] ( ) # + - . ! | and a literal backslash, and left visible for ~ ^ and $. Those three are emitted as numeric character references instead. This value previously read 'documents no divergence from standard escaping', which is an absence of documentation recorded as a presence of behaviour, exactly what FR-014 above forbids",
+    strikethrough:
+      "Observed 2026-09-11 at rentry's own renderer, the /markdownx/markdownify/ endpoint its compose page previews through: ~~struck out~~ produced <del>. rentry.co/how documents ~~Strikeout~~ as well, and the documentation and the observation agree, which is worth recording because the hardBreak value above exists precisely because they once did not. Nothing was published. docs/research/2026-09-11-marks-verification.md",
+    highlight:
+      "Observed 2026-09-11 at the same endpoint: ==highlighted== produced <mark>, and rentry.co/how documents ==Mark==. The same probe found a divergence from text.is that is NOT shared: rentry leaves 'a == b and c == d' alone where text.is marks it, so these two hosts disagree again despite running the same stack. docs/research/2026-09-11-marks-verification.md",
     maxBytes: "rentry.co/how documents no limit. Recorded as unknown, not as unlimited",
   },
 };
@@ -101,6 +113,8 @@ export const TEXT_IS: Target = {
     tables: true,
     hardBreak: "spaces",
     localImages: false,
+    strikethrough: true,
+    highlight: true,
     escapeStyle: "commonmark",
     maxBytes: 200000,
   },
@@ -116,6 +130,10 @@ export const TEXT_IS: Target = {
     thematicBreak: "Observed 2026-09-01: *** produced an hr",
     escapeStyle:
       "Observed 2026-09-01, one line per character, twenty nine characters: the backslash was consumed for every one of them except the tilde. That is narrower than rentry, where it also fails for the caret and the dollar sign. All three are emitted as numeric character references regardless, and those were confirmed here to render as the character the seller typed, with a doubled entity tilde staying literal text while a real one is still struck through",
+    strikethrough:
+      "Observed 2026-09-11 at text.is's own renderer, /markdownx/markdownify/, the same endpoint the 2026-09-01 verification used: ~~struck out~~ produced <del>. The escapeStyle citation below already reached the same conclusion sideways on 2026-09-01, recording that a real tilde is 'still struck through' while a doubled entity tilde stays literal text. docs/research/2026-09-11-marks-verification.md",
+    highlight:
+      "Observed 2026-09-11 at the same endpoint: ==highlighted== produced <mark>. NOT copied from rentry, and the probe is why: text.is renders 'a == b and c == d' as a highlight with the spaces inside the markers, and rentry renders it as plain text. Two hosts on the same stack, disagreeing for the third time. docs/research/2026-09-11-marks-verification.md",
     maxBytes:
       "Observed 2026-09-01: the paste form carries maxlength=\"200000\". That counts characters and this field counts bytes, so it is recorded as bytes deliberately: a page inside 200000 bytes holds at most 200000 characters, so the limit is conservative in the safe direction rather than assumed",
   },
@@ -143,6 +161,8 @@ export const MENU_FILE: Target = {
     tables: true,
     hardBreak: "spaces",
     localImages: true,
+    strikethrough: true,
+    highlight: true,
     escapeStyle: "commonmark",
   },
   sources: {
@@ -154,6 +174,10 @@ export const MENU_FILE: Target = {
     thematicBreak: "Observed in our own renderer: *** becomes an hr. Chosen over --- per review R-1, which applies here for the same reason",
     localImages:
       "Observed in our own renderer, which is the thing that displays this file. The app resolves an mdsb-asset: address on the built DOM before serializing, so the picture is in the file rather than fetched from anywhere. Stronger evidence than any of the three above carry, because we ship both ends of it",
+    strikethrough:
+      "Observed in our own renderer, app/src/ui/render-markdown.ts, which builds a del element from ~~. Stronger evidence than any paste host can offer, because we ship both ends of it",
+    highlight:
+      "Observed in our own renderer, which builds a mark element from ==. True here while portable is false, and that is the right answer rather than an inconsistency: portable describes a baseline somebody else implements, and this describes a file we render ourselves",
     escapeStyle:
       "Observed in our own renderer, which implements CommonMark backslash escapes for ASCII punctuation. The same escaper the paste hosts get, so a seller reading their menu file is reading what they would have published",
     maxBytes:

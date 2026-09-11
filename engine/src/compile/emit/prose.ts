@@ -1,5 +1,6 @@
 import type { Block } from "../../document/types.js";
 import type { Target } from "../capabilities.js";
+import type { DiagnosticSink } from "../diagnostics.js";
 import { formatInline } from "../inline.js";
 import { joinParts, sectionHeading } from "./shared.js";
 
@@ -19,14 +20,24 @@ import { joinParts, sectionHeading } from "./shared.js";
  * joining two sentences with no space. Found by pasting real output into their
  * preview, not by any test.
  */
-export function emitProse(block: Extract<Block, { kind: "prose" }>, target: Target): string {
+export function emitProse(
+  block: Extract<Block, { kind: "prose" }>,
+  target: Target,
+  sink: DiagnosticSink,
+): string {
   const hardBreak = target.capabilities.hardBreak === "spaces" ? "  \n" : "\\\n";
+
+  // One set for the whole section, so a seller who highlights five words in one
+  // passage is told once about the section rather than five times about the
+  // same thing. Deliberately NOT shared across sections: a warning that cannot
+  // name where the problem is fails the whole purpose of naming the block.
+  const warned = new Set<string>();
 
   const paragraphs = block.text
     .split(/\r?\n[ \t]*\r?\n/)
     .map((p) => p.trim())
     .filter((p) => p !== "")
-    .map((chunk) => emitChunk(chunk, hardBreak));
+    .map((chunk) => emitChunk(chunk, hardBreak, target, sink, block.id, warned));
 
   return joinParts([sectionHeading(block.heading, target), ...paragraphs]);
 }
@@ -46,7 +57,14 @@ export function emitProse(block: Extract<Block, { kind: "prose" }>, target: Targ
  * strict. The intro line above is the common case, and it turned the whole
  * section into escaped text with visible backslashes in front of every dash.
  */
-function emitChunk(chunk: string, hardBreak: string): string {
+function emitChunk(
+  chunk: string,
+  hardBreak: string,
+  target: Target,
+  sink: DiagnosticSink,
+  blockId: string,
+  warned: Set<string>,
+): string {
   const lines = chunk.split(/\r?\n/).map((l) => l.trim());
   const parts: string[] = [];
 
@@ -54,13 +72,19 @@ function emitChunk(chunk: string, hardBreak: string): string {
   let bullets: string[] = [];
 
   const flushProse = (): void => {
-    if (prose.length > 0) parts.push(prose.map((l) => formatInline(l)).join(hardBreak));
+    if (prose.length > 0) {
+      parts.push(prose.map((l) => formatInline(l, target, sink, blockId, warned)).join(hardBreak));
+    }
     prose = [];
   };
 
   const flushBullets = (): void => {
     if (bullets.length > 0) {
-      parts.push(bullets.map((l) => `- ${formatInline(stripMarker(l))}`).join("\n"));
+      parts.push(
+        bullets
+          .map((l) => `- ${formatInline(stripMarker(l), target, sink, blockId, warned)}`)
+          .join("\n"),
+      );
     }
     bullets = [];
   };

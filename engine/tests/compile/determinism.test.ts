@@ -97,6 +97,8 @@ describe("SC-007: adding a host changes no compiler logic", () => {
         tables: false,
         hardBreak: "backslash",
         localImages: false,
+        strikethrough: false,
+        highlight: false,
         escapeStyle: "commonmark",
       },
       sources: {
@@ -105,6 +107,8 @@ describe("SC-007: adding a host changes no compiler logic", () => {
         tables: "invented",
         hardBreak: "invented",
         localImages: "invented",
+        strikethrough: "invented",
+        highlight: "invented",
         escapeStyle: "invented",
         maxBytes: "invented",
       },

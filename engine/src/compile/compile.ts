@@ -41,7 +41,7 @@ function emitBlock(block: Block, target: Target, sink: DiagnosticSink): string {
     case "divider":
       return emitDivider(target);
     case "prose":
-      return emitProse(block, target);
+      return emitProse(block, target, sink);
     case "menu":
       return emitMenu(block, target, sink);
     case "gallery":

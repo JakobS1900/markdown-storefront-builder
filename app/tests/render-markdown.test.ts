@@ -218,9 +218,20 @@ describe("the entities the escaper produces are shown as their characters", () =
     expect(host.textContent).not.toContain("&#");
   });
 
-  it("shows a doubled tilde as text, matching what the host will do", () => {
-    const host = renderCompiled({ id: "p", kind: "prose", text: "~~not struck~~" });
-    expect(host.textContent).toContain("~~not struck~~");
+  it("shows a tilde the grammar did not claim as text, matching what the host will do", () => {
+    // AMENDED BY FEATURE 028. This compiled `~~not struck~~` and asserted the
+    // preview showed those characters literally, which was right while
+    // strikethrough was not a construct: a doubled tilde could only be an
+    // accident. It is now something a seller can ask for, and `renderCompiled`
+    // compiles for `portable`, which does not render it, so the markers are
+    // dropped and the words stay. That is the fallback, seen exactly where
+    // Principle VII promises the seller will see it.
+    //
+    // The property underneath is unchanged and is what is asserted: a tilde the
+    // grammar did not claim is still inert.
+    const host = renderCompiled({ id: "p", kind: "prose", text: "~~ spaced ~~ and 50~60" });
+    expect(host.textContent).toContain("~~ spaced ~~");
+    expect(host.textContent).toContain("50~60");
     expect(host.querySelector("del, s, strike")).toBeNull();
   });
 
@@ -293,14 +304,19 @@ describe("it draws what the compiler emits", () => {
     // setext heading or a highlight on a paste host. If `=` were missing from
     // this renderer's strip list the seller would read `A \=\=highlight\=\=`
     // in the preview while the Copy tab showed the truth.
+    // Written with the SPACED form on purpose. `==highlight==` is a mark a
+    // seller asked for, and `renderCompiled` compiles for `portable`, which
+    // drops it. `a == b` is the form the grammar refuses on every host, so it
+    // is escaped everywhere and is the case that actually exercises this strip
+    // list rather than the fallback.
     const host = renderCompiled({
       id: "t",
       kind: "prose",
-      text: "A ==highlight== and Bundle = 3 items",
+      text: "a == b and Bundle = 3 items",
     });
-    expect(host.textContent).toContain("A ==highlight== and Bundle = 3 items");
+    expect(host.textContent).toContain("a == b and Bundle = 3 items");
     expect(host.textContent).not.toContain("\\=");
-    // And it is still text rather than a mark, because the compiler refused it.
+    // Still text rather than a mark, because the grammar refused it.
     expect(host.querySelector("mark")).toBeNull();
   });
 

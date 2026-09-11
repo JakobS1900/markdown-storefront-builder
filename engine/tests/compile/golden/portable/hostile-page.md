@@ -35,6 +35,6 @@ My shop
 Underlined by hand  
 \=\=\=\=\=
 
-A \=\=highlight\=\= nobody asked for, and a \=\= b comparison.
+A highlight nobody asked for, and a \=\= b comparison.
 
 Bundle = 3 items, S = small.
