@@ -160,8 +160,12 @@ function inline(text: string): DocumentFragment {
   // restating rather than assumed: the forgery bug happened because a pattern
   // was asked to tell the seller's words from the compiler's structure when
   // they were the same characters. Here they cannot be the same characters.
+  // `***` before `**` before `*`, because the longer run has to win. Without
+  // the first of those, `***word***` matched the `**` branch, whose content
+  // class `[^*]+` cannot start with an asterisk, so the whole thing fell
+  // through to plain text and the seller read their own asterisks.
   const pattern =
-    /(!?)\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)|(\*\*)([^*]+)\*\*|(~~)([^~]+)~~|(==)([^=]+)==|(\*)([^*]+)\*/g;
+    /(!?)\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)|(\*\*\*)([^*]+)\*\*\*|(\*\*)([^*]+)\*\*|(~~)([^~]+)~~|(==)([^=]+)==|(\*)([^*]+)\*/g;
 
   let last = 0;
   for (const match of text.matchAll(pattern)) {
@@ -193,20 +197,28 @@ function inline(text: string): DocumentFragment {
         frag.append(a);
       }
     } else if (match[4] !== undefined) {
+      // Bold and italic together. A strong holding an em, which is what the
+      // compiler emits it as and what it means.
       const strong = document.createElement("strong");
-      strong.append(inline(match[5] ?? ""));
+      const em = document.createElement("em");
+      em.append(inline(match[5] ?? ""));
+      strong.append(em);
       frag.append(strong);
     } else if (match[6] !== undefined) {
-      const del = document.createElement("del");
-      del.append(inline(match[7] ?? ""));
-      frag.append(del);
+      const strong = document.createElement("strong");
+      strong.append(inline(match[7] ?? ""));
+      frag.append(strong);
     } else if (match[8] !== undefined) {
-      const mark = document.createElement("mark");
-      mark.append(inline(match[9] ?? ""));
-      frag.append(mark);
+      const del = document.createElement("del");
+      del.append(inline(match[9] ?? ""));
+      frag.append(del);
     } else if (match[10] !== undefined) {
+      const mark = document.createElement("mark");
+      mark.append(inline(match[11] ?? ""));
+      frag.append(mark);
+    } else if (match[12] !== undefined) {
       const em = document.createElement("em");
-      em.append(inline(match[11] ?? ""));
+      em.append(inline(match[13] ?? ""));
       frag.append(em);
     }
 

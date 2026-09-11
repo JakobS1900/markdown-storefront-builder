@@ -81,7 +81,7 @@ export type Node =
  * nesting stays text rather than producing a link to somewhere unintended.
  */
 const PATTERN =
-  /\[([^\]\n]*)\]\(((?:[^()\s\n]|\([^()\s\n]*\))*)\)|\*\*(?!\s)([^\n]+?)(?<!\s)\*\*|(?<!~)~~(?!~)(?!\s)([^\n]+?)(?<!\s)(?<!~)~~(?!~)|(?<!=)==(?!=)(?!\s)([^\n]+?)(?<!\s)(?<!=)==(?!=)|(?<![*\w])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![*\w])|(?<![_\w])_(?!\s)([^_\n]+?)(?<!\s)_(?![_\w])/;
+  /\[([^\]\n]*)\]\(((?:[^()\s\n]|\([^()\s\n]*\))*)\)|\*\*\*(?!\s)([^\n]+?)(?<!\s)\*\*\*|\*\*(?!\s)([^\n]+?)(?<!\s)\*\*|(?<!~)~~(?!~)(?!\s)([^\n]+?)(?<!\s)(?<!~)~~(?!~)|(?<!=)==(?!=)(?!\s)([^\n]+?)(?<!\s)(?<!=)==(?!=)|(?<![*\w])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![*\w])|(?<![_\w])_(?!\s)([^_\n]+?)(?<!\s)_(?![_\w])/;
 
 /**
  * Parses one line into nodes.
@@ -102,7 +102,7 @@ export function parseInline(text: string, depth = 0): Node[] {
 
     if (match.index > 0) nodes.push({ kind: "text", value: rest.slice(0, match.index) });
 
-    const [whole, linkLabel, linkUrl, strong, strike, highlight, emStar, emUnderscore] = match;
+    const [whole, linkLabel, linkUrl, both, strong, strike, highlight, emStar, emUnderscore] = match;
 
     if (linkUrl !== undefined) {
       // An unsafe address never becomes a link. The label and the raw address
@@ -117,6 +117,21 @@ export function parseInline(text: string, depth = 0): Node[] {
       } else {
         nodes.push({ kind: "text", value: whole });
       }
+    } else if (both !== undefined) {
+      // `***x***` is bold AND italic, and it needs no new node kind: it is a
+      // strong holding an em, which is exactly what it means. `emitInline`
+      // writes `**` then `*`, so it round trips to the same three asterisks.
+      //
+      // Added by feature 028 because the buttons made this one tap away. It was
+      // already broken before them and nothing reached it: a seller who typed
+      // `***word***` by hand got `**\*word**\*` published, a bold containing a
+      // literal asterisk plus a stray one. With two buttons on screen, pressing
+      // Bold then Italic is the obvious thing to do, so the gap stopped being
+      // theoretical the moment they existed.
+      nodes.push({
+        kind: "strong",
+        children: [{ kind: "em", children: parseInline(both, depth + 1) }],
+      });
     } else if (strong !== undefined) {
       nodes.push({ kind: "strong", children: parseInline(strong, depth + 1) });
     } else if (strike !== undefined) {

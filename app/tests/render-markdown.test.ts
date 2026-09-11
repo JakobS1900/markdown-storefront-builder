@@ -364,6 +364,19 @@ describe("it draws what the compiler emits", () => {
     expect(host.querySelector("mark strong")?.textContent).toBe("bold");
   });
 
+  it("draws bold and italic together", () => {
+    const host = renderCompiledFor("rentry", {
+      id: "t",
+      kind: "prose",
+      text: "***word***",
+    });
+    expect(host.querySelector("strong em")?.textContent).toBe("word");
+    // Not the seller's own asterisks. Before the `***` branch was added ahead of
+    // the `**` one, this fell through to plain text, because `**`'s content
+    // class cannot begin with an asterisk.
+    expect(host.textContent).not.toContain("*");
+  });
+
   it("draws a link inside bold, which it used to lose", () => {
     // A PRE-EXISTING GAP, closed as a consequence of this feature rather than
     // as its own fix, and recorded so it is not mistaken for new behaviour.

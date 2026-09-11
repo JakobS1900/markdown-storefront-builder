@@ -229,6 +229,80 @@ describe("what a press does to the seller's text", () => {
   });
 });
 
+/**
+ * Every case here was found by the holistic review over the whole feature diff,
+ * and every one of them reached a buyer's page. None was catchable by the tests
+ * above: the one that combined two marks used Bold and Cross out, and `**` and
+ * `~~` share no characters, so it could not discriminate. A fixture whose value
+ * is the harmless one cannot fail.
+ */
+describe("combining marks, and the three ways it used to corrupt text", () => {
+  it("bolds and italicises the same word instead of losing the bold", () => {
+    // Before: after Bold the text was `**word**` with `word` selected, and
+    // Italic's `*` matched the TAILS of the bold markers, so it unwrapped them.
+    // `**word**` became `*word*` and the bold silently vanished.
+    live();
+    textSection("word");
+    press("Bold", 0, 4);
+    expect(box().value).toBe("**word**");
+    const control = box();
+    press("Italic", control.selectionStart, control.selectionEnd);
+    expect(box().value).toBe("***word***");
+    expect(textOf()).toBe("***word***");
+  });
+
+  it("works the same way in the other order", () => {
+    live();
+    textSection("word");
+    press("Italic", 0, 4);
+    const control = box();
+    press("Bold", control.selectionStart, control.selectionEnd);
+    expect(box().value).toBe("***word***");
+  });
+
+  it("still takes bold off a plain bold word", () => {
+    // The guards must not cost the ordinary case they were added around.
+    live();
+    textSection("word");
+    press("Bold", 0, 4);
+    const control = box();
+    press("Bold", control.selectionStart, control.selectionEnd);
+    expect(box().value).toBe("word");
+  });
+
+  it("deletes nothing when the selection spans two separate bold spans", () => {
+    // Before: both ends matched `**`, so it stripped the outer markers of two
+    // DIFFERENT pairs and four characters of the seller's text were deleted.
+    live();
+    textSection("**a** and **b**");
+    press("Bold", 2, 13);
+    const after = box().value;
+    // Every character the seller had is still there. That is the property; the
+    // exact shape of an ambiguous selection's result is not.
+    for (const ch of ["a", "b", "and"]) expect(after).toContain(ch);
+    expect((after.match(/\*/g) ?? []).length).toBeGreaterThanOrEqual(8);
+    expect(after.replace(/\*/g, "")).toBe("a and b");
+  });
+
+  it("bolds a multi-line selection line by line, not as a block", () => {
+    // Before: `**line1\nline2**`, which the grammar can never read because
+    // every pattern captures with `[^\n]+?`, so it published as literal
+    // asterisks either side of the seller's sentences.
+    live();
+    textSection("line1\nline2");
+    press("Bold", 0, 11);
+    expect(box().value).toBe("**line1**\n**line2**");
+    expect(textOf()).toBe("**line1**\n**line2**");
+  });
+
+  it("leaves a blank line alone inside a multi-line selection", () => {
+    live();
+    textSection("one\n\ntwo");
+    press("Bold", 0, 8);
+    expect(box().value).toBe("**one**\n\n**two**");
+  });
+});
+
 describe("what a press must not do", () => {
   it("does not move the seller's place or lose what they typed", () => {
     live();

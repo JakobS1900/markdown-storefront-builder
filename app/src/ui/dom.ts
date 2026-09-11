@@ -248,7 +248,33 @@ function formattingBar(control: HTMLTextAreaElement, within: string): HTMLElemen
   );
 }
 
-/** Applies one format to whatever the seller has selected. */
+/**
+ * Applies one format to whatever the seller has selected.
+ *
+ * THREE THINGS HERE WERE FOUND BY THE HOLISTIC REVIEW AND EVERY ONE OF THEM
+ * REACHED A BUYER'S PAGE. Read this before simplifying any of the guards.
+ *
+ * The first version decided "is this already formatted" by looking at the
+ * `marker.length` characters immediately outside the selection. That is not the
+ * same question, and it was wrong three ways:
+ *
+ *   - Bold then Italic on one word. After Bold the text is `**word**` with
+ *     `word` selected. Italic's marker is `*`, and the characters just outside
+ *     the selection ARE `*`, because they are the tails of the bold markers. It
+ *     "unwrapped" them: `**word**` became `*word*` and **the bold silently
+ *     vanished**, with nothing on screen saying so.
+ *   - A selection spanning two separate bold spans. `**a** and **b**` with
+ *     `a** and **b` selected: both ends match, so it stripped the outer pair of
+ *     two DIFFERENT pairs and **deleted four characters of the seller's text**.
+ *   - Neither case could be caught by the tests that existed, because the one
+ *     test that combined two marks used Bold and Cross out, and `**` and `~~`
+ *     share no characters. A fixture whose value is the harmless one cannot
+ *     discriminate.
+ *
+ * The guards below ask the real question instead: is this selection the whole
+ * interior of exactly one pair of this marker, with nothing of that marker
+ * inside it and no longer run of the same character running into it.
+ */
 function apply(control: HTMLTextAreaElement, format: (typeof FORMATS)[number]): void {
   const value = control.value;
   const from = control.selectionStart;
@@ -273,19 +299,64 @@ function apply(control: HTMLTextAreaElement, format: (typeof FORMATS)[number]): 
   }
 
   const marker = format.wrap;
-  // Pressing the same button again takes the formatting off rather than nesting
-  // it. Both shapes count: the markers may be inside the selection, because the
-  // seller selected the word after formatting it, or outside it, because they
-  // selected only the word between them.
-  if (selected.startsWith(marker) && selected.endsWith(marker) && selected.length > marker.length * 2) {
+  const char = marker[0] ?? "";
+
+  // A SELECTION CROSSING A LINE BREAK IS WRAPPED LINE BY LINE, NOT AS A BLOCK.
+  //
+  // The grammar's patterns all capture with `[^\n]+?`, so a marker pair with a
+  // newline between its halves is not a construct and never can be. Wrapping
+  // the block would put `**` around a passage and publish it as literal
+  // asterisks either side of the seller's sentence: worse than nothing
+  // happening, because it is visible rubbish rather than an inert no-op.
+  //
+  // Selecting a whole passage and pressing Bold is the most natural thing a
+  // button invites, so this is not an edge case, it is the common one. The
+  // per-line answer is what the seller meant and it is what the grammar reads.
+  if (selected.includes("\n")) {
+    const wrapped = selected
+      .split("\n")
+      .map((line) => (line.trim() === "" ? line : `${marker}${line}${marker}`))
+      .join("\n");
+    control.value = `${value.slice(0, from)}${wrapped}${value.slice(to)}`;
+    control.setSelectionRange(from, from + wrapped.length);
+    return;
+  }
+
+  /** Whether a run of this marker's character continues past `at`. */
+  const runsInto = (at: number): boolean => value[at] === char;
+
+  // Already wrapped, markers inside the selection: the seller selected the word
+  // together with its markers.
+  if (
+    selected.startsWith(marker) &&
+    selected.endsWith(marker) &&
+    selected.length > marker.length * 2 &&
+    // Nothing of this marker in the middle, or the two ends belong to different
+    // pairs and stripping them is the character-deleting bug above.
+    !selected.slice(marker.length, -marker.length).includes(char) &&
+    // And no longer run of the same character running into either end, which is
+    // what made `*` mistake the tail of `**` for an italic marker.
+    !runsInto(from - 1) &&
+    !runsInto(to)
+  ) {
     const bare = selected.slice(marker.length, -marker.length);
     control.value = `${value.slice(0, from)}${bare}${value.slice(to)}`;
     control.setSelectionRange(from, from + bare.length);
     return;
   }
+
+  // Already wrapped, markers outside the selection: the seller selected only
+  // the word between them, which is what this function leaves selected after a
+  // press, so it is the shape a second press actually meets.
   const before = value.slice(Math.max(0, from - marker.length), from);
   const after = value.slice(to, to + marker.length);
-  if (before === marker && after === marker) {
+  if (
+    before === marker &&
+    after === marker &&
+    !selected.includes(char) &&
+    !runsInto(from - marker.length - 1) &&
+    !runsInto(to + marker.length)
+  ) {
     control.value = `${value.slice(0, from - marker.length)}${selected}${value.slice(to + marker.length)}`;
     control.setSelectionRange(from - marker.length, from - marker.length + selected.length);
     return;

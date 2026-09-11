@@ -33,6 +33,34 @@ describe("the formatting artists actually type", () => {
     expect(fmt(input)).toBe(expected);
   });
 
+  it.each([
+    // Bold AND italic, added by feature 028 because the buttons made it one tap
+    // away. It was broken before them and nothing reached it: `***word***` used
+    // to publish as `**\*word**\*`, a bold containing a literal asterisk and a
+    // stray one after it. No new node kind: a strong holding an em, which is
+    // what it means and what round trips to the same three asterisks.
+    ["***word***", "***word***"],
+    ["a ***word*** here", "a ***word*** here"],
+    ["***[shop](https://e.test)***", "***[shop](https://e.test)***"],
+  ])("formats %j as bold and italic together", (input, expected) => {
+    expect(fmt(input)).toBe(expected);
+  });
+
+  it("reads bold and italic back as a strong holding an em", () => {
+    const nodes = parseInline("***word***");
+    expect(nodes).toHaveLength(1);
+    const outer = nodes[0];
+    expect(outer?.kind).toBe("strong");
+    if (outer === undefined || outer.kind !== "strong") throw new Error("not a strong");
+    expect(outer.children[0]?.kind).toBe("em");
+  });
+
+  it("is stable over its own output, which is what makes the button safe", () => {
+    // Pressing Bold then Italic produces this, and the compiler must read back
+    // what it wrote or the second press published something else.
+    expect(fmt(fmt("***word***"))).toBe("***word***");
+  });
+
   it("normalises underscore emphasis to asterisks, so output is one style", () => {
     expect(fmt("_one_ and *two*")).toBe("*one* and *two*");
   });
