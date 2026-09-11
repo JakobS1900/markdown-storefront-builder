@@ -49,6 +49,7 @@ answerable without reading fifty commit messages.
 | [024 the menu file](024-menu-file/) | 2026-09-06 | **before** | yes | yes | no | **yes** |
 | [025 the pages sidebar](025-pages-sidebar/) | 2026-09-07 | **before** | yes | yes | no | no |
 | [026 selling modes](026-selling-modes/) | 2026-09-08 | **before** | yes | yes | no | no |
+| [027 the setup wizard](027-setup-wizard/) | 2026-09-08 | **before** | yes | yes | yes | **yes** |
 
 024 is the fullest set in the repository: spec, plan, tasks, research, data
 model, contracts, a quickstart, an analysis and a holistic review. It is also

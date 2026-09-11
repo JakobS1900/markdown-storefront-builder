@@ -150,7 +150,10 @@ export function previewSurface(container: HTMLElement): void {
             // page can be a price table above and a block per item here.
             // Principle VII wants a divergence stated in the product rather
             // than in a document.
-            "This is the file itself, as whoever you send it to will see it. Save it from the Copy tab. It can be laid out differently from the page above, because it can show pictures no paste host can carry.",
+            // "Export menu" names the control on the Copy tab exactly. A
+            // pointer to a button has to use the button's own words or it is a
+            // pointer to nothing, and that button was renamed on 2026-09-09.
+            "This is the file itself, as whoever you send it to will see it. Export menu on the Copy tab saves it. It can be laid out differently from the page above, because it can show pictures no paste host can carry.",
           ]),
           // Why this can look different from the page above, said rather than
           // left to be noticed. A picture from the device counts toward the per

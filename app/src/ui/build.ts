@@ -13,17 +13,21 @@ import {
   clearBusy,
   getState,
   moveBlock,
+  openWizard,
   removeBlock,
   selectBlock,
   setBusy,
   undoLast,
   updateBlock,
   update,
+  type State,
 } from "../store.js";
 import { openBackup } from "../import.js";
+import { rememberWizardOpen } from "../surface-history.js";
 import { showsEmptyState, starterPicker } from "./pages-sidebar.js";
 import { announce, button, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
+import { WIZARD_ID } from "./wizard.js";
 
 const ADDABLE: Block["kind"][] = [
   "profile",
@@ -118,7 +122,7 @@ function revealSection(blockId: string): void {
  * from a subdirectory on the web and from the root of a custom scheme inside
  * the Android shell, and an absolute path is wrong for one of those.
  */
-function emptyState(): HTMLElement[] {
+function emptyState(state: State): HTMLElement[] {
   const load = button({
     label: "See an example page",
     variant: "primary",
@@ -147,11 +151,67 @@ function emptyState(): HTMLElement[] {
     },
   });
 
+  // The wizard's only way in. FR-119 puts it on the empty state and the
+  // assumption behind it says why it is offered here rather than forced ahead
+  // of the surface: a question between a returning seller and their own pages
+  // is a toll, and FR-128 keeps the other two ways in beside it.
+  //
+  // It carries `aria-controls` because that is how `renderShell` finds the
+  // control to give focus back to when the layer closes, with
+  // `root.querySelector`. The lookup runs over the whole tree rather than the
+  // header, precisely because this trigger is drawn by a surface rather than by
+  // the shell. A trigger without it opens the wizard and strands a keyboard at
+  // the top of the document when it shuts.
+  //
+  // THAT IS TRUE OF CLOSING AND WAS NOT TRUE OF FINISHING, which is worth
+  // spelling out because this comment used to claim both. Finishing replaces
+  // the empty state with a page, so this control does not exist to be found,
+  // and focus went to the body on the feature's own success path. The landing
+  // in `syncWizardFocus` is what covers that case; this attribute only covers
+  // the seller who changed their mind.
+  //
+  // `rememberWizardOpen` is paired with `openWizard` here the way `shell.ts`
+  // pairs `rememberSidebarOpen` with `openSidebar`, and until this line existed
+  // nothing in the app called it at all. Without the entry it pushes, the first
+  // back gesture on Build leaves the app before any `popstate` fires, because
+  // Build deliberately pushes no history of its own, and the wizard would be
+  // dismissed by closing the app, which is not dismissing it. FR-133.
+  const wizard = button({
+    label: "Answer a few questions",
+    // From the state this render was given, not read back out of the store.
+    // `buildSurface` already holds it and passes it to `showsEmptyState`, so
+    // reaching past that for one field is a second way of doing what the
+    // surrounding function already does, and two reads of one paint can in
+    // principle disagree.
+    expanded: state.wizardOpen,
+    controls: WIZARD_ID,
+    onClick: () => {
+      rememberWizardOpen();
+      openWizard();
+    },
+  });
+
   return [
     el("p", { class: "empty" }, [
-      "Your page is empty. Add a section below to start, or begin from a template.",
+      "Your page is empty. Answer a few questions and I will make one, add a section below, or begin from a template.",
     ]),
-    el("div", { class: "adders" }, [load]),
+    // CHUNK 5: this is NOT the primary control, and the spec does not settle
+    // which of the two entry points a newcomer should press first.
+    //
+    // "See an example page" has been the empty state's one primary since the
+    // restyle, and the reasoning beside the add-a-section row is why nothing is
+    // being promoted here: six primaries on one screen meant no primary at all,
+    // and two competing solid accent buttons is that mistake in miniature. The
+    // argument the other way is real and is the whole point of the feature:
+    // somebody who cannot work out what to type is better served by the wizard
+    // than by a demonstration of somebody else's shop, so the wizard could
+    // fairly take the accent and the example step back to a plain button.
+    //
+    // Left as it is, and put to T048 rather than settled quietly in the chunk
+    // that wrote it, because it is a taste question about a screen and this
+    // chunk cannot see the screen. Its position, first in the row, is what it
+    // gets instead.
+    el("div", { class: "adders" }, [wizard, load]),
     starterPicker("starters-group-empty"),
   ];
 }
@@ -319,7 +379,7 @@ export function buildSurface(container: HTMLElement): void {
           update(next as typeof state.doc);
         },
       }),
-      ...(showsEmptyState(state) ? emptyState() : [list]),
+      ...(showsEmptyState(state) ? emptyState(state) : [list]),
       el("h2", { class: "sr-only" }, ["Add a section"]),
       adders,
     ]),

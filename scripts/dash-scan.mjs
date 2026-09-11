@@ -21,7 +21,16 @@ const VENDORED = [/^\.claude\/skills\//, /^\.specify\//, /^package-lock\.json$/]
 
 const TEXT_EXT = /\.(md|ts|tsx|js|mjs|cjs|json|html|css|yml|yaml)$/;
 
-const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
+// `--others --exclude-standard` alongside the default `--cached`, so a file
+// that has been written but not staged is scanned too. Without them this gate
+// could not see a new file at all, and a new file is exactly where a first
+// mistake lives: it went green over a file with an em dash in it on 2026-09-09,
+// reporting "clean, 321 files checked", and only started failing once the file
+// was staged. Anything ignored by `.gitignore` stays ignored, which is what
+// `--exclude-standard` is for, so `node_modules` and `dist` do not come back.
+const files = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
+  encoding: "utf8",
+})
   .split("\0")
   .filter(Boolean)
   .filter((f) => TEXT_EXT.test(f))

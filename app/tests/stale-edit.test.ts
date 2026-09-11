@@ -107,7 +107,7 @@ describe("editing two fields before the interface catches up", () => {
     addBlock(blankBlock("profile"));
     selectBlock(getState().doc.blocks[0]?.id);
 
-    put("Your name", "Ari");
+    put("Store name", "Ari");
     put("One line about you (optional)", "Character art");
 
     const block = getState().doc.blocks[0];

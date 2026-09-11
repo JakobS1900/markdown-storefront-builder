@@ -119,7 +119,7 @@ describe("typing into a section", () => {
     live();
     openFirstBlock("profile");
 
-    const start = fieldByLabel("Your name");
+    const start = fieldByLabel("Store name");
     const startLabel = labelOf(start);
     start.focus();
 
@@ -134,7 +134,7 @@ describe("typing into a section", () => {
     live();
     openFirstBlock("profile");
 
-    const start = fieldByLabel("Your name");
+    const start = fieldByLabel("Store name");
     start.focus();
     const startLabel = labelOf(start);
 
@@ -150,7 +150,7 @@ describe("typing into a section", () => {
     live();
     openFirstBlock("profile");
 
-    fieldByLabel("Your name").focus();
+    fieldByLabel("Store name").focus();
     typeWord("Ari");
 
     const after = focused();
@@ -246,7 +246,7 @@ describe("the repaint that was deferred still happens", () => {
       live();
       openFirstBlock("profile");
 
-      const start = fieldByLabel("Your name");
+      const start = fieldByLabel("Store name");
       start.focus();
       const startLabel = labelOf(start);
       typeWord("Ari");

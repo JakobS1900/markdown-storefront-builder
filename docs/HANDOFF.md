@@ -12,7 +12,175 @@ exists with the signed APK attached: 3,228,912 bytes, `isDraft: false`, checked
 with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
-Nothing is in progress. What is next is F4, the wizard, item 5 below.
+
+**Feature 027, the setup wizard, is COMPLETE as of 2026-09-11 and released as
+`v0.10.0`.** Branch `027-setup-wizard`, all seven phases, 57 of its 58 tasks.
+T051, the desktop browser pass, is the one exception and it is explained in
+`tasks.md` rather than quietly ticked: the Chrome automation extension was
+unresponsive all session across four attempts. Its substance was covered twice
+over, by the headless contrast gate at 390px and by the handset pass, and the
+desktop pass specifically is still owed.
+
+**THE HOLISTIC REVIEW EARNED ITS COST AGAIN, AND THIS TIME IT CAUGHT A WRONG
+PRICE GOING TO BUYERS.** Read "What T048 found" below before touching
+`wizard-answers.ts`. The short version: a renamed first item kept the template's
+`unit`, so a freelancer who typed "Logo design" and "300" and took question 6's
+own advice published `| Logo design | USD 300 per hour |`. Every test passed over
+it because six of the eight starting points ship `unit: "each"` and the default
+test starter is one of them. **A fixture whose value is the harmless one cannot
+discriminate.**
+
+**Phase 6 is finished and committed as `bc86758`**, "test(027): the contrast
+gate walks the wizard, and proves it read it". T042 through T047 are all ticked
+in `specs/027-setup-wizard/tasks.md`. `npm run verify` is green whole and
+unpiped at that commit, numbers under "Current state".
+
+**Nothing was lost when the 2026-09-10 session was cut**, and this is worth
+recording because the file spent a day telling the next session to check. The
+two subagents that were still running had landed chunk A as a commit and left
+chunk B as an uncommitted diff in `scripts/contrast.mjs`. A later session ran
+against the same tree and also landed nothing. `git log` matched this file
+exactly, `git status` still said `M scripts/contrast.mjs`, and no app code had
+been touched by anybody. The chunk B diff was good and was kept rather than
+rewritten, per the rule about never throwing away work to recover from a
+failure. It was the right call: it was most of T044 and T043b already done.
+
+**THE DEAD SUBAGENT'S LAST WORDS WERE RIGHT, AND THIS IS THE FINDING OF PHASE
+6.** It died on the account session limit saying it did not trust its own gate:
+
+> Three `.wizard-help` paragraphs (screens 3, 6, 7) did not appear even though
+> they are the same colour. I need to know why before I trust this gate.
+
+It was correct, and the reason is now the most useful thing in
+`scripts/contrast.mjs`. **Counting what a screen DREW is not the same as
+knowing axe MEASURED it.** The first version of the wizard walk counted
+elements and passed. Asking axe which elements it had actually reached said
+three of the seven help paragraphs were drawn and never checked, in both
+palettes, with axe's own reason:
+
+> Element's background color could not be determined because it partially
+> overlaps other elements
+
+axe decides a background by sampling the element stack at several points of the
+rect, and `document.elementsFromPoint` returns everything at a point whether or
+not it is painted over. **So an opaque panel does not save you**: the app behind
+a modal is in the stack regardless. Those three paragraphs happened to land
+across the edge of the add-a-section dock behind them, and the other four were
+measured only by the luck of where they fell.
+
+The fix is that the axe run hides everything behind the layer and puts it back
+afterwards. That changes nothing about the quantity being measured, which is why
+it is not the gate moving its own ruler: `.wizard-panel` is `var(--panel)`, fully
+opaque, so no pixel of the rendered colour comes from behind it, and `.wizard` is
+`position: fixed; inset: 0`, so nothing behind it affects the panel's layout
+either. Only the instrument's ability to resolve the pair changes. T043b's widths
+are deliberately taken BEFORE that, with the page exactly as a seller has it, so
+the overflow ruler never moves with the thing it measures.
+
+**The general lesson, which is the fourth variation on the same theme in this
+repo: a structural count can be satisfied by an element nobody measured.** The
+guard now demands both, and a shortfall names the paragraph and quotes axe's
+reason.
+
+The historical detail of the cut, kept because the process record is worth
+having:
+
+- **Chunk A landed**: `9c51c4f test(027): the a11y gate walks every screen of
+  the wizard`. T042, T043, T043a and T046. One file,
+  `app/tests/a11y.test.ts`, +262/-0. a11y went 53 to 59, the whole suite 1473
+  to 1479, `npm run verify` green whole and unpiped, exit 0, nothing else
+  moved. The T046 break proof fired with `AssertionError: step 0, the control
+  reading "x": expected 1 to be greater than 4`, and
+  `git diff app/src/ui/wizard.ts` was empty afterwards.
+- **Chunk A was reviewed twice and both passed.** Spec compliance: PASS on all
+  four tasks, and the reviewer re-ran `npm run a11y` itself rather than
+  trusting the report. Code quality: APPROVED. Every finding was a Minor.
+- **The chunk A fix round LANDED**: `60219c3 test(027): review fixes for the
+  wizard's half of the a11y gate`. Same one file, +99/-23. All ten Minors
+  applied, a11y 59 to 60, typecheck, lint, dashscan 322 and secretscan 447 all
+  clean. `npm run verify` was NOT re-run whole that round, deliberately,
+  because chunk B's unfinished work was in the tree and would have been
+  reported on. **So T047 still owes one clean whole run.**
+- **Chunk B is now DONE too**, T044, T045 and T043b, finished on 2026-09-11 from
+  the diff it left behind. Its brief is `.superpowers/sdd/tasks/chunk-b-brief.md`
+  and both of its rulings were implemented rather than revisited: storage is
+  cleared per scheme so both palettes reach the empty state, and the wizard gets
+  its own axe run before the example loads and is closed before the main run.
+
+  Mid run it had also touched `app/src/styles.css`, outside its brief, and by
+  the end that edit was gone. Nothing in the final commit touches app code:
+  `git status` was checked clean of `app/src` before committing.
+
+- **T047 is done**: `npm run verify` whole and unpiped, exit 0, boxes ticked,
+  committed as `bc86758`.
+
+**The full ledger is `.superpowers/sdd/tasks/progress.md`.** It carries the
+pre-flight conflict table, all three rulings, both review verdicts in detail,
+and the ten open Minors. Read it before re-dispatching anything, or you will
+re-do work that is already in `git log`.
+
+**Two rulings that Phase 6 depends on and that the plan text does not cover.**
+Both are in the ledger with what they cost if wrong, and both bind chunk B:
+
+1. **The contrast gate must clear storage per scheme.** The wizard's only way
+   in is the empty state trigger in `build.ts`, and the two palettes share one
+   Chrome profile, so the dark run reopens an app that already holds the
+   example page and would never show that trigger. Without this the dark
+   palette's wizard goes unmeasured, which is the exact vacuity R6 exists to
+   refuse. CDP `Storage.clearDataForOrigin` is the direct way.
+2. **The wizard gets its own axe run, before the example loads, and is closed
+   before the main run.** axe reports an element it believes is obscured as
+   incomplete rather than as a violation, and this gate collects only
+   violations, so leaving the layer up over the storefront would quietly
+   SHRINK the 411 rather than add to it.
+
+A third ruling, for every session here: commits carry **no AI attribution**,
+against the harness's own attribution reminder, because `CLAUDE.md`
+non-negotiable 1 forbids it and says in terms that tooling will try to add it.
+
+**`cat >>` through the Bash tool bit again on 2026-09-10**, this time on
+`.superpowers/sdd/tasks/progress.md`: it wrote at the TOP and destroyed the
+header and the first table rows. That is the third file in this repo, after
+`app/src/styles.css` and `app/tests/a11y.test.ts`. `CLAUDE.md` already forbids
+it. Use Write or Edit, always.
+
+`bc86758` is the last commit with CODE in it, and it is the tree every number in
+this file describes. Anything after it on this branch is documentation, this
+sentence included, which is why HEAD will not match that hash and nothing is
+wrong when it does not.
+
+**`origin` has everything**, up to and including the documentation commit
+`97d0782`, verified with `git log --oneline -1 origin/027-setup-wizard` on
+2026-09-09 with a clean `git status`.
+
+The one command that tells you which branch is live:
+
+```powershell
+git rev-parse --abbrev-ref HEAD   # expect 027-setup-wizard
+git log --oneline origin/master..HEAD
+```
+
+If that says `master`, check out `027-setup-wizard`. If the branch is gone, 027
+was merged and released while nobody updated this file, and `git log` on master
+is the truth.
+
+**Start at `specs/027-setup-wizard/tasks.md`, Phase 6, task T042.** Read
+`research.md` before anything else: it reverses part of the spec, and the spec
+carries that amendment in its own text rather than only in research. R6 is the
+one Phase 6 turns on, and it is the record of this project's own gates being
+green about surfaces they never drew.
+
+**Read the `CHUNK 4:` and `CHUNK 5:` comments before Phase 7.** Four are left
+and each is a real question for T048: the entry point's priority in
+`build.ts`, whether `sectionToOpen` belongs in `wizard-answers.ts`, swallowing
+`openBackup`'s message in `wizard.ts`, and the note in `wizard-answers.ts`
+saying chunk 2 never got its two reviews. That last one should be the first
+thing T048 reads.
+
+**Phase 2 will NOT be released on its own.** Asked and answered on 2026-09-08:
+Jakob chose "Phase 3 now, release later", so the hints ship with the whole 027
+release at the end. Do not cut a 0.9.1 for them and do not re-ask. The full
+entry is under "Blocked on Jakob".
 
 The APK was verified before it was published, both ways the trap list demands:
 `assets/public/assets/index-C9AYi9o0.js` is inside it, matching what the build
@@ -56,27 +224,38 @@ fixes, not a fortnight in one. The policy and the reasoning are in
 only the handoff still knows. It no longer needs to be asked for, per the rule
 change above.
 
-**Current state**: this file describes the tree at `ce56f2d`, and
-`npm run verify` is green on it, run whole from PowerShell on 2026-09-08:
-**74 test files, 1371 tests, a11y 53, contrast 404 elements and 12 sections with
-0 failures in both light and dark, menu file gate clean, pwa update gate clean,
-exit code 0.**
+**Current state**: this file describes the tree at `bc86758` on
+`027-setup-wizard`, and `npm run verify` is green on it, run whole and unpiped
+from PowerShell on 2026-09-11:
+**78 test files, 1480 tests, a11y 60, contrast 411 elements, 45 fields, 32
+folded fields and 39 hints with 0 failures in both light and dark, PLUS the
+wizard walked in both palettes at 7 screens, 15 choices, 4 fields, 7 help lines
+all 7 read by axe, 6 progress lines all 6 read by axe, 4 hints, 0 contrast
+failures and 0 overflows at 390px; secret scan clean over 447 files, dash scan
+clean over 322 files, menu file gate clean, pwa update gate clean, exit code 0.**
 
-Note the contrast number: 404, not the 167 the last three sessions saw. The gate
-had never measured a price row. It opens whichever section offers itself first,
-which on the example is a Text block: one field, no rows, and zero `details`
-anywhere under `#surface`. So the cost, the unit, the quantity breakdown, the
-labelled details and every hint in that fold were unmeasured, and nothing said
-so, because a gate that measures less does not complain about it. `ce56f2d`
-opens Prices and every fold in it, counts `folded` fields, and refuses a run
-that cannot show at least five. **That is now the third time a gate here turned
-out to be green about something it never looked at.** The lesson is in the file:
-probe what the run actually laid out, do not infer it from the step that was
-supposed to lay it out.
+Those are the numbers to expect. If they are lower, something stopped rendering
+rather than something being fine. **"7 read by axe" is the one that matters
+most**: it was 4 before the layer was isolated, and 4 is what a gate reports
+when it is quietly measuring less than it claims.
 
-**Update this file when a feature lands, not when somebody remembers.** It went
-stale by three releases between 0.6.0 and 0.8.0 and described a push rule that
-had been reversed.
+**The scan counts moved for a reason worth knowing, and it was a real bug.**
+`c191f97` fixes it. Both scans enumerated with `git ls-files`, which lists
+tracked and staged files only, so a file that had been written and not staged
+was invisible to them and `verify` went green over it. It was found while
+explaining why Phase 4's run said 444 when the tree it described had 446: the
+two missing files were `wizard.ts` and `wizard.test.ts`, untracked at the
+moment the gate ran. Proved both ways before and after, with an untracked file
+carrying an em dash and another carrying an AWS key id. **Stage before you
+trust a scan on any older commit than this one.**
+
+**a11y and contrast used to sit at 53 and 411 with the wizard measured by
+nothing at all**, which was correct in Phase 3 and stopped being correct the
+moment there was a surface. **Phase 6 fixed it**: a11y is 60 and the contrast
+gate now walks all seven wizard screens in both palettes. The storefront's 411
+did not move, and it was not supposed to: the wizard is measured on its own
+pass, before the example loads, so that the modal layer cannot shrink the main
+number. That was ruling 2 and it held.
 
 Before those, feature 023 completed as `fa8eb28`, feature 022's missing holistic
 review ran (`b69266a` the test, `20d3192` the findings), two directly requested
@@ -134,20 +313,130 @@ Every feature through 023 now has a holistic review except the ones
 `specs/README.md` marks `no` for structural reasons, and that column is the
 honest record of it.
 
+## What T048 found, and what was done about it
+
+The review ran over the whole feature diff with a fresh reviewer, sequentially
+rather than in parallel, which is the rule the 2026-09-09 double rate limit
+bought. Findings and dispositions:
+
+1. **HIGH, fixed: the renamed item published the template's amount.** Described
+   at the top. `offerOnly` now carries neither `unit` nor `availability` nor
+   `leadTime`; questions 5 and 6 put the seller's own back. `price` stays and is
+   now called out in the code as the deliberate exception, because data model
+   rule 3 chose it and tests it, and a leftover NUMBER is wrong in a way a
+   seller notices where "per hour" reads as something they picked.
+   **Proved by compiling it, before and after, not by reading the code**, and
+   the new test was verified to fail with the fix removed.
+2. **HIGH, fixed: a second back could have closed the app.** `history.back()` is
+   asynchronous, so a second dismiss arriving before the traversal landed still
+   saw `wizard: true`, queued a second back, and spent the entry belonging to
+   the surface underneath. The existing `making` flag guarded only `finish`
+   running twice, which is one of five live paths. Fixed at the choke point in
+   `surface-history.ts`: the layer's claim comes off the entry before the
+   traversal. **The pages drawer had the identical shape and shipped with it**,
+   so it was fixed too.
+3. **MEDIUM, fixed: the contrast gate had R6's own failure mode inside it.**
+   `WIZARD_QUESTIONS` was hardcoded to 6 against `<` guards, so a seventh
+   question would have been measured as six screens and passed. The total is
+   read off the progress line now.
+4. **MEDIUM, fixed, wording.** "How does that reach a buyer?" offered "Sold
+   out", which is not a way anything reaches a buyer, and is now "How is this
+   available?". Its help promised the word would be printed, which is false for
+   "Portfolio and about me", the starter with no prices, and now says "If your
+   page lists prices".
+5. **Open, deliberately, and for Jakob rather than for a session.** The reviewer
+   would swap the empty state's two controls, making "Answer a few questions"
+   primary and "See an example page" the ghost. Seen on the handset, the purple
+   example button does dominate the one the whole feature exists for. It is a
+   taste call and it is in "Blocked on Jakob".
+6. **Not a defect, checked and left.** `sectionToOpen` staying in `wizard.ts`,
+   and `COULD_NOT_MAKE` swallowing `openBackup`'s message: the resolved failure
+   branch is only reachable if `parseDocument` refuses bytes `serializeDocument`
+   just produced, which is an app bug no wording about a seller's file can
+   describe. The reviewer read the `CHUNK 2:` debt hardest, as asked, and found
+   trimming correct and consistently applied.
+
+**Delete the `CHUNK 2:` comment in `wizard-answers.ts` only now that T048 has
+actually run**, which it has.
+
+## What was verified on the handset, 2026-09-11
+
+Moto G7 `ZY2262PFGQ`, release build, real key, versionCode 14 / 0.10.0 confirmed
+by `dumpsys package`. **Do not re-probe these.**
+
+- **FR-128 holds**: the empty state offers the wizard, the example page AND
+  "Start from a template". The picker is not gone and not behind the wizard.
+- **All seven screens drawn**, nine choices on the first, progress line, help
+  and the Back / Skip / Next row on every question. No sideways scroll.
+- **The software keyboard does NOT cover the panel.** This is the risk
+  `styles.css` flagged at `max-height: 92vh` and asked T052 to measure: with the
+  keyboard up on a text question, the fields and the moves row were both still
+  on screen and reachable. Measured, not reasoned about.
+- **THE FIX IS REAL ON THE DEVICE.** Freelance services, "Logo design", "300",
+  question 6 skipped, and the Copy tab printed
+  `| Logo design | USD 300 |  |`. No "per hour". Before the fix this row was
+  `| Logo design | USD 300 per hour |`.
+- **FR-121 holds on the device**: the Copy tab opened on `### Wren and Willow`,
+  so the store name reached the compiled output rather than only the editor.
+- **"Make my page" pressed twice quickly leaves the app running.** pid 503,
+  `MainActivity` still resumed, and exactly ONE page created. This is the
+  consequence no test here can reach, because jsdom clamps `history.back()`.
+- **The back gesture dismisses the wizard and stays in the app**, rather than
+  leaving the surface.
+- **PRINCIPLE V HOLDS, MEASURED.** Jakob's two pages were "Untitled page, last
+  edited 9/1/2026" and "Ridgeline Carry, last edited 8/31/2026" before the run
+  and are byte for byte those two, with those same dates, after it. The wizard
+  opened its new page ALONGSIDE. Two probe pages were created to reach the empty
+  state and both were removed afterwards; the device was left with the owner's
+  two pages, no probe screenshots, and `stay_on_while_plugged_in` back to 0.
+
 ## Next up, in order
 
-1. **Run `npm run verify` from PowerShell before anything else.** It is the
-   check that tells you whether the tree is actually where this file says it is.
-   Expect 1371 tests, a11y 53, contrast clean in both palettes at 404 elements,
-   menu file and pwa gates green. If it fails, read "Traps" below before
-   believing it: several of its failures are environmental rather than real. It
-   earned its place on 2026-09-05, when it caught a real failure that had been
-   latent for days and was NOT one of the environmental ones. See the
-   starters-picker entry under "Traps".
+1. **Check the branch, then run `npm run verify` from PowerShell.** The branch
+   command is at the top of this file. Expect **1480 tests, a11y 60, contrast
+   clean in both palettes at 411 elements plus the wizard walked at 7 screens
+   with 7 help lines read by axe**, secret scan 447, dash scan 322, menu file
+   and pwa gates green, exit 0. If it fails, read "Traps" below before believing
+   it: several of its failures are environmental rather than real.
 
-   Done on 2026-09-08 at `ce56f2d`, green, numbers quoted under "Current state".
+   Green at `bc86758` on 2026-09-11. Numbers under "Current state".
 
-2. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
+2. **Feature 027 is DONE and RELEASED. There is no next task on it.** 57 of 58,
+   with T051 explained rather than ticked. Merge `027-setup-wizard` to master
+   with `--no-ff` if that has not happened by the time you read this; the branch
+   command at the top of this file tells you.
+
+   **The one thing still open on it is a question for Jakob, not work**: the
+   empty state's two controls, item 5 under "What T048 found". It is in "Blocked
+   on Jakob".
+
+3. **Pick the next feature.** 028 is already named and chosen: pasting a whole
+   messy existing page from rentry or pastebin, deferred out of 027 on
+   2026-09-08. See "Deferred deliberately". The other standing candidate is the
+   share sheet preview fix under T058, roughly two lines in `MainActivity.java`,
+   which has now been carried past four releases without being raised.
+
+3. **Phases 4 and 5 are DONE, both reviewed twice.** `be5c8f7` is the layer and
+   the six screens; `f703ddb` is the way in and the way out.
+
+   **What the four reviews caught, so none of it is reopened.** The implementer
+   reported both chunks complete and correct, and between them the reviewers
+   found: a closed wizard that stayed on screen when Escape was pressed inside a
+   text field; a double press that could close the app; focus falling to the
+   body on the feature's own success path; a promise the picture question could
+   not keep for five of the eight starting points; and, inside a test written to
+   close a gap, an assertion that could not fail. **Run Phase 6 through the same
+   pipeline. It has paid for itself four times.**
+
+   Two of those are worth carrying as general lessons and are in "Traps": a
+   repaint deferred while a text field holds focus never lands, and a test that
+   calls `renderShell` by hand has stepped over the bug.
+
+   **The gate hole is fixed and is worth knowing about.** `c191f97`: the secret
+   and dash scans could not see an unstaged file at all. If you run either
+   against an older commit, stage first or it will lie to you.
+
+4. **026 is released. Nothing is outstanding on it.** Done on 2026-09-08, all
    of it: merged to master, pushed, tagged `v0.9.0`, Release published with the
    signed APK, installed and seen working on the handset. Details at the top.
 
@@ -162,7 +451,7 @@ honest record of it.
    `MainActivity.java` and the only thing anybody notices about the share sheet.
    It has now been carried past three releases without being raised.
 
-3. **Feature 026, selling modes, is DONE apart from the release.** How an item
+5. **Feature 026, selling modes, is DONE apart from the release.** How an item
    reaches a buyer, and how long the buyer waits.
 
    Where it came from: Jakob asked for a wizard that would ask what kind of
@@ -205,7 +494,7 @@ honest record of it.
    the page prints, because both come from one exported map,
    `SELLING_MODE_WORDS`.
 
-4. **F5, the menu file, is DONE** and was the feature before 025.
+6. **F5, the menu file, is DONE** and was the feature before 025.
    Jakob decided this on 2026-09-06 in the session that writes it down, which is
    the rule item 3 below exists to enforce.
 
@@ -285,9 +574,58 @@ honest record of it.
    and `data:` URIs embedded in the markdown, which research D3 reversed before
    any code was written. `specs/024-menu-file/` is authoritative.
 
-5. **F4, the interview wizard, is UNGATED and is the next FEATURE** once 026 is
-   released. It was put behind 024 on 2026-09-06, and behind 025 and 026 after
-   that, and all three are finished.
+7. **F4, the interview wizard, is now feature 027. Specified, planned, and
+   Phase 2 built** as of 2026-09-08. `specs/027-setup-wizard/` has spec, plan,
+   research, data model, quickstart, tasks and a requirements checklist.
+
+   **Phase 2 is done and is the whole of User Story 2**, `4ebc443`. It needed no
+   new code. Of the 21 text fields in `app/src/ui/forms.ts`, ten had no hint at
+   all and two more said only "One per line.", which is the format rather than
+   the content and is the complaint restated as help. Twelve of twenty one said
+   nothing useful, and Price had carried an example since feature 010 while
+   Item, the field directly above it and the first anybody meets, carried
+   nothing. All twelve now carry one.
+
+   `app/tests/field-examples.test.ts` refuses three things rather than one: a
+   missing hint, a hint giving only the format, and a **stale exemption** naming
+   a field that no longer exists. The exemption list carries a written reason
+   per entry and has exactly one, "What you paid", whose hint is a promise about
+   privacy that matters more than an example of a number. Proved by breaking it:
+   removing the Item hint reports `expected [ 'Item' ] to deeply equal []`,
+   naming the field rather than failing a count.
+
+   **The examples are invented** ("Ridgeline Carry", "Sourdough loaf", "Cash on
+   collection"). If Jakob's testers sell something specific enough that better
+   examples exist, each is a one line change.
+
+   Phases 3 to 7 are not built. Phase 3 is item 2 at the top of this list.
+
+   **Three decisions Jakob made on 2026-09-08, in the session that writes them
+   down**, which is the rule the near miss below exists to enforce:
+
+   - The wizard's answers PICK one of the eight starting points and pre-fill it.
+     The picker stays reachable. Nothing that ships today is deleted.
+   - Pasting a whole messy existing page from rentry or pastebin is OUT, and
+     deferred to 028.
+   - Examples in empty fields are IN. "Fewer fields on first sight" is not.
+
+   **The audit is the most useful thing in the spec.** All ten questions Jakob
+   listed were checked against the contract and every answer already had
+   somewhere to go, so **027 adds no schema at all**. If a question turns out to
+   need a field that does not exist, stop and specify it separately, the way 026
+   was carved out rather than grown inside this feature.
+
+   **Research reversed one requirement before any code was written.** The
+   examples were specified as text inside the empty box; the a11y gate refuses a
+   `placeholder` outright, not just one doing a label's job. The mechanism
+   already exists as the field `hint`, and the app has 13 hints across 49 label
+   sites, with **Price carrying an example and Item, right beside it, carrying
+   nothing.** So that whole user story needs no new code. `research.md` R2 has
+   it, and the spec carries the amendment in its own text rather than only in
+   research.
+
+   It was put behind 024 on 2026-09-06, and behind 025 and 026 after that, and
+   all three are finished.
 
    **026 was carved out of it deliberately.** The wizard asks what somebody
    sells and how, and had nowhere to write the answer. It does now. Specify the
@@ -350,7 +688,7 @@ honest record of it.
    is the largest of the three answers to this, not the only one, and the spec
    should say why it is the right one rather than assume it. Ask Jakob before
    ruling the cheap ones out.
-6. **Drive the app before believing anything about how it looks.** The design
+8. **Drive the app before believing anything about how it looks.** The design
    review on 2026-09-05 is done and found four defects plus the docked
    add-a-section row, all fixed, none of which was visible in `docs/media`.
    (This item used to say three, while the top of this file enumerated four and
@@ -358,7 +696,7 @@ honest record of it.
    `e1138d9`, `b8efe30`, and `dc68870` for the dock.) That is the standing
    lesson: the stills are not evidence about the states that are broken. See
    "Traps".
-7. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
+9. **The timing sweep is DONE** (`d061570`). Do not re-run it. Every fixed
    budget in the suite was squeezed and rerun to find which waits were load
    bearing. None of the seven carried the `starters-picker` defect, which was a
    deficit rather than a thin margin. `a11y` and `price-list-screen` pass at one
@@ -383,6 +721,25 @@ during implementation", and the short version is worth carrying:
   test, and it was verified to discriminate.
 
 ## Verified live, do not re-probe
+
+- **Feature 026 works end to end in a real browser, 2026-09-08.** A row set to
+  Made to order with "about 2 weeks" produced
+  `| Carved oak sign | 80 | Made to order, about 2 weeks |` on the Copy tab, the
+  same in Preview and in the menu file preview, and a real 2,047 byte
+  `menu.html` of type `text/html` carrying
+  `<tr><td>Carved oak sign</td><td>80</td><td>Made to order, about 2 weeks</td></tr>`.
+  Clearing the mode back to "Do not say" and emptying the wait **removed the
+  Availability column entirely and returned the exact pre-026 bytes.**
+
+- **No existing page moved when 026 landed, and this was measured rather than
+  argued.** All eight starting points and the bundled example were compiled for
+  all four targets against the engine at `49ab971` and again at `ce56f2d`:
+  **36 files, 57,648 bytes, byte identical.** Do not redo this for 026.
+
+- **026 is on the handset and both controls were seen there.** Moto G7,
+  versionCode 13 / 0.9.0 confirmed by `dumpsys package`. A blank price row shows
+  Item and Price and nothing else, and `More details` holds the two new controls
+  with the select reading "Do not say".
 
 - **A gate can pass by moving its own ruler.** `scripts/menu-file.mjs` measures
   the saved file at 390 CSS pixels and fails on sideways scroll. Its first
@@ -634,6 +991,122 @@ distinction in the tree, and seller text can never become a node.**
 
 ## Traps that cost real time in this session
 
+**A gate that enumerates with `git ls-files` cannot see a file you have not
+staged.** Fixed in `c191f97` for the secret and dash scans, and worth carrying
+because it is the shape rather than the instance: a new file is the likeliest
+place for a first mistake and it was the one place those gates could not look.
+Found by chasing a count that did not add up, not by a failure. If you add a
+gate that walks the repo, walk `--cached --others --exclude-standard`.
+
+**An assertion that cannot fail can appear inside a test written to close
+exactly that gap.** On 2026-09-09 a test for a double press asserted
+`history.state` was not null. jsdom clamps `history.back()` at the first entry
+rather than leaving anything, so the second back is a silent no-op and that line
+passed with the guard removed. **Remove the fix and watch the test fail** is the
+only thing that tells you a new assertion is real, and it takes a minute. The
+consequence that could not be asserted moved to `quickstart.md` as a handset
+check rather than being pretended at.
+
+**Focus is not restored for anything but form fields, so a control focused
+before a repaint is gone after it.** `restoreCaret` covers inputs and
+textareas. Everything else lands on `document.body`, and the only recoveries in
+the app are special cases: the undo offer in `shell.ts`, the sidebar, and now
+the wizard's landing. Anything that opens a page and expects focus to survive
+is wrong by default.
+
+
+**A repaint deferred while a text field has focus never lands, and that is how
+a closed surface stays on screen.** Found on 2026-09-09 by the chunk 4 code
+quality review, in the setup wizard. `repaint` in `store.ts` refuses to paint
+while a text input holds focus and reschedules itself every 200ms until that
+stops being true, which is correct and is what stops a keystroke rebuilding the
+shell. But a surface being REMOVED inverts that reasoning: there is no field
+left to protect. Escape does not blur, and neither does the back gesture, so
+either one set `wizardOpen: false` and then deferred the paint indefinitely. The
+panel stayed on screen and fully interactive against a store that said it was
+closed.
+
+**Every pointer path hid it**, because a real press blurs on the way in. Only
+the two keyboard-and-gesture paths were broken, and those are exactly the two a
+test suite driving `renderShell` by hand cannot see. **Fix it at the state
+change, not at the handler**, the way `repaint`'s own guard sits at the choke
+point rather than at its callers. Any layer added here that contains a text
+field has this bug until its close path blurs.
+
+**A test that calls the renderer directly has stepped over the bug.** Every DOM
+test in this project builds a host and calls `renderShell(host)` itself, which
+is fine for asserting what gets built and blind to everything between a state
+change and a paint. `app/tests/wizard.test.ts` has exactly one test that
+subscribes the renderer the way `main.ts` does, and it is the one that caught
+the above. It is worth having one of those per surface.
+
+**A function that cannot see what it is choosing from will choose wrong and say
+nothing.** `sectionToOpen` returned the constant `"gallery"` and five of the
+eight starting points ship without one, so the picture answer went nowhere for
+five of eight sellers while the screen promised it decided something. The
+signature was the defect rather than the body. Worth asking of any mapping
+function here: does it have enough in its arguments to be right, or is it right
+only for the case somebody happened to test?
+
+**Both review subagents can die on the same rate limit, in parallel, having read
+nothing.** Happened on 2026-09-09. The limit resets on a clock, so retrying is
+better than falling back to in-session review, and running the two reviewers
+SEQUENTIALLY rather than at once is what keeps one failure from costing both.
+
+
+- **A session rate limit kills subagents outright, and the chunk pipeline stops
+  with it.** On 2026-09-08 the Phase 3 implementer subagent was dispatched and
+  died on its first request: "You've hit your session limit", HTTP 429, before
+  it had read a single file. It left nothing behind, so `git status` was clean
+  and there was no half-written module to find later.
+
+  **What was done instead, recorded because it is a deviation from `CLAUDE.md`
+  rather than a shortcut somebody preferred**: Phase 3 was written in the main
+  session, test first, with the red run and the T023 break both captured. What
+  it did NOT get is the two per chunk reviews the rules ask for, a fresh
+  spec-compliance reviewer and a fresh code-quality reviewer, because no agent
+  could be started at all. The same session that wrote it is the session that
+  checked it, which is the one thing that rule exists to prevent.
+
+  So **the holistic review at T048 is carrying two chunks' worth of scrutiny for
+  Phase 3**, and it is now more load bearing than it already was. There is a
+  `CHUNK 2:` comment at the top of `app/src/ui/wizard-answers.ts` saying so and
+  naming the two judgement calls to look at hardest. Do not delete that comment
+  until T048 has actually run.
+
+  The general lesson, worth more than this instance: **a chunk whose subagent
+  died is not a chunk that got a lighter process, it is a chunk carrying a debt.
+  Write the debt down where the next reader will hit it**, which is the code,
+  not only this file.
+
+- **`npm run dev -- --port 5177` does not work and fails confusingly.** npm
+  passes `5177` through as a positional argument, vite reads it as a root
+  directory, and you get a server on **5173 serving nothing**, which looks like
+  the app being broken rather than the command being wrong. Use
+  `npx vite --port 5177 --strictPort`, and read the port it prints.
+
+- **`git commit -m` with a line starting `--something` is parsed as a git
+  option.** A commit message whose line began `--muted` died with
+  `error: unknown option 'muted'`. PowerShell has no heredoc either, so the
+  reliable route for any real commit message is: write it to a file in the
+  scratchpad and `git commit -F <file>`.
+
+- **`rtk` mangles output and sometimes hangs.** It rewrote `grep` output into a
+  summary that dropped the matches, reported `grep: unknown option -- muted` for
+  a literal `--muted`, and once left a `Bash` call to hang until it was moved to
+  the background. When exact output matters, use the Grep and Read tools or run
+  the command through PowerShell.
+
+- **A `python` heredoc that both contains `\n` inside a string AND is matched
+  against source containing `\n` is worth avoiding.** One replacement failed for
+  reasons that took two attempts to unpick. Where a pattern would contain an
+  escape sequence, match on a line that does not, or use the Edit tool.
+
+- **Field ids are regenerated on every repaint.** Typing into `#f7` worked, then
+  a repaint moved the id and the next `fill` went into the wrong field silently.
+  When driving the app, address fields by their label, never by id. This was
+  already a known finding from an earlier session and it bit again anyway.
+
 - **`docs/media` is not evidence about a broken state.** The design review found
   three defects and regenerating all twelve files afterwards changed only
   `demo.gif` and `demo.mp4`. Ten stills came back byte identical, because none
@@ -777,8 +1250,86 @@ distinction in the tree, and seller text can never become a node.**
   price list forms, took two seconds alone and blew the timeout in the full run.
   It was split: the DOM test checks drawing, a headless store test checks
   coverage.
+- **Probe what the run actually laid out. Do not infer it from the step that was
+  supposed to lay it out.** The contrast gate has now been caught twice: once
+  when 025 moved the page list into a drawer and it silently went 164 to 137
+  elements, and once when 026 found it had never opened a price row's fold at
+  all, so about a dozen controls had never had a computed colour. Both times
+  nothing failed, because **a gate that measures less does not complain about
+  it.** The fix each time was a counted guard, `pages` then `folded`, that
+  refuses a pass. The way it was found was dumping what the browser actually had
+  on screen, not reading the code that opens things.
+- **A FIXTURE WHOSE VALUE IS THE HARMLESS ONE CANNOT DISCRIMINATE.** Feature
+  027's worst defect, a wrong price published to buyers, survived a full test
+  suite because every test that renamed a price row used `DEFAULT_STARTER_ID`,
+  and that starter ships `unit: "each"`, which is the one value where keeping
+  the template's unit does no damage. Six of the eight ship "each"; the two that
+  do not are `freelance-services` and `art-commissions`. **Ask of any test that
+  uses a default fixture: would it fail if the code were wrong, or is the
+  default the case where wrong and right agree?** This is the same family as an
+  assertion that cannot fail, and it is harder to see, because the test looks
+  like it is exercising the behaviour.
+- **Counting what was DRAWN is not knowing what was MEASURED, and that is the
+  fourth variation on the same theme here.** The first three were a gate that
+  measured less and did not say so; this one is a gate that counted the right
+  number of elements while its instrument had quietly declined to look at three
+  of them. `scripts/contrast.mjs` now demands both, and the coverage number is
+  the one to watch. **Ask of any counted guard: does it count the things, or
+  does it count the things that were actually checked?** They are different
+  questions and only the second one is the guarantee.
+- **axe cannot see a background through a modal, and an opaque panel does not
+  save it.** `document.elementsFromPoint` returns everything at a point whether
+  or not it is painted over, and axe compares the element stack at several
+  points of a rect. If they disagree it reports `incomplete`, which a gate
+  collecting only violations throws away in silence. Any future surface layered
+  over the app has this problem. The answer is to hide what is behind for the
+  measurement, which is safe precisely when the layer is opaque and
+  `position: fixed`, and to say in the code why that is not moving the ruler.
+- **A thing people do constantly through a field that was not built for it is a
+  missing feature being worked around, not a convention that has settled.** From
+  `sold-out`, which was specified out on the argument that `price` is free text
+  so "SOLD OUT" already had a home. Jakob overruled it the same day: people use
+  it a lot. That is the reasoning error to watch for.
+- **Ask whether the answer is a new feature or a name.** Five things people
+  asked for already existed and were merely unfindable: the per item price
+  table, headings, pages being saved, categories, and pasting a price list. One
+  was fixed by a rename that changed no behaviour at all (`1e8013b`). Feature
+  027's spec audits every question it would ask against the schema before
+  specifying it, and found the whole feature needs no schema.
+- **A hint that gives only the format is not help.** Two fields shipped with
+  "One per line." as their entire hint, which says how to type and not what to
+  type. That is the complaint the whole of 027 exists for, restated as guidance.
+  `field-examples.test.ts` refuses it explicitly.
+- **A test that counts things can be satisfied with noise.** Every list-shaped
+  gate here carries a written reason per exemption, and fails on a stale
+  exemption naming something that no longer exists. Counting alone would have
+  been passed by twelve fields saying nothing useful.
 
 ## Deferred deliberately, do not "fix" without asking
+
+- **Pasting a whole messy existing page, from rentry or pastebin. This is 028
+  and Jakob chose to defer it on 2026-09-08.** Do not fold it into 027. Feature
+  023 already ships paste-guess-confirm for a price list INSIDE a Prices
+  section; the remaining gap is splitting a whole page into headings, about text
+  and prices, which is a different problem from asking questions.
+
+- **"Fewer fields on first sight" across the other section forms.** A real
+  answer to the same complaint as 027, explicitly NOT chosen for it on
+  2026-09-08. FR-092 already did it for price rows and that fix stuck. Do not
+  extend it to the other forms without asking.
+
+- **An example rendered inside an empty field's box.** 027 puts examples in the
+  field hint instead, and the reasoning is in `specs/027-setup-wizard/
+  research.md` R2. The in-box version is a real option that was rejected on cost
+  rather than on principle: it is a new mechanism in the most heavily tested
+  primitive in the app, and it must vanish on the first keystroke without ever
+  eating one. **If somebody watches a seller ignore the hints, this is the next
+  thing to try.**
+
+- **Any new schema field inside feature 027.** `SCHEMA_VERSION` stays at 5 and
+  `engine/tests/document/parity.snapshot.json` must not move. If a wizard
+  question turns out to need a field that does not exist, stop and specify it
+  separately, the way 026 was carved out rather than grown inside 027.
 
 - **F4, the interview wizard.** No longer deferred, but no longer next either.
   The gate opened on **2026-09-05**, not 2026-09-04. This line said 2026-09-04,
@@ -822,18 +1373,63 @@ distinction in the tree, and seller text can never become a node.**
 
 ## Blocked on Jakob
 
+- **The empty state's two controls: which one should be primary?** Raised by
+  feature 027's holistic review and seen on the handset on 2026-09-11. Today
+  "See an example page" is the solid purple button and "Answer a few questions",
+  the control the whole feature exists for, is the ghost outline beside it. On
+  the device the purple one does take the eye. The argument against promoting
+  the wizard is that two solid accents next to each other is the six-primaries
+  problem in miniature, which is a real rule this project already learned; the
+  argument for is that somebody who cannot work out what to type is not served
+  by a demonstration of somebody else's shop. **A swap, not an addition**, so it
+  stays one accent either way. Not done, because it is taste and it is yours.
+
+- **The share sheet cannot preview the exported menu file**, and this has now
+  been carried past FOUR releases without being put to you. Sending works and
+  the file name shows; Android just cannot render a thumbnail, because the
+  `FileProvider` URI is not granted to the system chooser. The fix the platform
+  names is `Intent#createChooser` with `clipData` and
+  `FLAG_GRANT_READ_URI_PERMISSION` in `MainActivity.java`, roughly two lines.
+  Full diagnosis is under "T058 is DONE" below.
+
+**NOTHING BLOCKS PHASE 4.** As of 2026-09-08 there is no open question standing
+between a new session and task T025. Every entry below is either answered or is
+a rule, and the only thing still worth RAISING with him is the share sheet
+preview under T058, which has now been carried past three releases without being
+mentioned. That is a thing to mention, not a thing to wait on.
+
 - **Nothing blocks F5.** All four of its open questions were put to Jakob on
   2026-09-06 and answered in that session: build all three parts and route them
   through Spec Kit, lock the pictures as an offline feature, relabel the buried
   `Bulk pricing` control rather than moving or reshaping it, and put the whole
   thing ahead of F4.
-- **Whether F4 is the right answer**, not whether the problem is real. The
-  problem is confirmed first hand on 2026-09-05: somebody could not figure out
-  what to write and got overwhelmed. What is not settled is that a wizard is the
-  fix. Fewer fields on first sight, and examples inside the fields rather than
-  hints above them, address the same complaint for a fraction of a new surface
-  with its own state machine. Jakob has not been asked to choose. Unlocks
-  specifying whatever wins.
+- **SHIP 0.9.1 FOR PHASE 2? ASKED AND ANSWERED on 2026-09-08: no, not on its
+  own.** Jakob chose "Phase 3 now, release later", so Phase 2, `4ebc443`, ships
+  as part of the whole 027 release at the end rather than as its own 0.9.1.
+
+  **Do not re-ask this and do not cut a 0.9.1 for Phase 2.** The question was
+  put with the cost of each option stated: a version bump, a build, a signature
+  check, a tag and a mid-feature merge to master against getting the hints in
+  front of him today.
+
+  What it means, said plainly so a later session does not treat it as an
+  oversight: **Phase 2 will never be judged on its own**, which was the stated
+  reason for building it first. That reason is now spent. It does not change
+  what Phase 2 is worth, and it does not reopen whether the wizard is needed,
+  which was settled separately on the same day and is recorded below.
+
+- **Whether F4 is the right answer is now SETTLED. Asked and answered on
+  2026-09-08**, in the session that writes it down, which is the rule the near
+  miss below exists to enforce. Jakob chose all three:
+
+  - the wizard's answers pick one of the eight starting points and pre-fill it,
+    and the picker stays reachable;
+  - pasting a whole messy existing page is out, and deferred to 028;
+  - examples in the empty fields are in, and "fewer fields on first sight" is
+    not.
+
+  So the cheap answers were not ruled out silently: one was taken and shipped as
+  Phase 2, and the other was declined on the record.
 - **Pushing is NO LONGER blocked on Jakob. Changed 2026-09-07.** He asked for
   the opposite: push, tag and publish releases as ordinary work, and stop asking.
   `CLAUDE.md` rule 3 carries the new policy and his words.
@@ -866,9 +1462,10 @@ distinction in the tree, and seller text can never become a node.**
   harness permission layer, not by anything in this project. Jakob ran it
   himself from the session prompt. If a session needs to push and is blocked the
   same way, that is the workaround, or a Bash permission rule for `git push`.
-- **Whether feature work should use branches at all.** Delivery has gone
-  straight to master since `Merge 009-imgur` on 2026-08-25, but
-  `.specify/extensions.yml` still runs a mandatory branch-creating hook before
-  every spec. This session created `023-import`, committed to master as
-  instructed, and deleted the branch. A stale `022-bulk-pricing` branch is still
-  there from the last time nobody decided.
+- **Whether feature work should use branches at all: SETTLED BY PRACTICE, not by
+  a decision anybody made.** 025, 026 and 027 each got a branch from the
+  mandatory `before_specify` hook, worked on it, and merged to master at release
+  with `--no-ff`. That is now three features in a row and it works, so treat it
+  as the way this repo does it rather than an open question. A stale
+  `022-bulk-pricing` branch is still on the remote from before that, and
+  deleting a remote branch still needs asking.

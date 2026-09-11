@@ -30,14 +30,33 @@ const BINARY_EXT =
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
-function trackedFiles() {
-  const out = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" });
+/**
+ * Everything git would carry, plus everything written and not yet staged.
+ *
+ * The second half is the point, and its absence was a real hole. `git ls-files`
+ * on its own lists tracked and staged files, so a brand new file was invisible
+ * to this gate until somebody staged it, and `npm run verify` went green over
+ * it. That is the wrong way round: a new file is the most likely place for a
+ * first mistake, and a credential pasted into one would have passed every gate
+ * right up to the commit that added it.
+ *
+ * Demonstrated on 2026-09-09 with the sibling dash gate, which reported "clean,
+ * 321 files checked" over an untracked file containing an em dash and failed on
+ * the same file the moment it was staged.
+ *
+ * `--exclude-standard` keeps `.gitignore` honoured, so `node_modules` and
+ * `dist` do not arrive here.
+ */
+function scannableFiles() {
+  const out = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
+    encoding: "utf8",
+  });
   return out.split("\0").filter(Boolean);
 }
 
 const findings = [];
 
-for (const file of trackedFiles()) {
+for (const file of scannableFiles()) {
   if (ALLOWLIST.has(file) || BINARY_EXT.test(file)) continue;
 
   let contents;
@@ -67,4 +86,4 @@ if (findings.length > 0) {
   process.exit(1);
 }
 
-console.log(`Secret scan clean. ${trackedFiles().length} tracked file(s) checked.`);
+console.log(`Secret scan clean. ${scannableFiles().length} file(s) checked, staged or not.`);

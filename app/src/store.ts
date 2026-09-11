@@ -19,6 +19,12 @@ import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
 import { canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
+// A type, and only a type. The answer set is defined beside the pure function
+// that turns it into a page, because that is what gives it its shape; the store
+// merely holds one while the wizard is open. Importing it as a value would put
+// a runtime edge from the store into the user interface, which is the wrong way
+// round and would be a cycle the moment `wizard.ts` imports the store back.
+import type { WizardAnswers } from "./ui/wizard-answers.js";
 
 export type Surface = "build" | "preview" | "export";
 
@@ -216,6 +222,27 @@ export interface State {
    * drawer's state, not the list's.
    */
   readonly sidebarOpen: boolean;
+  /**
+   * Whether the setup wizard is up, which question it is showing, and what has
+   * been said so far.
+   *
+   * Held here for the reason `sidebarOpen` is: the shell rebuilds its whole
+   * interface on every repaint, so anything living only in a node is destroyed
+   * by the next keystroke. That is not a nicety for the answers. FR-126
+   * requires that walking back to a question shows what was already typed, and
+   * a value kept only in the input is gone the moment anything else on screen
+   * changes.
+   *
+   * NONE OF IT IS PERSISTED, and that is the whole storage design of feature
+   * 027. It is not a document, it has no schema version, and it is never
+   * written to IndexedDB, so an abandoned wizard cannot leave anything behind:
+   * the cheapest way to guarantee that is to never write anything. Closing the
+   * app mid wizard loses the answers, which is correct, because nothing was
+   * created and there is nothing to come back to.
+   */
+  readonly wizardOpen: boolean;
+  readonly wizardStep: number;
+  readonly wizardAnswers: WizardAnswers;
 }
 
 type Listener = (state: State) => void;
@@ -259,6 +286,9 @@ export function init(storageOk: boolean, doc?: Document, pageId?: string): State
     storageOk,
     pages: [],
     sidebarOpen: false,
+    wizardOpen: false,
+    wizardStep: 0,
+    wizardAnswers: {},
   };
 
   // FR-086, and not awaited on purpose. Asking the browser to stop evicting us
@@ -464,6 +494,114 @@ export function openSidebar(): void {
 export function closeSidebar(): void {
   if (!state.sidebarOpen) return;
   set({ sidebarOpen: false });
+}
+
+/**
+ * Starts the setup wizard at its first question, with nothing answered.
+ *
+ * On the immediate path, exactly as `openSidebar` is and for the same reason:
+ * the deferred path waits 200ms of quiet, and a surface that appears a fifth of
+ * a second after the press reads as a press that needs repeating.
+ *
+ * Opening always starts from the beginning. There is no half finished run to
+ * resume, because `closeWizard` throws the answers away, and a wizard that
+ * opened on question four holding somebody else's answers would be a surprise
+ * with no way to explain it.
+ */
+export function openWizard(): void {
+  if (state.wizardOpen) return;
+  set({ wizardOpen: true, wizardStep: 0, wizardAnswers: {} });
+}
+
+/**
+ * Puts it away and forgets everything that was said.
+ *
+ * Forgetting is the point rather than tidiness. Nothing was created, so there
+ * is nothing to come back to, and answers left lying in memory would reappear
+ * under somebody's next run.
+ */
+export function closeWizard(): void {
+  if (!state.wizardOpen) return;
+
+  // BLUR FIRST, OR THE LAYER NEVER LEAVES THE SCREEN. This looks like it
+  // belongs in the surface and it does not, for the same reason `repaint`'s
+  // typing guard does not: it has to hold for every way out, and putting it at
+  // the callers means the next one added is the one that forgets.
+  //
+  // `repaint` defers while a text field holds focus and reschedules itself
+  // every 200ms until that stops being true. Four of the six questions are text
+  // fields. Pressing anything with a pointer blurs the field on the way in, so
+  // most ways out of here are safe by accident. Escape does not blur, and
+  // neither does the device back gesture, which arrives as a `popstate` with no
+  // pointer anywhere near it. Either one set `wizardOpen` to false and then
+  // deferred the paint indefinitely: the panel stayed on screen and fully
+  // interactive against a store that said it was closed, and typing into it
+  // refilled the answers of a wizard somebody had already left. Once the finish
+  // is wired up in phase 5, "Make my page" would have been pressable in that
+  // window.
+  //
+  // Blurring is safe rather than merely expedient: everything behind this layer
+  // is inert and focus is trapped inside it, so a focused text field at this
+  // moment is one of ours, and it is about to be destroyed anyway.
+  // `syncWizardFocus` moves focus on to the trigger once the paint lands.
+  if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+
+  set({ wizardOpen: false, wizardStep: 0, wizardAnswers: {} });
+}
+
+/**
+ * Shows a different question.
+ *
+ * Only the lower bound is enforced here. The store does not know how many
+ * questions there are, and the alternative, importing the list of screens from
+ * `ui/wizard.ts`, would be a runtime cycle: that module imports this one. The
+ * upper bound is clamped where the screens are defined, which is the only place
+ * that can know it.
+ */
+export function setWizardStep(step: number): void {
+  const next = Math.max(0, step);
+  // A no-op the way `closeSidebar` is. Pressing an option that is already
+  // chosen writes the same answer and then this writes the same step, and
+  // without this guard that is two whole shell rebuilds, measured at 37ms
+  // apiece on a Moto G7, for a press that changed nothing. The two writes per
+  // press are deliberate and argued where the choices are built; paying for
+  // them when neither value moved is not.
+  if (next === state.wizardStep) return;
+  set({ wizardStep: next });
+}
+
+/**
+ * Records, or takes back, part of what has been said.
+ *
+ * A key present with `undefined` CLEARS that answer, which is what skipping a
+ * question does. Copying key by key rather than spreading is the same care
+ * `set` takes and for the same reason: `exactOptionalPropertyTypes` is on, so
+ * an absent field and one holding `undefined` are different things, and the
+ * answer set is read by a function whose whole contract is that it never writes
+ * an empty value over a starting point's own content.
+ *
+ * ON THE IMMEDIATE PATH DESPITE FOUR OF THE SIX SCREENS BEING TEXT FIELDS, and
+ * that needs saying, because it looks like the mistake this file spends its
+ * longest comment on. A rebuild measured 37ms on a Moto G7 and one per
+ * keystroke dropped typed characters outright, which is why `update` goes
+ * through `setQuietly`. This does not, and is still safe: `repaint` refuses to
+ * paint at all while a text field holds focus and defers instead, so typing
+ * here cannot rebuild the shell no matter which path the write took. The guard
+ * is in `repaint` rather than at each caller precisely so a new caller cannot
+ * get this wrong. What the immediate path buys is the rest: pressing a choice,
+ * moving between questions and opening or closing the layer all happen with
+ * nothing focused, and there the deferred path's 200ms of quiet is the
+ * difference between a control that responded and one that looks broken.
+ */
+export function answerWizard(patch: { [K in keyof WizardAnswers]?: WizardAnswers[K] | undefined }): void {
+  const merged: Record<string, unknown> = { ...state.wizardAnswers };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) delete merged[key];
+    else merged[key] = value;
+  }
+  set({ wizardAnswers: merged as WizardAnswers });
 }
 
 export function setSurface(surface: Surface): void {

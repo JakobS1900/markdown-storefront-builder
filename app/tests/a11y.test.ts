@@ -14,7 +14,7 @@
 import "fake-indexeddb/auto";
 import axe from "axe-core";
 import { IDBFactory } from "fake-indexeddb";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Whether this build has an Imgur Client-ID is mocked rather than inherited.
@@ -41,6 +41,7 @@ vi.mock("../src/upload.js", () => ({
 import { writePage } from "../src/db.js";
 import {
   addBlock,
+  closeWizard,
   getState,
   init,
   openSidebar,
@@ -54,6 +55,7 @@ import {
 } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
 import { renderShell } from "../src/ui/shell.js";
+import { QUESTION_COUNT, WIZARD_ID, resetWizardFocusTracking } from "../src/ui/wizard.js";
 
 /**
  * Reads the stylesheet from disk.
@@ -73,6 +75,23 @@ function mount(): HTMLElement {
   const root = document.getElementById("app");
   if (root === null) throw new Error("missing #app");
   return root;
+}
+
+/**
+ * The name a person actually hears, which for a glyph is never its text.
+ *
+ * `aria-label` first, because a control that has one has one for a reason: the
+ * close controls in this app draw a "×" and nothing else, and their text passes
+ * a length check while saying nothing at all read aloud.
+ *
+ * Hoisted here rather than repeated. This expression was written out five times
+ * in this file before the wizard block made it six, and the copies had already
+ * drifted: two of them omit the trim, one omits the text fallback entirely, and
+ * those are left where they are because each is doing something slightly
+ * different on purpose and changing them is not this helper's business.
+ */
+function nameOf(control: Element): string {
+  return (control.getAttribute("aria-label") ?? control.textContent ?? "").trim();
 }
 
 async function violations(): Promise<axe.Result[]> {
@@ -271,9 +290,7 @@ describe("the page switcher is accessible", () => {
   it("names every entry, and names them differently from each other", () => {
     open(mount());
 
-    const names = [...document.querySelectorAll(".pages li > :first-child")].map((node) =>
-      (node.getAttribute("aria-label") ?? node.textContent ?? "").trim(),
-    );
+    const names = [...document.querySelectorAll(".pages li > :first-child")].map(nameOf);
     expect(names).toHaveLength(2);
     for (const name of names) expect(name).not.toBe("");
     expect(new Set(names).size).toBe(names.length);
@@ -362,6 +379,329 @@ describe("the starting point picker is accessible", () => {
 
     expect(document.querySelectorAll(".starters button").length).toBeGreaterThan(0);
     expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+});
+
+/**
+ * The setup wizard, feature 027.
+ *
+ * A `role="dialog"` layer with nine choices on its first screen, six question
+ * screens and a finish screen, and until this block existed the gate had never
+ * had one pixel of it on screen. The wizard itself is days old, so that is not
+ * an old failure; the PATTERN is this file's oldest, and
+ * `specs/027-setup-wizard/research.md` R6 records the two most recent times it
+ * landed anyway: feature 025 moved the page list into a drawer and the contrast
+ * gate quietly went from 164 elements to 137, and feature 026 found it had
+ * never opened a price row's fold at all. Nothing failed either time, because a
+ * gate that measures less does not complain about it.
+ *
+ * So every helper below proves the surface is really on screen before anything
+ * is asserted about it, and every screen is reached by pressing the control a
+ * seller presses rather than by writing to the store.
+ */
+describe("the setup wizard is accessible", () => {
+  beforeEach(() => {
+    globalThis.indexedDB = new IDBFactory();
+    init(true);
+    // Module state in `wizard.ts` outlives a test: it remembers whether the
+    // layer was open on the last repaint, and how many repaints the focus
+    // landing may still act on. Left alone, a test inherits the previous one's
+    // answer to both and the focus moves for reasons this file cannot see.
+    resetWizardFocusTracking();
+  });
+
+  // And once on the way out, because that state is not this block's to leave
+  // lying around. The last test here finishes with `wasOpen` true, so the first
+  // render of every describe after this one looks like a wizard that has just
+  // closed and takes the focus landing branch, which moves focus into the new
+  // page. Harmless today only because nothing below reads `document.activeElement`.
+  afterAll(resetWizardFocusTracking);
+
+  function panel(): HTMLElement {
+    const found = document.getElementById(WIZARD_ID);
+    if (found === null) throw new Error("the wizard is not on screen");
+    return found;
+  }
+
+  /** Every button on the screen showing, in document order. */
+  function controls(): HTMLButtonElement[] {
+    return [...panel().querySelectorAll<HTMLButtonElement>("button")];
+  }
+
+  /**
+   * Opens the wizard through the real control, not through `openWizard()`.
+   *
+   * The trigger is drawn by the EMPTY STATE rather than by the shell, so it
+   * exists only on a page with nothing on it yet. Reaching past it to the store
+   * would leave the one way into this feature unrendered, and a gate green on a
+   * control it never built is the exact failure this file's docstring is about.
+   */
+  function open(root: HTMLElement): void {
+    renderShell(root);
+    const trigger = [...document.querySelectorAll("button")].find(
+      (control) => control.getAttribute("aria-controls") === WIZARD_ID,
+    );
+    if (trigger === undefined) {
+      throw new Error("the wizard trigger did not render on the empty state");
+    }
+    trigger.click();
+    // This harness renders on demand rather than subscribing, so the state
+    // change has to be drawn deliberately.
+    renderShell(root);
+    if (document.getElementById(WIZARD_ID) === null) {
+      throw new Error("the wizard did not render after its trigger was pressed");
+    }
+  }
+
+  /** Presses a control by name, and says what was there when there is none. */
+  function press(root: HTMLElement, name: string): void {
+    const control = controls().find((one) => nameOf(one) === name);
+    if (control === undefined) {
+      throw new Error(
+        `no control called "${name}" on this screen. What is here: ${controls()
+          .map(nameOf)
+          .join(", ")}`,
+      );
+    }
+    control.click();
+    renderShell(root);
+  }
+
+  /**
+   * Walks every screen the wizard has, handing each one to `visit`.
+   *
+   * Steps 0 to `QUESTION_COUNT` inclusive, which is seven screens counting the
+   * finish. Driven off the count rather than off the literal six, so a seventh
+   * question added later is measured without anybody remembering to come back
+   * here: that is the difference between this gate and one that silently
+   * measures less than it did yesterday.
+   *
+   * Forward by pressing Next, which is the path a seller takes. Each screen has
+   * to prove it rendered before it is visited, or a `Next` that stopped working
+   * would leave this walking the same screen seven times and reporting green.
+   */
+  async function walk(
+    root: HTMLElement,
+    visit: (step: number) => Promise<void> | void,
+  ): Promise<void> {
+    open(root);
+    for (let step = 0; step <= QUESTION_COUNT; step += 1) {
+      if (step < QUESTION_COUNT) {
+        const progress = panel().querySelector(".wizard-progress")?.textContent ?? "";
+        const expected = `Question ${String(step + 1)} of ${String(QUESTION_COUNT)}`;
+        if (progress !== expected) {
+          throw new Error(
+            `step ${String(step)} did not render: expected "${expected}", found "${progress}"`,
+          );
+        }
+        // And that it rendered something to answer WITH. A question carries
+        // either a list of choices or one or more fields, and a heading with a
+        // Back, Skip and Next under it would satisfy every check above while
+        // the nine choices this feature exists for went unmeasured. That is R6
+        // in one sentence: a gate that measures less does not complain.
+        const answerable =
+          panel().querySelectorAll(".wizard-choices li").length +
+          panel().querySelectorAll(".field :is(input, textarea, select)").length;
+        if (answerable === 0) {
+          throw new Error(`step ${String(step)} rendered its question but nothing to answer it with`);
+        }
+      } else if (!controls().some((one) => nameOf(one) === "Make my page")) {
+        throw new Error("the finish screen did not render");
+      }
+
+      await visit(step);
+      if (step < QUESTION_COUNT) press(root, "Next");
+    }
+  }
+
+  it("has no axe violations on any question, or on the finish", async () => {
+    // FR-119 and Principle VI. Seven screens, each one scanned where it stands.
+    const root = mount();
+    await walk(root, async (step) => {
+      expect((await violations()).map((v) => v.id), `step ${String(step)}`).toEqual([]);
+    });
+  });
+
+  it("gives every control on every question a real accessible name", async () => {
+    const root = mount();
+    await walk(root, (step) => {
+      const buttons = controls();
+      expect(buttons.length, `step ${String(step)}`).toBeGreaterThan(0);
+
+      for (const control of buttons) {
+        // Named in the message as well as counted, because a failure here is
+        // read by somebody who has to go and find the control, and "step 0" on
+        // a screen of eleven buttons does not tell them which one.
+        const where = `step ${String(step)}, the control reading "${control.textContent ?? ""}"`;
+        expect(nameOf(control), where).not.toBe("");
+        // The close control is the reason this is not "has some text". It draws
+        // a "×" and nothing else, so its text passes a length check while
+        // saying nothing at all read aloud, and only `aria-label` makes it a
+        // name somebody can act on.
+        //
+        // FOUR IS A HEURISTIC AND IT IS WORTH SAYING WHAT IT CANNOT DO. It is
+        // the same threshold the icon-only assertion further down this file has
+        // used since feature 004, chosen because every glyph this app draws is
+        // one character and no useful English name for a control is four or
+        // fewer: "Close setup" clears it, "×", "···" and "Back" do not, and
+        // "Back" is never an icon. What it cannot catch is a five character
+        // label that is real English and still says nothing, "Press" say. No
+        // machine catches that one, and pretending a longer threshold would is
+        // how a gate ends up measuring the wrong thing confidently. The second
+        // assertion is the half that does real work: a label identical to the
+        // glyph is a label that was never written.
+        if (control.classList.contains("icon")) {
+          const label = control.getAttribute("aria-label") ?? "";
+          expect(label.length, where).toBeGreaterThan(4);
+          expect(label, where).not.toBe(control.textContent);
+        }
+      }
+
+      for (const control of panel().querySelectorAll("input, textarea, select")) {
+        const id = control.getAttribute("id");
+        expect(id, `step ${String(step)}`).toBeTruthy();
+        // Resolved INSIDE the panel, not over the document. The surface behind
+        // the layer is still in the DOM with all its own labels on it, and a
+        // document wide lookup would let one of those answer for a wizard field
+        // whose own label was never drawn. Ids are minted per render and shared
+        // across both, so that is a collision waiting to happen rather than a
+        // theoretical one.
+        expect(
+          panel().querySelector(`label[for="${id ?? ""}"]`),
+          `step ${String(step)}`,
+        ).not.toBeNull();
+      }
+    });
+  });
+
+  it("does not use a placeholder in place of a label on any question", async () => {
+    // FR-130, and research R2 is why it is worth a test of its own. The
+    // examples in these fields are hints, sitting beside a real label and read
+    // out with it. A placeholder is neither: it disappears the moment somebody
+    // types, and it is the first thing anybody "helpfully" reaches for here.
+    const root = mount();
+    await walk(root, (step) => {
+      for (const control of panel().querySelectorAll("input, textarea")) {
+        expect(control.getAttribute("placeholder"), `step ${String(step)}`).toBeNull();
+      }
+    });
+  });
+
+  it("meets the 44 by 44 touch target minimum on every control of every question", async () => {
+    // FR-132, which nothing else in this repository asserts. Constitution VI
+    // wants CI to fail on it, so driving the wizard by eye on the handset is a
+    // second opinion rather than the mechanism.
+    //
+    // jsdom lays nothing out, so a computed size here would be a number that
+    // means nothing. This asserts the PAIR that produces the size, the way the
+    // menu file control's assertion does: the control carries the class, and
+    // the class carries the minimum in the stylesheet.
+    const css = await stylesheet();
+    expect(css).toMatch(/\.btn\s*\{[^}]*min-height: var\(--tap\)/);
+    expect(css).toMatch(/\.btn\s*\{[^}]*min-width: var\(--tap\)/);
+    // A text field takes the full width of the panel rather than a 44 pixel
+    // minimum, so the horizontal half of the rule is `width: 100%` here. A
+    // `min-width` on it would be a floor it is never anywhere near.
+    expect(css).toMatch(/\.field input[^{]*\{[^}]*width: 100%/);
+    expect(css).toMatch(/\.field input[^{]*\{[^}]*min-height: var\(--tap\)/);
+
+    const root = mount();
+    await walk(root, (step) => {
+      for (const control of controls()) {
+        expect(
+          control.classList.contains("btn"),
+          `step ${String(step)}, the control "${nameOf(control)}"`,
+        ).toBe(true);
+      }
+      for (const control of panel().querySelectorAll("input, textarea, select")) {
+        // The wrapper is what the rule above is written against, so a field
+        // built by hand outside `field()` fails here rather than shipping a
+        // 20 pixel box nobody can hit.
+        //
+        // Named by its label rather than by its id, for the reason the naming
+        // test gives: a failure is read by somebody who has to go and find the
+        // control, and `f7` is not a thing anybody can see on a screen.
+        const label = panel().querySelector(`label[for="${control.getAttribute("id") ?? ""}"]`);
+        expect(
+          control.parentElement?.classList.contains("field"),
+          `step ${String(step)}, the control "${label === null ? "unlabelled" : nameOf(label)}"`,
+        ).toBe(true);
+      }
+    });
+  });
+
+  it("marks everything behind the wizard inert while it is open", () => {
+    // The attribute is what a browser acts on. jsdom implements `inert` neither
+    // as a property nor as behaviour, proven by probe in feature 025 and
+    // recorded in research R1, so this asserts only that the word is applied.
+    // The guarantee actually TESTED is the focus containment below. Both exist
+    // because they fail in different places.
+    const root = mount();
+    open(root);
+    for (const selector of ["header.bar", "main", "nav.tabs"]) {
+      expect(root.querySelector(selector)?.hasAttribute("inert"), selector).toBe(true);
+    }
+  });
+
+  it("leaves nothing inert once the wizard closes", () => {
+    // The negative control, and without it the test above passes just as
+    // happily on a shell that marks these three inert and never takes it back.
+    // `pages-sidebar.test.ts` carries the same pair for the drawer, for the same
+    // reason: half a toggle asserted is a toggle nobody has checked.
+    //
+    // Closed through the store rather than by pressing the close control, the
+    // way the drawer's half of this does. The control goes through
+    // `dismissWizard`, which spends a history entry with `history.back()`, and
+    // jsdom's history is a model rather than a browser: nothing here could
+    // honestly observe when that lands. What is under test is the attribute,
+    // not the route taken to it.
+    const root = mount();
+    open(root);
+    closeWizard();
+    renderShell(root);
+    if (document.getElementById(WIZARD_ID) !== null) {
+      throw new Error("the wizard is still on screen, so this proves nothing");
+    }
+
+    for (const selector of ["header.bar", "main", "nav.tabs"]) {
+      expect(root.querySelector(selector)?.hasAttribute("inert"), selector).toBe(false);
+    }
+  });
+
+  it("holds the keyboard inside the panel", () => {
+    // What `showModal()` would have given for nothing, done by hand. UNDER
+    // JSDOM it is the only thing standing between a keyboard user and a page
+    // they cannot see, which is the honest way to say it: in a real browser
+    // `inert` above does that work and this trap is the belt to its braces.
+    // jsdom implements none of `inert`, so here the braces are all there is.
+    const root = mount();
+    open(root);
+    const stops = [
+      ...panel().querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ];
+    // Two, not one. `trapFocus` wraps from the last stop to the first, and with
+    // a single stop the first IS the last: both assertions below would pass
+    // with focus never having moved and the trap doing nothing at all.
+    if (stops.length < 2) {
+      throw new Error(
+        `the trap needs at least two stops to prove anything, and the panel offered ${String(stops.length)}`,
+      );
+    }
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    if (first === undefined || last === undefined) throw new Error("nothing to tab between");
+
+    last.focus();
+    panel().dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(first);
+
+    first.focus();
+    panel().dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }),
+    );
+    expect(document.activeElement).toBe(last);
   });
 });
 
@@ -677,8 +1017,7 @@ describe("the storage view is accessible", () => {
   it("keeps every control in the panel reachable and named", async () => {
     await openPanel();
     for (const control of document.querySelectorAll(".device-pictures button")) {
-      const name = control.getAttribute("aria-label") ?? control.textContent ?? "";
-      expect(name.trim()).not.toBe("");
+      expect(nameOf(control)).not.toBe("");
       expect(control.getAttribute("tabindex")).toBeNull();
       expect(control.classList.contains("btn")).toBe(true);
     }
@@ -699,8 +1038,7 @@ describe("every control can be named and reached", () => {
     const buttons = [...document.querySelectorAll("button")];
     expect(buttons.length).toBeGreaterThan(10);
     for (const b of buttons) {
-      const name = b.getAttribute("aria-label") ?? b.textContent ?? "";
-      expect(name.trim()).not.toBe("");
+      expect(nameOf(b)).not.toBe("");
     }
   });
 

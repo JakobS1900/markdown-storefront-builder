@@ -314,6 +314,7 @@ function headingForm(block: Extract<Block, { kind: "heading" }>, onChange: OnCha
     field({
       label: "Heading text",
       value: block.text,
+      hint: 'What this part of your page is: "Prices", "About me", "How to order".',
       onInput: (text) => onChange({ ...nowBlock(block), text }),
     }),
     select({
@@ -333,6 +334,7 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
     field({
       label: "Section heading (optional)",
       value: block.heading ?? "",
+      hint: 'What this passage is about: "How to order", "Shipping and returns".',
       onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
     }),
     field({
@@ -485,9 +487,13 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
             }),
           ]
         : []),
+      // The first field anybody meets, and until feature 027 the only one on
+      // this row with nothing to say. Price, immediately below it, has said
+      // `Anything you like: "45", "from 45", or "DM me"` since feature 010.
       field({
         label: "Item",
         value: tier.name,
+        hint: 'What you are selling: "Carved oak sign", "Logo design", "Sourdough loaf".',
         onInput: (name) => editTier(i, (t) => ({ ...t, name })),
       }),
       field({
@@ -627,13 +633,17 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
           field({
             label: "Description (optional)",
             value: tier.blurb ?? "",
+            hint: 'A sentence about this one item: "Oak, sealed for outdoors."',
             onInput: (v) => editTier(i, (t) => withOptional(t, "blurb", v)),
           }),
           field({
             label: "What is included (optional)",
             value: (tier.includes ?? []).join("\n"),
             multiline: true,
-            hint: "One per line.",
+            // Was "One per line." and nothing else, which says how to type and
+            // not what to type. That is the complaint feature 027 exists for,
+            // restated as help.
+            hint: 'One per line, as "Two colour choices" or "Free UK postage".',
             onInput: (v) => {
               const items = v.split("\n").map((s) => s.trim()).filter((s) => s !== "");
               editTier(i, (t) => {
@@ -701,6 +711,7 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
         field({
           label: "Section heading (optional)",
           value: block.heading ?? "",
+          hint: 'What this price list is: "Prices", "Commissions", "Bakes this week".',
           onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
         }),
         field({
@@ -747,6 +758,7 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
       field({
         label: "Caption (optional)",
         value: item.caption ?? "",
+        hint: 'What this picture shows: "Walnut, 40cm" or "Before and after".',
         onInput: (v) => editItem(i, (it) => withOptional(it, "caption", v)),
       }),
       ...rowTools({
@@ -775,6 +787,7 @@ function galleryForm(block: Extract<Block, { kind: "gallery" }>, onChange: OnCha
         field({
           label: "Section heading (optional)",
           value: block.heading ?? "",
+          hint: 'What this run of pictures is: "Recent work", "Colours available".',
           onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
         }),
         select({
@@ -806,6 +819,7 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
       field({
         label: "What to call it",
         value: link.label,
+        hint: 'The words people will read: "Instagram", "My shop", "Email me".',
         onInput: (label) => withLinks((all) => all.map((l, j) => (i === j ? { ...l, label } : l))),
       }),
       field({
@@ -832,13 +846,22 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
 
   return el("div", {}, [
     field({
-      label: "Your name",
+      // "Store name", matching the setup wizard's own question word for word.
+      // It read "Your name" until feature 027, and the wizard asked for a store
+      // name, so one answer had two names depending on which screen you met it
+      // on. Jakob chose to rename both rather than let them differ. The hint
+      // keeps "your name or the handle", because a person selling their own
+      // work IS the shop and the label should not imply they need to invent a
+      // trading name they do not have.
+      label: "Store name",
       value: block.displayName,
+      hint: 'Your name or the handle people know you by: "Ridgeline Carry".',
       onInput: (displayName) => onChange({ ...nowBlock(block), displayName }),
     }),
     field({
       label: "One line about you (optional)",
       value: block.tagline ?? "",
+      hint: 'One line, as "Hand stitched leather goods, made in Leeds".',
       onInput: (v) => onChange(withOptional(nowBlock(block), "tagline", v)),
     }),
     imageField({
@@ -864,7 +887,8 @@ function profileForm(block: Extract<Block, { kind: "profile" }>, onChange: OnCha
       label: "How you take payment (optional)",
       value: (block.paymentMethods ?? []).join("\n"),
       multiline: true,
-      hint: "One per line.",
+      // Same fix as "What is included". The format was never the hard part.
+      hint: 'One per line, as "PayPal", "Bank transfer", "Cash on collection".',
       onInput: (v) => {
         const items = v.split("\n").map((s) => s.trim()).filter((s) => s !== "");
         const next = { ...nowBlock(block) } as Record<string, unknown>;
