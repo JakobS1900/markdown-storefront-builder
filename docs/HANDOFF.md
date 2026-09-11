@@ -13,9 +13,22 @@ with `gh release view v0.9.0`.
 
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
-**In progress: feature 027, the setup wizard. Branch `027-setup-wizard`.
-Phases 1 to 6 are DONE as of 2026-09-11. Phase 7, the holistic review and the
-release, is the remaining work.**
+**Feature 027, the setup wizard, is COMPLETE as of 2026-09-11 and released as
+`v0.10.0`.** Branch `027-setup-wizard`, all seven phases, 57 of its 58 tasks.
+T051, the desktop browser pass, is the one exception and it is explained in
+`tasks.md` rather than quietly ticked: the Chrome automation extension was
+unresponsive all session across four attempts. Its substance was covered twice
+over, by the headless contrast gate at 390px and by the handset pass, and the
+desktop pass specifically is still owed.
+
+**THE HOLISTIC REVIEW EARNED ITS COST AGAIN, AND THIS TIME IT CAUGHT A WRONG
+PRICE GOING TO BUYERS.** Read "What T048 found" below before touching
+`wizard-answers.ts`. The short version: a renamed first item kept the template's
+`unit`, so a freelancer who typed "Logo design" and "300" and took question 6's
+own advice published `| Logo design | USD 300 per hour |`. Every test passed over
+it because six of the eight starting points ship `unit: "each"` and the default
+test starter is one of them. **A fixture whose value is the harmless one cannot
+discriminate.**
 
 **Phase 6 is finished and committed as `bc86758`**, "test(027): the contrast
 gate walks the wizard, and proves it read it". T042 through T047 are all ticked
@@ -300,6 +313,83 @@ Every feature through 023 now has a holistic review except the ones
 `specs/README.md` marks `no` for structural reasons, and that column is the
 honest record of it.
 
+## What T048 found, and what was done about it
+
+The review ran over the whole feature diff with a fresh reviewer, sequentially
+rather than in parallel, which is the rule the 2026-09-09 double rate limit
+bought. Findings and dispositions:
+
+1. **HIGH, fixed: the renamed item published the template's amount.** Described
+   at the top. `offerOnly` now carries neither `unit` nor `availability` nor
+   `leadTime`; questions 5 and 6 put the seller's own back. `price` stays and is
+   now called out in the code as the deliberate exception, because data model
+   rule 3 chose it and tests it, and a leftover NUMBER is wrong in a way a
+   seller notices where "per hour" reads as something they picked.
+   **Proved by compiling it, before and after, not by reading the code**, and
+   the new test was verified to fail with the fix removed.
+2. **HIGH, fixed: a second back could have closed the app.** `history.back()` is
+   asynchronous, so a second dismiss arriving before the traversal landed still
+   saw `wizard: true`, queued a second back, and spent the entry belonging to
+   the surface underneath. The existing `making` flag guarded only `finish`
+   running twice, which is one of five live paths. Fixed at the choke point in
+   `surface-history.ts`: the layer's claim comes off the entry before the
+   traversal. **The pages drawer had the identical shape and shipped with it**,
+   so it was fixed too.
+3. **MEDIUM, fixed: the contrast gate had R6's own failure mode inside it.**
+   `WIZARD_QUESTIONS` was hardcoded to 6 against `<` guards, so a seventh
+   question would have been measured as six screens and passed. The total is
+   read off the progress line now.
+4. **MEDIUM, fixed, wording.** "How does that reach a buyer?" offered "Sold
+   out", which is not a way anything reaches a buyer, and is now "How is this
+   available?". Its help promised the word would be printed, which is false for
+   "Portfolio and about me", the starter with no prices, and now says "If your
+   page lists prices".
+5. **Open, deliberately, and for Jakob rather than for a session.** The reviewer
+   would swap the empty state's two controls, making "Answer a few questions"
+   primary and "See an example page" the ghost. Seen on the handset, the purple
+   example button does dominate the one the whole feature exists for. It is a
+   taste call and it is in "Blocked on Jakob".
+6. **Not a defect, checked and left.** `sectionToOpen` staying in `wizard.ts`,
+   and `COULD_NOT_MAKE` swallowing `openBackup`'s message: the resolved failure
+   branch is only reachable if `parseDocument` refuses bytes `serializeDocument`
+   just produced, which is an app bug no wording about a seller's file can
+   describe. The reviewer read the `CHUNK 2:` debt hardest, as asked, and found
+   trimming correct and consistently applied.
+
+**Delete the `CHUNK 2:` comment in `wizard-answers.ts` only now that T048 has
+actually run**, which it has.
+
+## What was verified on the handset, 2026-09-11
+
+Moto G7 `ZY2262PFGQ`, release build, real key, versionCode 14 / 0.10.0 confirmed
+by `dumpsys package`. **Do not re-probe these.**
+
+- **FR-128 holds**: the empty state offers the wizard, the example page AND
+  "Start from a template". The picker is not gone and not behind the wizard.
+- **All seven screens drawn**, nine choices on the first, progress line, help
+  and the Back / Skip / Next row on every question. No sideways scroll.
+- **The software keyboard does NOT cover the panel.** This is the risk
+  `styles.css` flagged at `max-height: 92vh` and asked T052 to measure: with the
+  keyboard up on a text question, the fields and the moves row were both still
+  on screen and reachable. Measured, not reasoned about.
+- **THE FIX IS REAL ON THE DEVICE.** Freelance services, "Logo design", "300",
+  question 6 skipped, and the Copy tab printed
+  `| Logo design | USD 300 |  |`. No "per hour". Before the fix this row was
+  `| Logo design | USD 300 per hour |`.
+- **FR-121 holds on the device**: the Copy tab opened on `### Wren and Willow`,
+  so the store name reached the compiled output rather than only the editor.
+- **"Make my page" pressed twice quickly leaves the app running.** pid 503,
+  `MainActivity` still resumed, and exactly ONE page created. This is the
+  consequence no test here can reach, because jsdom clamps `history.back()`.
+- **The back gesture dismisses the wizard and stays in the app**, rather than
+  leaving the surface.
+- **PRINCIPLE V HOLDS, MEASURED.** Jakob's two pages were "Untitled page, last
+  edited 9/1/2026" and "Ridgeline Carry, last edited 8/31/2026" before the run
+  and are byte for byte those two, with those same dates, after it. The wizard
+  opened its new page ALONGSIDE. Two probe pages were created to reach the empty
+  state and both were removed afterwards; the device was left with the owner's
+  two pages, no probe screenshots, and `stay_on_while_plugged_in` back to 0.
+
 ## Next up, in order
 
 1. **Check the branch, then run `npm run verify` from PowerShell.** The branch
@@ -311,29 +401,20 @@ honest record of it.
 
    Green at `bc86758` on 2026-09-11. Numbers under "Current state".
 
-2. **Feature 027 Phase 7 is the next work: the holistic review, the proofs, and
-   the release.** `specs/027-setup-wizard/tasks.md` has 58 tasks; 51 are done.
-   T048 to T054 remain.
+2. **Feature 027 is DONE and RELEASED. There is no next task on it.** 57 of 58,
+   with T051 explained rather than ticked. Merge `027-setup-wizard` to master
+   with `--no-ff` if that has not happened by the time you read this; the branch
+   command at the top of this file tells you.
 
-   **Phase 6 is DONE.** Both gates now see the wizard. a11y went 53 to 60 and
-   walks every screen; the contrast gate walks all seven screens in both
-   palettes and proves axe read every help paragraph. Details and the finding
-   are at the top of this file. Do not redo any of it.
+   **The one thing still open on it is a question for Jakob, not work**: the
+   empty state's two controls, item 5 under "What T048 found". It is in "Blocked
+   on Jakob".
 
-   **T048, the holistic review, is the gate on everything after it, and it is
-   carrying more than usual.** Six chunks, and Phase 3 never got its two per
-   chunk reviews at all because the subagent died on a rate limit. That debt is
-   written into the code as a `CHUNK 2:` comment at the top of
-   `app/src/ui/wizard-answers.ts`, and that comment should be the first thing
-   the review reads. The seams `plan.md` names are the answer set to the
-   document, and the wizard's finish to `openBackup`.
-
-   **Dispatch reviewers SEQUENTIALLY, never in parallel.** On 2026-09-09 both
-   died on the same rate limit having read nothing, which cost two reviews for
-   one failure.
-
-   Then T049 fixes, T050 the byte identical compile proof, T051 the browser
-   drive at 390px, T052 the handset, T053 the docs, T054 the release.
+3. **Pick the next feature.** 028 is already named and chosen: pasting a whole
+   messy existing page from rentry or pastebin, deferred out of 027 on
+   2026-09-08. See "Deferred deliberately". The other standing candidate is the
+   share sheet preview fix under T058, roughly two lines in `MainActivity.java`,
+   which has now been carried past four releases without being raised.
 
 3. **Phases 4 and 5 are DONE, both reviewed twice.** `be5c8f7` is the layer and
    the six screens; `f703ddb` is the way in and the way out.
@@ -1178,6 +1259,16 @@ SEQUENTIALLY rather than at once is what keeps one failure from costing both.
   it.** The fix each time was a counted guard, `pages` then `folded`, that
   refuses a pass. The way it was found was dumping what the browser actually had
   on screen, not reading the code that opens things.
+- **A FIXTURE WHOSE VALUE IS THE HARMLESS ONE CANNOT DISCRIMINATE.** Feature
+  027's worst defect, a wrong price published to buyers, survived a full test
+  suite because every test that renamed a price row used `DEFAULT_STARTER_ID`,
+  and that starter ships `unit: "each"`, which is the one value where keeping
+  the template's unit does no damage. Six of the eight ship "each"; the two that
+  do not are `freelance-services` and `art-commissions`. **Ask of any test that
+  uses a default fixture: would it fail if the code were wrong, or is the
+  default the case where wrong and right agree?** This is the same family as an
+  assertion that cannot fail, and it is harder to see, because the test looks
+  like it is exercising the behaviour.
 - **Counting what was DRAWN is not knowing what was MEASURED, and that is the
   fourth variation on the same theme here.** The first three were a gate that
   measured less and did not say so; this one is a gate that counted the right
@@ -1281,6 +1372,25 @@ SEQUENTIALLY rather than at once is what keeps one failure from costing both.
   not an unnecessary step.
 
 ## Blocked on Jakob
+
+- **The empty state's two controls: which one should be primary?** Raised by
+  feature 027's holistic review and seen on the handset on 2026-09-11. Today
+  "See an example page" is the solid purple button and "Answer a few questions",
+  the control the whole feature exists for, is the ghost outline beside it. On
+  the device the purple one does take the eye. The argument against promoting
+  the wizard is that two solid accents next to each other is the six-primaries
+  problem in miniature, which is a real rule this project already learned; the
+  argument for is that somebody who cannot work out what to type is not served
+  by a demonstration of somebody else's shop. **A swap, not an addition**, so it
+  stays one accent either way. Not done, because it is taste and it is yours.
+
+- **The share sheet cannot preview the exported menu file**, and this has now
+  been carried past FOUR releases without being put to you. Sending works and
+  the file name shows; Android just cannot render a thumbnail, because the
+  `FileProvider` URI is not granted to the system chooser. The fix the platform
+  names is `Intent#createChooser` with `clipData` and
+  `FLAG_GRANT_READ_URI_PERMISSION` in `MainActivity.java`, roughly two lines.
+  Full diagnosis is under "T058 is DONE" below.
 
 **NOTHING BLOCKS PHASE 4.** As of 2026-09-08 there is no open question standing
 between a new session and task T025. Every entry below is either answered or is

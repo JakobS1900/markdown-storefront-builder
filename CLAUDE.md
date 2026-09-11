@@ -8,24 +8,29 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
-**In progress right now: `specs/027-setup-wizard/`, the question by question
-front door.** Specified and planned on 2026-09-08, no implementation code yet.
-The live plan is `specs/027-setup-wizard/plan.md` and the decisions that shaped
-it, including one amendment to the spec, are in its `research.md`.
+**Nothing is in progress right now.** The next feature has not been started.
 
-Most recently finished: `specs/026-selling-modes/`, how an item reaches a buyer,
-released as `v0.9.0` on 2026-09-08 and verified on the handset. 024 and 025
-before it are also done and released.
+Most recently finished: `specs/027-setup-wizard/`, the question by question
+front door, released as `v0.10.0` on 2026-09-11 and verified on the handset.
+All seven phases, 57 of its 58 tasks, with T051 explained in `tasks.md` rather
+than ticked. 024, 025 and 026 before it are also done and released.
+
+**The next feature is 028, pasting a whole messy existing page** from rentry or
+pastebin, which Jakob chose to defer out of 027 on 2026-09-08. Not specified
+yet.
 
 **That is a claim with an expiry date**, true only while `docs/HANDOFF.md` still
 says so. Believe the handoff over this block, always.
 
-That warning is not boilerplate, and it has now earned its keep twice: this line
-said 024 was in progress, the condition fired the moment the handoff disagreed,
-and it was corrected instead of quietly rotting. Then it said 024 was the most
-recent work and nothing was in progress, and stayed that way through three
-releases and two whole features. **The block does not update itself. Whoever
-finishes a feature updates it.**
+That warning is not boilerplate, and it has now earned its keep three times:
+this line said 024 was in progress, the condition fired the moment the handoff
+disagreed, and it was corrected instead of quietly rotting. Then it said 024 was
+the most recent work and nothing was in progress, and stayed that way through
+three releases and two whole features. Then it said 027 was specified with no
+implementation code, and stayed that way through all seven of its phases and its
+release. **The block does not update itself. Whoever finishes a feature updates
+it.** It was updated on 2026-09-11 by the session that finished 027, which is
+the rule working rather than the rule being needed again.
 This block used to name
 `specs/002-compile-skeleton/plan.md` as "the current plan". It had been finished
 for a month, so every session began by reading a description of work already
