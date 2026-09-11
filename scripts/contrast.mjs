@@ -317,6 +317,35 @@ const WIZARD_SCREEN = `(async () => {
   const layer = document.querySelector('.wizard');
   const page = document.documentElement;
 
+  // WAIT FOR THE PANEL TO STOP MOVING BEFORE MEASURING ANYTHING ON IT.
+  //
+  // '.wizard-panel' carries 'animation: wizard-in 160ms ease-out', and
+  // '@keyframes wizard-in' starts at 'translateY(100%)', which puts every pixel
+  // of the panel BELOW the bottom of the viewport. axe resolves a background by
+  // sampling points of an element's rect, and it can resolve nothing for an
+  // element that is not on screen, so a run that lands inside those 160ms
+  // returns no result at all for the panel's text.
+  //
+  // That is not a smaller number. It is 0 of 7 help paragraphs and 0 of 6
+  // progress lines, in both palettes, with '0 contrast failure(s)' beside it,
+  // which is precisely the vacuous pass the R6 guard was written to refuse. The
+  // guard did refuse it, which is the only reason this was ever visible rather
+  // than being a green gate measuring an off-screen panel.
+  //
+  // It is also a RACE and not a constant. Probing on 2026-09-11 caught the same
+  // screen at y=844 on one run and y=595 on the next, and the walk repaints on
+  // every press so the animation restarts for every screen. That is why this
+  // failed on this machine and passed on the one before it.
+  //
+  // Waited for by asking the animations whether they have finished, not by
+  // sleeping for 160ms and hoping. This project has fixed the same shape of bug
+  // twice already, in 'a6d1314' and '4d26e5f': a fixed wait in front of
+  // asynchronous work is a bug with a delay on it. An empty animation list
+  // resolves immediately, so removing the animation later costs nothing here.
+  await Promise.all(
+    panel.getAnimations().map(a => a.finished.catch(() => undefined)),
+  );
+
   // MEASURED FIRST, WITH THE PAGE EXACTLY AS A SELLER HAS IT. The axe run below
   // hides everything behind the layer, and a width compared against a hidden
   // page would be a ruler moving with the thing it measures, which is the
@@ -623,6 +652,44 @@ try {
   await connect();
   await send("Page.enable");
   await send("Runtime.enable");
+
+  // THE VIEWPORT IS SET HERE, NOT BY `--window-size`, AND IT IS THEN CHECKED.
+  //
+  // This gate asked Chrome for a 390 by 844 window and never once looked at
+  // what it got. On Chrome 152 it got 500 by 749: neither `--headless=new` nor
+  // `--headless` produces a headless browser any more, so the window carries a
+  // tab strip and an address bar, and `--window-size` sizes the window rather
+  // than the content. All four combinations were measured on 2026-09-11 and
+  // only a device metrics override gives the page the size this gate claims to
+  // be testing at.
+  //
+  // The consequence was not a smaller number, which is what makes it worth
+  // this comment. The whole wizard panel starts at y=749 in a 749 tall
+  // viewport, so every one of its help and progress paragraphs sat outside the
+  // viewport, axe could resolve a background for none of them, and the walk
+  // reported "0 of 7 read by axe" in both palettes. The R6 guard from Phase 6
+  // of feature 027 caught it and refused the pass, which is the only reason
+  // this was ever visible.
+  //
+  // `scripts/menu-file.mjs` already had both halves of this, and its comment
+  // records why: a gate whose ruler moves with the thing it measures reports a
+  // pass about nothing. Its `mobile: false` is copied here for the same reason
+  // it gives, so that a page wider than the screen overflows rather than
+  // widening the layout viewport to fit itself.
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+
+  const got = await evaluate(`innerWidth + 'x' + innerHeight`);
+  if (got !== "390x844") {
+    console.error(
+      `  the viewport is ${got} and this gate only means anything at 390x844. Everything it measures, including "0 overflow(s) at 390px", would be measured somewhere else.`,
+    );
+    failed++;
+  }
 
   for (const scheme of ["light", "dark"]) {
     const { violations, checked, sections, fields, hints, pages, folded, wizard } =
