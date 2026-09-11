@@ -50,6 +50,31 @@ answerable without reading fifty commit messages.
 | [025 the pages sidebar](025-pages-sidebar/) | 2026-09-07 | **before** | yes | yes | no | no |
 | [026 selling modes](026-selling-modes/) | 2026-09-08 | **before** | yes | yes | no | no |
 | [027 the setup wizard](027-setup-wizard/) | 2026-09-08 | **before** | yes | yes | yes | **yes** |
+| [028 formatting buttons](028-text-formatting/) | 2026-09-11 | **before** | yes | yes | no | **owed** |
+
+**028's holistic review column says `owed`, not `no`, and the distinction is
+the point.** 025 and 026 say `no` because each is small enough that the rule in
+`CLAUDE.md` does not fire, and that is a judgement. 028 is five chunks, so the
+rule does fire and the review is mandatory. Two attempts at it died on the
+account session limit on 2026-09-11. `owed` is the honest word for a required
+step that has not happened, and it will stay in that column until it has.
+
+**028 is worth reading for what it found rather than for what it built.** The
+feature is six buttons over a field. Building it surfaced three defects in
+shipped code that nobody was looking for: a seller's own sentence could become a
+heading on both paste hosts because `=` was escaped nowhere; the new highlight
+grammar destroyed four characters of a hand-drawn underline, found by reading a
+golden diff rather than by a test; and the contrast gate had been measuring an
+off-screen wizard panel at 500x749 while printing "0 overflow(s) at 390px". The
+last of those is the fourth time a gate here has been green about a surface it
+never measured, and the R6 guard that feature 027 built is the only reason it
+was visible.
+
+**It is also the fifth time a requested feature already existed.** Bold, italics
+and links have compiled since feature 008. The previous four cases were fixed by
+renaming a control; this one could not be, because there was no control at all,
+only a hint telling the seller to type asterisks. That is the sharpest statement
+of what this project is for that the repository contains.
 
 024 is the fullest set in the repository: spec, plan, tasks, research, data
 model, contracts, a quickstart, an analysis and a holistic review. It is also

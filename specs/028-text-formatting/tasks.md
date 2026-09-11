@@ -177,7 +177,7 @@ Copy tab.
 - [ ] T055 Build with `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"` set for the build only. Verify the APK carries the assets the build just emitted, which is the stale-assets failure that nearly shipped in 0.4.0, and that `apksigner verify` reports v2 true, v3 true and digest `c952b39c...`.
 - [ ] T056 Merge to master with `--no-ff`, push, tag `v0.11.0`, and publish the GitHub Release **with the signed APK attached**. Pushing commits is not shipping.
 - [ ] T057 Update `docs/HANDOFF.md` and the `CLAUDE.md` status block. The block does not update itself, and it has spent whole features saying the wrong thing three times.
-- [ ] T058 Update the status table in `specs/README.md` with a row for 028, honest about which documents exist.
+- [x] T058 Update the status table in `specs/README.md` with a row for 028, honest about which documents exist.
 
 ---
 
