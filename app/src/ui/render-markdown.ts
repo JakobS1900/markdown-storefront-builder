@@ -149,7 +149,19 @@ function inline(text: string): DocumentFragment {
   // Both halves are needed. The escaping stops the seller's text from ever
   // supplying the delimiter; this stops the delimiter being looked for in the
   // wrong place.
-  const pattern = /(!?)\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)|(\*\*)([^*]+)\*\*|(\*)([^*]+)\*/g;
+  // `~~` and `==` joined with feature 028, and they are safe here for the same
+  // reason `**` is: this renderer only ever sees compiled output, and a live
+  // tilde or a live doubled equals sign cannot be seller text by the time it
+  // gets here. The escaper turns a seller's `~` into `&#126;` and backslashes
+  // every `=` in a run of two or more, so both markers in this pattern can only
+  // have been written by `emitInline`.
+  //
+  // That is the same argument the label pattern above rests on, and it is worth
+  // restating rather than assumed: the forgery bug happened because a pattern
+  // was asked to tell the seller's words from the compiler's structure when
+  // they were the same characters. Here they cannot be the same characters.
+  const pattern =
+    /(!?)\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)|(\*\*)([^*]+)\*\*|(~~)([^~]+)~~|(==)([^=]+)==|(\*)([^*]+)\*/g;
 
   let last = 0;
   for (const match of text.matchAll(pattern)) {
@@ -182,11 +194,19 @@ function inline(text: string): DocumentFragment {
       }
     } else if (match[4] !== undefined) {
       const strong = document.createElement("strong");
-      strong.append(unescape(match[5] ?? ""));
+      strong.append(inline(match[5] ?? ""));
       frag.append(strong);
     } else if (match[6] !== undefined) {
+      const del = document.createElement("del");
+      del.append(inline(match[7] ?? ""));
+      frag.append(del);
+    } else if (match[8] !== undefined) {
+      const mark = document.createElement("mark");
+      mark.append(inline(match[9] ?? ""));
+      frag.append(mark);
+    } else if (match[10] !== undefined) {
       const em = document.createElement("em");
-      em.append(unescape(match[7] ?? ""));
+      em.append(inline(match[11] ?? ""));
       frag.append(em);
     }
 
