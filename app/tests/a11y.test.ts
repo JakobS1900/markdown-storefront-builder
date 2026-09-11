@@ -133,6 +133,34 @@ describe("the shell is accessible", () => {
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 
+  it("has no axe violations with the formatting buttons on screen", async () => {
+    // Feature 028. The text section is the only one that draws them, so the
+    // test above, which opens a Prices section, never sees them.
+    const root = mount();
+    addBlock(blankBlock("prose"));
+    selectBlock(getState().doc.blocks[0]?.id);
+    renderShell(root);
+
+    // DEMANDED, NOT ASSUMED. SC-028-7, and the fourth time this project has
+    // written a guard like this: a gate that measures less does not say so. If
+    // the bar ever stops rendering, this fails instead of quietly auditing a
+    // page with six fewer controls on it and reporting a pass.
+    const bar = document.querySelector("#surface .format-bar");
+    expect(bar, "the formatting bar must be on screen for this to mean anything").not.toBeNull();
+    const buttons = [...(bar?.querySelectorAll("button") ?? [])];
+    expect(buttons).toHaveLength(6);
+    for (const node of buttons) {
+      // A real accessible name, not a plausible looking one: the glyph alone
+      // reads aloud as a letter and says nothing about what the button does.
+      const name = node.getAttribute("aria-label") ?? "";
+      expect(name.length).toBeGreaterThan(4);
+      expect(name).not.toBe(node.textContent);
+      expect(node.getAttribute("type")).toBe("button");
+    }
+
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
   it("has no axe violations with a row's More details fold open", async () => {
     // A blank row keeps that fold shut, and axe skips what is hidden, so every
     // control inside it was going unscanned by the gate above: the cost, the

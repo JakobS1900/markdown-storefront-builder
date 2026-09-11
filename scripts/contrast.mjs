@@ -246,6 +246,37 @@ async function loadRealContent() {
     "the folded fields to be on screen",
   );
 
+  // The formatting buttons, feature 028, measured on their own before the
+  // Prices section is reopened for the main pass.
+  //
+  // WHY A PASS OF ITS OWN. Only a text section draws them, and selecting a
+  // section deselects the last one, so measuring them inside the main pass
+  // would mean giving up the Prices section and the twelve folded fields that
+  // come with it. Same shape and same reason as the wizard's own pass above.
+  //
+  // The highlight button is the one that needs a real browser rather than
+  // jsdom: it is the only control in the application whose background is
+  // `--accent-wash`, and a wash that passes contrast in light can fail in dark.
+  // `app/tests/a11y.test.ts` already checks the names and the roles, and lays
+  // nothing out.
+  const format = await auditFormatBar();
+
+  await evaluate(`(() => {
+    const b = [...document.querySelectorAll('#surface button')].find(x => /^Open Prices/.test((x.textContent||'').trim()));
+    if (b) b.click();
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface fieldset.item').length >= 1`,
+    "the Prices section to come back for the main pass",
+  );
+  await evaluate(`(() => {
+    for (const d of document.querySelectorAll('#surface details')) d.open = true;
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface details[open] .field').length >= 5`,
+    "the folded fields to be back on screen",
+  );
+
   // And the pages panel, which is a surface of its own since feature 025.
   //
   // It moved out of the Build surface into a drawer, and this gate measured 164
@@ -267,6 +298,10 @@ async function loadRealContent() {
     if (t) t.click();
   })()`);
   await waitFor(`!!document.querySelector('.pages-panel .pages li')`, "the pages panel to list a page");
+
+  // Handed back rather than measured here, because the caller is what reports
+  // and what counts failures. Everything else this function does is setup.
+  return format;
 }
 
 /**
@@ -467,6 +502,74 @@ const WIZARD_SCREEN = `(async () => {
 })()`;
 
 /**
+ * Opens a text section and measures the formatting buttons. Feature 028.
+ *
+ * Returns what axe REACHED as well as what the page drew, which is the lesson
+ * feature 027 Phase 6 paid for: a structural count is satisfied by an element
+ * nobody measured. Six buttons on screen and two of them checked is a gate
+ * reporting a pass about four controls it never looked at.
+ */
+async function auditFormatBar() {
+  await waitFor(
+    `[...document.querySelectorAll('#surface button')].some(x => /^Open /.test((x.textContent||'').trim()))`,
+    "the example to offer a section to open",
+  );
+  // "How to order" rather than the first text section on the page, because the
+  // first one is the demonstration notice and a later session may well delete
+  // it. Any text section would do; this one is named so a failure says which.
+  await evaluate(`(() => {
+    const b = [...document.querySelectorAll('#surface button')]
+      .find(x => /^Open How to order/.test((x.textContent||'').trim()))
+      ?? [...document.querySelectorAll('#surface button')]
+        .find(x => /^Open /.test((x.textContent||'').trim()));
+    if (b) b.click();
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface .format-bar button').length >= 6`,
+    "the text section to draw its formatting buttons",
+  );
+
+  return JSON.parse(
+    await evaluate(`(async () => {
+      const bar = document.querySelector('#surface .format-bar');
+      const buttons = [...bar.querySelectorAll('button')];
+
+      const r = await axe.run(document.body, {
+        runOnly: { type: 'rule', values: ['color-contrast'] },
+        resultTypes: ['violations', 'passes', 'incomplete'],
+      });
+
+      const reached = new Map();
+      for (const group of [['passes', r.passes], ['incomplete', r.incomplete], ['violations', r.violations]]) {
+        for (const v of group[1]) {
+          for (const n of v.nodes) {
+            if (typeof n.target[0] !== 'string') continue;
+            const found = document.querySelector(n.target[0]);
+            if (found) reached.set(found, group[0]);
+          }
+        }
+      }
+      const measured = b => reached.get(b) === 'passes' || reached.get(b) === 'violations';
+
+      return JSON.stringify({
+        drawn: buttons.length,
+        measured: buttons.filter(measured).length,
+        unmeasured: buttons
+          .filter(b => !measured(b))
+          .map(b => ({ name: b.getAttribute('aria-label') || '', how: reached.get(b) || 'not evaluated' })),
+        nodes: r.violations.flatMap(v => v.nodes
+          .filter(n => typeof n.target[0] === 'string' && (document.querySelector(n.target[0])?.closest('.format-bar')))
+          .map(n => ({
+            target: n.target.join(' '),
+            summary: (n.failureSummary || '').split('\\n').filter(Boolean).slice(-1)[0] || '',
+            html: (n.html || '').slice(0, 90),
+          }))),
+      });
+    })()`),
+  );
+}
+
+/**
  * Opens the wizard, measures every screen of it, and closes it again.
  *
  * WHY IT GETS ITS OWN AXE RUN, BEFORE THE EXAMPLE IS LOADED. The wizard is a
@@ -601,7 +704,7 @@ async function auditScheme(scheme) {
   await injectAxe();
   const wizard = await auditWizard();
 
-  await loadRealContent();
+  const format = await loadRealContent();
 
   await injectAxe();
   const result = await evaluate(`(async () => {
@@ -644,7 +747,7 @@ async function auditScheme(scheme) {
       folded: document.querySelectorAll('#surface details[open] .field').length,
     });
   })()`);
-  return { ...JSON.parse(result), wizard };
+  return { ...JSON.parse(result), wizard, format };
 }
 
 let failed = 0;
@@ -692,7 +795,7 @@ try {
   }
 
   for (const scheme of ["light", "dark"]) {
-    const { violations, checked, sections, fields, hints, pages, folded, wizard } =
+    const { violations, checked, sections, fields, hints, pages, folded, wizard, format } =
       await auditScheme(scheme);
     const nodes = violations.flatMap((v) => v.nodes);
 
@@ -764,6 +867,28 @@ try {
     // is the trap three tests fell into earlier in this project. The example
     // storefront has several sections and an opened one has several fields, so
     // this refuses to report a pass it did not earn.
+    // The formatting buttons, feature 028. Drawn AND measured, both demanded,
+    // because a structural count is satisfied by an element axe skipped and
+    // this project has now caught that four times.
+    console.log(
+      `${scheme} formatting: ${format.drawn} buttons drawn (${format.measured} read by axe), ${format.nodes.length} contrast failure(s)`,
+    );
+    if (format.drawn < 6 || format.measured < 6) {
+      console.error(
+        `  ${scheme} formatting: ${format.drawn} of 6 buttons drawn and ${format.measured} of 6 read by axe. The rest were never checked, so this run proves less than it claims.`,
+      );
+      for (const miss of format.unmeasured) {
+        console.error(`    ${miss.name}: ${miss.how}`);
+      }
+      failed++;
+    }
+    for (const n of format.nodes) {
+      failed++;
+      console.log(`  ${n.target}`);
+      console.log(`    ${n.summary}`);
+      console.log(`    ${n.html}`);
+    }
+
     if (sections < 3 || fields < 3 || pages < 1 || folded < 5) {
       console.error(
         `  ${scheme}: only ${sections} sections, ${fields} fields, ${folded} folded fields and ${pages} listed pages on screen. Something did not render, so this run proves less than it claims.`,
