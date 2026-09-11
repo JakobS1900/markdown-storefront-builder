@@ -285,4 +285,29 @@ describe("it draws what the compiler emits", () => {
   it("makes a rule from a divider", () => {
     expect(render("---").querySelector("hr")).not.toBeNull();
   });
+
+  it("shows escaped equals signs as equals signs, not as backslashes", () => {
+    // Compiled, not hand written, because the point is that this renderer and
+    // the escaper agree. Feature 028 made the escaper backslash every equals
+    // sign in a run of two or more, so a seller's own writing cannot become a
+    // setext heading or a highlight on a paste host. If `=` were missing from
+    // this renderer's strip list the seller would read `A \=\=highlight\=\=`
+    // in the preview while the Copy tab showed the truth.
+    const host = renderCompiled({
+      id: "t",
+      kind: "prose",
+      text: "A ==highlight== and Bundle = 3 items",
+    });
+    expect(host.textContent).toContain("A ==highlight== and Bundle = 3 items");
+    expect(host.textContent).not.toContain("\\=");
+    // And it is still text rather than a mark, because the compiler refused it.
+    expect(host.querySelector("mark")).toBeNull();
+  });
+
+  it("does not turn a seller's underline into a heading", () => {
+    // The defect feature 028 closed, measured where a seller would see it.
+    const host = renderCompiled({ id: "t", kind: "prose", text: "My shop\n=" });
+    expect(host.querySelector("h1")).toBeNull();
+    expect(host.textContent).toContain("=");
+  });
 });

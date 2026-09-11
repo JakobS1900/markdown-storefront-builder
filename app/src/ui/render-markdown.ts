@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Renders the compiled Markdown for the preview.
  *
  * Constitution Principle VII: the preview renders the COMPILED OUTPUT, never an
@@ -112,9 +112,18 @@ function decodeEntities(text: string): string {
     .replace(/&amp;/g, "&");
 }
 
-/** Backslash escapes the escaper added, removed for display. */
+/**
+ * Backslash escapes the escaper added, removed for display.
+ *
+ * `=` joined this set with feature 028, and it is not optional. The escaper now
+ * backslashes every equals sign in a run of two or more, and a line that is
+ * equals signs and nothing else, so that a seller's own writing cannot become a
+ * setext heading or a highlight on a paste host. Without the same character
+ * here, the preview shows the seller `A \=\=highlight\=\=` and the Copy tab
+ * would be the only honest surface in the app.
+ */
 function unescape(text: string): string {
-  return decodeEntities(text).replace(/\\([\\`*_{}[\]()#+\-.!|~^$])/g, "$1");
+  return decodeEntities(text).replace(/\\([\\`*_{}[\]()#+\-.!|~^$=])/g, "$1");
 }
 
 /**

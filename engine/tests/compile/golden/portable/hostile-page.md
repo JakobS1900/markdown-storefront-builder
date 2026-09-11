@@ -28,3 +28,13 @@ Payment: a\|b, &lt;b&gt;c&lt;/b&gt;
 &lt;img src=x onerror=alert(1)&gt;
 
 Dollar &#36;45, tilde 50&#126;60, caret a&#94;b.
+
+My shop  
+\=
+
+Underlined by hand  
+\=\=\=\=\=
+
+A \=\=highlight\=\= nobody asked for, and a \=\= b comparison.
+
+Bundle = 3 items, S = small.

@@ -106,6 +106,67 @@ function escapeLineStarts(text: string): string {
 }
 
 /**
+ * A run of two or more equals signs, which is a highlight on both paste hosts.
+ *
+ * `==marked==` renders as `<mark>` on rentry and on text.is, observed
+ * 2026-09-11. text.is goes further and pairs markers with a space just inside
+ * them, so `a == b and c == d` is a highlight there and plain text on rentry.
+ * Two hosts running the same stack, disagreeing for the third time.
+ */
+const EQUALS_RUN = /={2,}/g;
+
+/**
+ * A line that is equals signs and nothing else, which is a setext heading
+ * underline, and ONE is enough.
+ *
+ * This is the hole feature 028 found. `My shop` on one line and `=` on the
+ * next published as `<h1>My shop</h1>` on both hosts, with the equals sign
+ * consumed. Underlining a heading with a row of equals is a plain-text habit
+ * older than Markdown, so it is reachable by somebody laying out a menu rather
+ * than by somebody attacking the app.
+ *
+ * The dash form was always safe: `LINE_MARKER` above escapes `-`. `=` was in
+ * none of this file's three sets, so the protection was correct and had a hole
+ * in it exactly one character wide.
+ */
+const EQUALS_ONLY_LINE = /^([ \t]*)(=+)([ \t]*)$/;
+
+/**
+ * Escapes the equals signs that can become structure, and only those.
+ *
+ * EVERY character of a run carries its own backslash. Escaping only the first
+ * is not enough and this was measured rather than reasoned about:
+ * `a \===b=== c` renders as `a =<mark>b</mark>= c` on both hosts, because the
+ * survivors still pair. That is the same lesson this file already records
+ * about the exclamation mark, one construct along.
+ *
+ * A LONE equals sign between other characters is deliberately left alone, and
+ * that restraint is the point rather than an oversight. Adding `=` to
+ * `ESCAPABLE` would be two words shorter and would put `Bundle \= 3 items` on
+ * the seller's Copy screen. That is the `()` change recorded at the top of this
+ * file: made, shipped `Laser engraving \(up to 20 characters\)` in front of a
+ * seller, and reverted.
+ *
+ * A backslash is enough here, on both hosts, so no numeric character reference
+ * is needed. That is not obvious and was checked: `~`, `^` and `$` all needed
+ * one, and `=` does not.
+ *
+ * Recorded in `docs/research/2026-09-11-marks-verification.md`.
+ */
+function escapeEquals(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => {
+      const underline = EQUALS_ONLY_LINE.exec(line);
+      if (underline !== null) {
+        return `${underline[1]}${(underline[2] ?? "").replace(/=/g, "\\=")}${underline[3]}`;
+      }
+      return line.replace(EQUALS_RUN, (run) => run.replace(/=/g, "\\="));
+    })
+    .join("\n");
+}
+
+/**
  * The characters a backslash cannot protect, so an entity does instead.
  *
  * Pasted into rentry's live preview on 2026-08-31, one line per character, the
@@ -155,8 +216,15 @@ export function escapeText(text: string): string {
   // correct: `\*foo` does not start a list.
   const anywhere = entities.replace(ESCAPABLE, (ch) => `\\${ch}`);
 
+  // After the always set, so the backslashes this adds are its own and are not
+  // fed back through a pass that escapes backslashes. Before the line start
+  // pass, which looks for `#`, `+` and `-` and never sees an equals sign, and
+  // before the entity pass, which only touches `~`, `^` and `$`. It therefore
+  // composes with both rather than ordering against them.
+  const equals = escapeEquals(anywhere);
+
   return (
-    escapeLineStarts(anywhere)
+    escapeLineStarts(equals)
       // Last, because an entity contains `&` and `#`, and those are ours rather
       // than the artist's. Running it earlier produced `a&\#36;b`: the escaper
       // escaping its own output, which is the same trap the `&` ordering above

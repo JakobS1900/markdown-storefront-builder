@@ -70,7 +70,7 @@
     {
       "id": "t",
       "kind": "prose",
-      "text": "](evil) [\n\n***\n\n<img src=x onerror=alert(1)>\n\nDollar $45, tilde 50~60, caret a^b."
+      "text": "](evil) [\n\n***\n\n<img src=x onerror=alert(1)>\n\nDollar $45, tilde 50~60, caret a^b.\n\nMy shop\n=\n\nUnderlined by hand\n=====\n\nA ==highlight== nobody asked for, and a == b comparison.\n\nBundle = 3 items, S = small."
     }
   ]
 }
