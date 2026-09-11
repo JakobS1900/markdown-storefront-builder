@@ -4,14 +4,19 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-**Released**: `v0.9.0`, from `c0f58fc`, versionCode 13, versionName 0.9.0.
-`v0.8.0` is `49ab971`, `v0.7.1` is `d27f470`, `v0.7.0` is `108c4a7`. **Every tag
-through 0.9.0 is on `origin`**, confirmed with `git ls-remote --tags origin` on
-2026-09-08, `origin/master` is at `c0f58fc`, and the GitHub Release for 0.9.0
-exists with the signed APK attached: 3,228,912 bytes, `isDraft: false`, checked
-with `gh release view v0.9.0`.
+**Released**: `v0.10.0`, from `fdf1548`, versionCode 14, versionName 0.10.0.
+`v0.9.0` is `c0f58fc`, `v0.8.0` is `49ab971`, `v0.7.1` is `d27f470`, `v0.7.0` is
+`108c4a7`. **Every tag through 0.10.0 is on `origin`**, confirmed with
+`git ls-remote --tags origin` on 2026-09-11, `origin/master` is at `fdf1548`,
+and the GitHub Release for 0.10.0 exists with the signed APK attached:
+3,231,428 bytes, `isDraft: false`, `isPrerelease: false`, checked with
+`gh release view v0.10.0`.
 
-**Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
+**027 is merged to master with `--no-ff`**, which is the fourth feature in a row
+done that way and is settled practice here rather than an open question.
+
+**Feature 027 is DONE and SHIPPED**, and so is everything before it.
+`027-setup-wizard` is merged to master.
 
 **Feature 027, the setup wizard, is COMPLETE as of 2026-09-11 and released as
 `v0.10.0`.** Branch `027-setup-wizard`, all seven phases, 57 of its 58 tasks.
