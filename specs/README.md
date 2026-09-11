@@ -50,14 +50,30 @@ answerable without reading fifty commit messages.
 | [025 the pages sidebar](025-pages-sidebar/) | 2026-09-07 | **before** | yes | yes | no | no |
 | [026 selling modes](026-selling-modes/) | 2026-09-08 | **before** | yes | yes | no | no |
 | [027 the setup wizard](027-setup-wizard/) | 2026-09-08 | **before** | yes | yes | yes | **yes** |
-| [028 formatting buttons](028-text-formatting/) | 2026-09-11 | **before** | yes | yes | no | **owed** |
+| [028 formatting buttons](028-text-formatting/) | 2026-09-11 | **before** | yes | yes | no | **yes** |
 
-**028's holistic review column says `owed`, not `no`, and the distinction is
-the point.** 025 and 026 say `no` because each is small enough that the rule in
-`CLAUDE.md` does not fire, and that is a judgement. 028 is five chunks, so the
-rule does fire and the review is mandatory. Two attempts at it died on the
-account session limit on 2026-09-11. `owed` is the honest word for a required
-step that has not happened, and it will stay in that column until it has.
+**028's holistic review column said `owed` for part of 2026-09-11**, because two
+attempts at it died on the account session limit, and a required step that has
+not happened should not be recorded as a judgement that it was unnecessary. It
+ran on the third attempt and the column is `yes`.
+
+**It found three ways the buttons corrupted a seller's text**, all in one
+function, all reaching a buyer's page, and none catchable by the tests that
+existed: Bold then Italic silently deleted the bold; a selection spanning two
+bold spans deleted four characters; and a selection crossing a line break
+published literal asterisks around the seller's sentences.
+
+The reason no test caught the first two is the part worth carrying, and it is
+the same finding 027's review produced: the only test that combined two marks
+used Bold and Cross out, and `**` and `~~` share no characters, so **it could
+not discriminate.**
+
+Verifying those findings turned up a fourth the review had scored as passing.
+`***word***` compiled to a bold containing a literal asterisk plus a stray one,
+so bold and italic together was broken in both orders and had been since feature
+008. Nothing had ever reached it, because typing three asterisks by hand is
+unlikely. Two buttons make it one tap, which is the general lesson: **an
+affordance makes a latent gap reachable.**
 
 **028 is worth reading for what it found rather than for what it built.** The
 feature is six buttons over a field. Building it surfaced three defects in

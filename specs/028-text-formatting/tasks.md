@@ -137,8 +137,8 @@ Copy tab.
 
 ## Phase 7: Whole-feature review and release
 
-- [ ] T048 **The holistic review over the whole feature diff**, with a fresh reviewer, run sequentially rather than in parallel. Five chunks is over `CLAUDE.md`'s line, so this is mandatory. It has found something real on every feature here that ran it, and on 027 it caught a wrong price going to buyers.
-- [ ] T049 Read every `CHUNK N:` comment left in the code and resolve or carry each one deliberately. Delete the ones that are done.
+- [x] T048 **The holistic review over the whole feature diff**, with a fresh reviewer, run sequentially rather than in parallel. Five chunks is over `CLAUDE.md`'s line, so this is mandatory. It has found something real on every feature here that ran it, and on 027 it caught a wrong price going to buyers.
+- [x] T049 Read every `CHUNK N:` comment left in the code and resolve or carry each one deliberately. Delete the ones that are done.
 - [x] T050 Drive the six buttons in a real browser per [quickstart.md](quickstart.md), including the fallback: switch the host to portable and confirm the marks go plain **and the message appears**.
 
   **Done, headless Chrome at 390x844, eleven checks, all clean.** The ones jsdom
@@ -171,10 +171,38 @@ Copy tab.
   document was scanned for all three and **none contains any of them**, so none
   of the three can arise and every one of these pages publishes what it
   published before.
-- [ ] T052 Handset pass on the Moto G7. `adb -s ZY2262PFGQ`, because an offline emulator is usually attached too. `MSYS_NO_PATHCONV=1` on `adb shell`. Check `dumpsys power` for `mWakefulness` **immediately before every** `screencap`: a capture under about 20 kB is a sleeping screen, not a broken app. Set `svc power stayon` back to `false` afterwards.
-- [ ] T053 On the handset specifically: the buttons are reachable with the software keyboard up, the selection survives the tap, and **Jakob's two pages do not move**. They are "Untitled page, 9/1/2026" and "Ridgeline Carry, 8/31/2026". Remove any probe page.
-- [ ] T054 Bump to versionCode 16 / versionName 0.11.0. **Use Edit, never `Set-Content`**, which writes a UTF-8 BOM into `build.gradle` and kills Gradle in about a second with no useful message. Check the first three bytes are `97,112,112` and not `239,187,191`.
-- [ ] T055 Build with `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"` set for the build only. Verify the APK carries the assets the build just emitted, which is the stale-assets failure that nearly shipped in 0.4.0, and that `apksigner verify` reports v2 true, v3 true and digest `c952b39c...`.
+- [x] T052 Handset pass on the Moto G7. `adb -s ZY2262PFGQ`, because an offline emulator is usually attached too. `MSYS_NO_PATHCONV=1` on `adb shell`. Check `dumpsys power` for `mWakefulness` **immediately before every** `screencap`: a capture under about 20 kB is a sleeping screen, not a broken app. Set `svc power stayon` back to `false` afterwards.
+- [x] T053 On the handset specifically: the buttons are reachable with the software keyboard up, the selection survives the tap, and **Jakob's two pages do not move**. They are "Untitled page, 9/1/2026" and "Ridgeline Carry, 8/31/2026". Remove any probe page.
+
+  **Done on the Moto G7 `ZY2262PFGQ`, release build, real key, versionCode 16 /
+  0.11.0 confirmed by `dumpsys package`. Do not re-probe these.**
+
+  - **THE BUTTONS ARE REACHABLE WITH THE SOFTWARE KEYBOARD UP.** All six sit
+    above the field once the keyboard opens, and the field keeps focus. This is
+    the one question no gate here can answer.
+  - **The placeholder is inserted SELECTED.** Bold pressed on an empty field,
+    then "deposit" typed, gave `**deposit**`: the typing replaced the
+    placeholder rather than joining it.
+  - **Both new marks reach the compiled output**, seen on the Copy tab as
+    `**deposit==limited==**` for rentry.
+  - **The glyph styling works on the device**: B bold, I italic, S struck
+    through, H carrying the accent wash. Six buttons on one row at handset
+    width with no wrapping and no sideways scroll.
+  - **PRINCIPLE V HOLDS, MEASURED.** Jakob's pages were "Untitled page, last
+    edited 9/1/2026" and "Ridgeline Carry, last edited 8/31/2026" before the
+    run and are exactly those two, with those dates, after it.
+  - **Two probe pages were made and both were removed.** The second existed
+    only so the first could be deleted without opening one of Jakob's, and
+    opening one was then proved harmless anyway: his 9/1 page was open when the
+    app launched and still read 9/1/2026 afterwards. Sixteen screenshots and a
+    UI dump were deleted from the device and `stay_on_while_plugged_in` is back
+    to 0.
+  - **`adb pull` needs `MSYS_NO_PATHCONV=1` too**, not just `adb shell`. The
+    handoff already says this about `adb shell`; the pull rewrote its remote
+    path to `C:/Program Files/Git/sdcard/...` and failed. PowerShell avoids it
+    entirely and is what the rest of this run used.
+- [x] T054 Bump to versionCode 16 / versionName 0.11.0. **Use Edit, never `Set-Content`**, which writes a UTF-8 BOM into `build.gradle` and kills Gradle in about a second with no useful message. Check the first three bytes are `97,112,112` and not `239,187,191`.
+- [x] T055 Build with `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"` set for the build only. Verify the APK carries the assets the build just emitted, which is the stale-assets failure that nearly shipped in 0.4.0, and that `apksigner verify` reports v2 true, v3 true and digest `c952b39c...`.
 - [ ] T056 Merge to master with `--no-ff`, push, tag `v0.11.0`, and publish the GitHub Release **with the signed APK attached**. Pushing commits is not shipping.
 - [ ] T057 Update `docs/HANDOFF.md` and the `CLAUDE.md` status block. The block does not update itself, and it has spent whole features saying the wrong thing three times.
 - [x] T058 Update the status table in `specs/README.md` with a row for 028, honest about which documents exist.
