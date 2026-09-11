@@ -4,6 +4,171 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## FEATURE 028 IS IN PROGRESS. Read this section before anything below it.
+
+**Branch `028-text-formatting`. Formatting buttons over a Text section, plus
+strikethrough and highlight.** Spec, plan, research, data model, tasks and all
+five implementation chunks are DONE and committed. 49 of 58 tasks ticked.
+`npm run verify` is green whole and unpiped.
+
+**Where it came from**: a tester said bold, italics and highlighting were
+missing. Two of the three have compiled since feature 008 and the only
+affordance was a hint telling the seller to type asterisks, which asks somebody
+who does not know Markdown to know Markdown. **The fifth time here that a
+requested feature already existed.** The previous four were fixed by a rename;
+this one needed buttons, because there was no control at all.
+
+**Not the paste import.** 028 was earmarked for that; Jakob chose the buttons
+instead on 2026-09-11. **Pasting a whole messy existing page is now 029**, to be
+specified once this ships. `docs/ROADMAP.md:259-290` has the standing thinking.
+
+**Three decisions from Jakob on 2026-09-11**, in the session that wrote them
+down: everything in one release rather than phased; a mark a host cannot render
+prints plain with a warning rather than being silently substituted with bold;
+the paste import stays out.
+
+### Current state, measured
+
+`npm run verify` whole and unpiped from PowerShell, exit 0, at `f756ddd`:
+**79 test files, 1551 tests, a11y 61, contrast 411 elements / 12 sections / 45
+fields / 32 folded / 39 hints with 0 failures in both palettes, PLUS the wizard
+walked at 7 screens with 7 of 7 help lines and 6 of 6 progress lines read by
+axe, PLUS the formatting bar at 6 of 6 buttons read by axe in both palettes,
+secret scan 456, dash scan 331, menu file and pwa gates clean.**
+
+Those are the numbers to expect. a11y was 60 and is 61; the formatting line is
+new. **If the formatting line says fewer than 6 read by axe, something stopped
+being measured** rather than something being fine.
+
+### What is LEFT, in order
+
+1. **T048, the holistic review, is NOT DONE and is MANDATORY.** Five chunks is
+   over `CLAUDE.md`'s line. **Two attempts died on the account session limit**
+   (resets 3:20pm America/Los_Angeles on 2026-09-11), which is the same failure
+   as 2026-09-09. Dispatch a fresh reviewer over `git diff efe8400..HEAD`. The
+   brief that was used is worth reusing: the toggle logic in `dom.ts` (`apply`,
+   `applyLines`), the `*` versus `**` interaction, round tripping button output
+   back through `compile()`, the `warned` Set's scope, and vacuous assertions.
+2. **T052 and T053, the handset pass.** The Moto G7 `ZY2262PFGQ` is connected
+   and an offline emulator is attached beside it, so **every `adb` call needs
+   `-s ZY2262PFGQ`**. JDK 21 is at `C:\Program Files\Java\jdk-21`. Check
+   `dumpsys power` for `mWakefulness` immediately before every `screencap`.
+   What to look for: the six buttons reachable with the software keyboard up,
+   the selection surviving a tap, and **Jakob's two pages not moving**. They are
+   "Untitled page, 9/1/2026" and "Ridgeline Carry, 8/31/2026".
+3. **T054 to T056, the release.** versionCode **16**, versionName **0.11.0**.
+   Bump with Edit, never `Set-Content`. Merge to master `--no-ff`, push, tag
+   `v0.11.0`, publish the Release with the signed APK attached.
+4. **T057, T058**: update this file and `specs/README.md`.
+
+### What this feature found that nobody was looking for
+
+Three real defects, none of them in the feature being built. All three are
+fixed, committed, and proved firing.
+
+1. **A seller's own sentence could become a heading.** `122113d`. `=` was
+   escaped nowhere, so a line of equals signs directly under a line of text
+   published as an `<h1>` on **both** paste hosts, with the equals signs
+   consumed. **One `=` was enough.** Underlining a heading by hand is a
+   plain-text habit older than Markdown. The dash form was always safe because
+   `LINE_MARKER` escapes `-`.
+
+   The fix is two narrow rules, not one broad one: every `=` in a run of two or
+   more, and a line that is equals signs and nothing else. **A lone `=` is
+   deliberately untouched**, because `Bundle \= 3 items` on the Copy screen is
+   the reverted `()` change repeated with a different character.
+
+   **Escaping only the first character of a run is not enough**, and that was
+   measured rather than reasoned about: `a \===b=== c` renders as
+   `a =<mark>b</mark>= c` on both hosts, because the survivors still pair.
+
+2. **The highlight grammar destroyed text, and a golden diff found it.**
+   `3807225`. A hand-drawn underline `=====` was matched as `==` plus `=` plus
+   `==`, a highlight around one equals sign. On rentry it published as `==\===`;
+   on portable, where the fallback drops markers, **five characters the seller
+   typed became `\=`**. Silent loss of somebody's work, on the path with no test
+   watching. Fixed with `(?<!=)==(?!=)` on both ends: a marker is the whole run
+   or it is not a marker.
+
+   **The same shape exists on `**` and is deliberately NOT fixed**: `*****` is
+   still bold around an asterisk. It loses no characters, because that path has
+   no marker-dropping fallback. Recorded at the site in `inline.ts`.
+
+3. **The contrast gate was measuring an off-screen panel at the wrong width.**
+   `ea2d219`, and it is why the baseline run failed before any 028 code existed.
+   Two independent defects:
+
+   - **axe ran while the wizard was still sliding in.** `.wizard-panel` carries
+     `animation: wizard-in 160ms ease-out` starting at `translateY(100%)`, which
+     puts every pixel below the viewport. axe can resolve a background for
+     nothing off screen, so it returned **0 of 7 help paragraphs and 0 of 6
+     progress lines, in both palettes**, with `0 contrast failure(s)` printed
+     beside it. A race, not a constant: probing caught the same screen at y=844
+     on one run and y=595 on the next. **Third time this project has fixed a
+     fixed wait in front of asynchronous work**, after `a6d1314` and `4d26e5f`.
+     Now waits on `panel.getAnimations()`.
+   - **`--window-size` does not size the content on Chrome 152**, and neither
+     `--headless=new` nor `--headless` produces a headless browser any more, so
+     the window carries a tab strip. The gate had been measuring at **500x749
+     while printing "0 overflow(s) at 390px"**. The overflow check compares
+     `scrollWidth` to `clientWidth`, which is self-relative, so it passed at any
+     width: the ruler moved with the thing it measured. Fixed the way
+     `scripts/menu-file.mjs` already does it, `Emulation.setDeviceMetricsOverride`
+     plus an assertion that fails if the viewport is not 390x844.
+
+   **Only the animation fix cured the symptom.** With it in place the wizard
+   reads 7 of 7 even at 500x749. The viewport defect is real and is kept on its
+   own merits.
+
+### Verified, do not re-probe
+
+- **Both paste hosts render both marks**, observed 2026-09-11 at each host's own
+  `/markdownx/markdownify/` endpoint, which is what its compose page previews
+  through. Nothing was published to either.
+  `docs/research/2026-09-11-marks-verification.md` has the tables and the
+  method. **text.is and rentry disagree again**: text.is pairs `==` markers with
+  a space just inside them and rentry does not, so `a == b and c == d`
+  highlights on one and not the other. Third divergence between two hosts on the
+  same stack.
+- **A backslash protects `=` on both hosts**, so no numeric character reference
+  was needed. Not obvious: `~`, `^` and `$` all needed one.
+- **No shipped page moved.** 9 documents, 4 targets, **36 outputs, 57,648
+  bytes**, which is exactly the number feature 026's own sweep recorded. Method
+  in `tasks.md` T051: 028 changes emitted bytes in exactly three situations and
+  no starting point or the example contains any of them.
+- **The browser pass is done**, T050, eleven checks at 390x844. A real pointer
+  press on Bold through CDP produced `Pay a **deposit** first`, **focus never
+  left the textarea**, the word stayed selected, and the Copy tab carried it.
+  No sideways scroll, all six buttons at least 44 by 44.
+- **The warning reaches the seller through machinery that already existed.**
+  Preview lists diagnostics under "things to know before you publish" with a
+  button to the section. `app/tests/mark-warning.test.ts` asserts it, and
+  writing it found a seam: **the page preview shows the words plain for a host
+  that cannot highlight while the menu file preview, on the same screen, shows
+  the highlight**, because it compiles for `MENU_FILE`, which can. Both are
+  true. That is why the fallback had to be per target.
+
+### Traps this feature added to the list
+
+- **A heredoc through the Bash tool mangles backslashes in test expectations.**
+  Writing `"a \\=\\=x\\=\\= b"` produced `"a \=\=x\=\= b"` in the file, which in
+  JavaScript is just `"a ==x== b"`: the expected value became identical to the
+  input and **eight assertions passed while comparing a string to itself.**
+  `CLAUDE.md` already forbids `cat >>` for corruption; this is the same tool
+  being wrong in a quieter way. **Use Write or Edit for anything containing
+  backslashes.**
+- **An undefined custom property is not an error.** `--accent-soft` was written
+  instead of `--accent-wash`. It would have resolved to nothing, left the
+  highlight button looking like the other five, and passed every gate here,
+  because no gate reads a colour a browser computed. Same class as the white on
+  white row `6b8bc45` records. Caught by grepping the palette.
+- **axe returns no result at all for a symbol glyph.** The Link and Bullet list
+  buttons were a chain emoji and a bullet character, and the new contrast guard
+  reported 6 drawn and **4 read by axe** in both palettes. They are short words
+  now. The four letter glyphs beside them measured fine.
+
+---
+
 **Released**: `v0.10.1`, versionCode 15, versionName 0.10.1, the empty state's
 button swap. `v0.10.0` is `fdf1548`, versionCode 14.
 `v0.9.0` is `c0f58fc`, `v0.8.0` is `49ab971`, `v0.7.1` is `d27f470`, `v0.7.0` is
