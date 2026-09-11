@@ -299,6 +299,68 @@ main {
   line-height: 1.55;
 }
 
+/*
+ * The formatting buttons over a text section. Feature 028.
+ *
+ * Six of them at 390px, which is the width this project gates against and the
+ * width of the handset of record. `--tap` is the 44px minimum, and `flex-wrap`
+ * is the honest answer for anything narrower rather than a row that overflows:
+ * the page must never scroll sideways, and a control a seller cannot reach is
+ * not a control.
+ *
+ * Joined to the box below it, because it belongs to that box and to no other.
+ * That is the whole reason it can be here at all: this is the only field in the
+ * application whose contents can carry formatting.
+ */
+.format-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.format-bar .btn {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 0.5rem;
+  /* The glyphs are letters, so they need to read as marks rather than as a
+     word. The bold one is bold, the italic one is italic, and the crossed out
+     one is crossed out, which is the fastest label there is. */
+  font-size: var(--t-sm);
+  line-height: 1;
+}
+
+.format-bar .btn:nth-child(1) {
+  font-weight: 800;
+}
+
+.format-bar .btn:nth-child(2) {
+  font-style: italic;
+}
+
+.format-bar .btn:nth-child(3) {
+  text-decoration: line-through;
+}
+
+/*
+ * The highlight button carries the thing it does, which is the one of the six
+ * that no letterform can show on its own.
+ *
+ * `--accent-wash` rather than a yellow: the palette has to work in both
+ * schemes, and a fixed yellow that passes contrast in light fails in dark. The
+ * contrast gate measures this button in both.
+ *
+ * It was written as `--accent-soft` first, which does not exist. That would
+ * have resolved to nothing, left the button looking like the other five, and
+ * passed every gate in the repository, because no gate reads a colour a
+ * browser computed and an undefined custom property is not an error. Caught by
+ * grepping the palette rather than by anything automatic, which is worth
+ * knowing: this is the same class as the white on white row `6b8bc45` records.
+ */
+.format-bar .btn:nth-child(4) {
+  background: var(--accent-wash);
+}
+
 /* A checkbox row, not a stretched text box. Overrides `.field input` above by
    specificity, so the touch target rule it inherits from there still holds. */
 .field.checkbox {

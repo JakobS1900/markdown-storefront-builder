@@ -56,11 +56,41 @@ describe("characters the host does not unescape", () => {
     expect(out).toContain("&#36;45");
   });
 
-  it("still stops the character forming a construct", () => {
-    // Doubled tildes are strikethrough on this host. As entities they are text.
-    const out = md({ id: "p", kind: "prose", text: "~~not struck~~" });
-    expect(out).not.toContain("~~");
-    expect(out).toContain("&#126;&#126;");
+  /**
+   * AMENDED BY FEATURE 028, and the amendment is argued rather than applied.
+   *
+   * This test used to compile `~~not struck~~` in a text section and assert the
+   * output contained no real `~~` at all. That was correct while strikethrough
+   * was not a construct this compiler knew: a doubled tilde could only be an
+   * accident, and an accident that becomes a construct on somebody else's
+   * domain is the thing the escaper exists to prevent.
+   *
+   * Feature 028 put strikethrough in the whitelist, so `~~struck~~` in a text
+   * section is now something a seller ASKED for, and refusing it would be the
+   * compiler ignoring an instruction rather than defending anybody.
+   *
+   * The property underneath has not changed and is what is asserted now: a
+   * tilde the grammar did not claim can still never form a construct. That is
+   * the whole difference between a whitelist and a filter, and it is why
+   * `escapeText` forcing `~` to `&#126;` is still load bearing: seller text
+   * cannot contain a live tilde, so a real `~~` in the output can only have
+   * been written by `emitInline`.
+   */
+  it("makes a strikethrough only where the grammar claimed one", () => {
+    const struck = md({ id: "p", kind: "prose", text: "~~struck~~" });
+    expect(struck).toContain("~~struck~~");
+
+    // Everything the grammar did not claim is still an entity and still inert.
+    for (const text of ["~~", "~~ spaced ~~", "an unclosed ~~strike", "50~60"]) {
+      const out = md({ id: "p", kind: "prose", text });
+      expect(out, `${JSON.stringify(text)} is not a mark anybody asked for`).not.toContain("~~");
+      expect(out).toContain("&#126;");
+    }
+  });
+
+  it("still writes a lone tilde as an entity even beside a real mark", () => {
+    const out = md({ id: "p", kind: "prose", text: "~~struck~~ and a stray ~" });
+    expect(out).toBe("~~struck~~ and a stray &#126;\n");
   });
 });
 

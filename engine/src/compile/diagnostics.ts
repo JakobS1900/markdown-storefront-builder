@@ -18,7 +18,16 @@ export type DiagnosticCode =
   | "local_image_unsupported"
   | "item_omitted"
   | "picture_superseded"
-  | "section_empty";
+  | "section_empty"
+  /**
+   * A mark the seller applied that this host does not render.
+   *
+   * Carries `capability` so the message can name which mark, and `blockId` so
+   * the app can point at the section. Shaped on `local_image_unsupported`,
+   * including FR-081: the message never quotes the seller's own words back,
+   * because a warning is somewhere a seller might screenshot.
+   */
+  | "mark_unsupported";
 
 export type DiagnosticSeverity = "info" | "warning";
 

@@ -341,6 +341,25 @@ function proseForm(block: Extract<Block, { kind: "prose" }>, onChange: OnChange)
       label: "Text",
       value: block.text,
       multiline: true,
+      // THE ONLY FIELD IN THE APP THAT GETS THESE BUTTONS, and the reason is
+      // structural rather than a judgement about which fields matter.
+      // `formatInline` is called from one place in the engine, the text section
+      // emitter, so this is the only field whose contents can carry formatting
+      // at all. The other four multiline fields are line-oriented lists that
+      // publish as plain text; a Bold button on one of them would promise
+      // something the compiler refuses.
+      //
+      // Named by the section so three text sections do not give a screen
+      // reader three identical "Bold" buttons, the same problem `rowTools`
+      // above solves with `within`.
+      formatting: block.heading === undefined || block.heading.trim() === ""
+        ? "this text section"
+        : `the "${block.heading.trim()}" section`,
+      // Kept, and not replaced by the buttons. It is still true, and it still
+      // serves somebody who would rather type than tap. FR-028-11. The buttons
+      // exist because a tester read this exact sentence and still reported the
+      // feature missing, which is the whole argument for the feature and not an
+      // argument against the sentence.
       hint: "Blank line between paragraphs. **bold**, *italic*, [text](https://address) for a link, and lines starting with a dash for a list.",
       onInput: (text) => onChange({ ...nowBlock(block), text }),
     }),

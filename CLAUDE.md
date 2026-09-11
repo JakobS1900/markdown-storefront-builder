@@ -8,16 +8,21 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
-**Nothing is in progress right now.** The next feature has not been started.
+**Feature 028 is IN PROGRESS**: `specs/028-text-formatting/`, formatting buttons
+over a Text section. Spec, plan, research, data model and quickstart are
+written; `specs/028-text-formatting/plan.md` is the plan of record. Five chunks,
+so its holistic review is mandatory rather than optional.
+
+**028 is NOT the paste import.** It was earmarked for that and Jakob chose the
+formatting buttons instead on 2026-09-11, after a tester reported bold, italics
+and highlighting as missing. Two of those three have worked since feature 008
+and had no control, only a hint telling the seller to type asterisks. **Pasting
+a whole messy existing page is now 029**, to be specified once 028 ships.
 
 Most recently finished: `specs/027-setup-wizard/`, the question by question
 front door, released as `v0.10.0` on 2026-09-11 and verified on the handset.
 All seven phases, 57 of its 58 tasks, with T051 explained in `tasks.md` rather
 than ticked. 024, 025 and 026 before it are also done and released.
-
-**The next feature is 028, pasting a whole messy existing page** from rentry or
-pastebin, which Jakob chose to defer out of 027 on 2026-09-08. Not specified
-yet.
 
 **That is a claim with an expiry date**, true only while `docs/HANDOFF.md` still
 says so. Believe the handoff over this block, always.

@@ -246,6 +246,37 @@ async function loadRealContent() {
     "the folded fields to be on screen",
   );
 
+  // The formatting buttons, feature 028, measured on their own before the
+  // Prices section is reopened for the main pass.
+  //
+  // WHY A PASS OF ITS OWN. Only a text section draws them, and selecting a
+  // section deselects the last one, so measuring them inside the main pass
+  // would mean giving up the Prices section and the twelve folded fields that
+  // come with it. Same shape and same reason as the wizard's own pass above.
+  //
+  // The highlight button is the one that needs a real browser rather than
+  // jsdom: it is the only control in the application whose background is
+  // `--accent-wash`, and a wash that passes contrast in light can fail in dark.
+  // `app/tests/a11y.test.ts` already checks the names and the roles, and lays
+  // nothing out.
+  const format = await auditFormatBar();
+
+  await evaluate(`(() => {
+    const b = [...document.querySelectorAll('#surface button')].find(x => /^Open Prices/.test((x.textContent||'').trim()));
+    if (b) b.click();
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface fieldset.item').length >= 1`,
+    "the Prices section to come back for the main pass",
+  );
+  await evaluate(`(() => {
+    for (const d of document.querySelectorAll('#surface details')) d.open = true;
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface details[open] .field').length >= 5`,
+    "the folded fields to be back on screen",
+  );
+
   // And the pages panel, which is a surface of its own since feature 025.
   //
   // It moved out of the Build surface into a drawer, and this gate measured 164
@@ -267,6 +298,10 @@ async function loadRealContent() {
     if (t) t.click();
   })()`);
   await waitFor(`!!document.querySelector('.pages-panel .pages li')`, "the pages panel to list a page");
+
+  // Handed back rather than measured here, because the caller is what reports
+  // and what counts failures. Everything else this function does is setup.
+  return format;
 }
 
 /**
@@ -316,6 +351,35 @@ const WIZARD_SCREEN = `(async () => {
   const panel = document.querySelector('#wizard-panel');
   const layer = document.querySelector('.wizard');
   const page = document.documentElement;
+
+  // WAIT FOR THE PANEL TO STOP MOVING BEFORE MEASURING ANYTHING ON IT.
+  //
+  // '.wizard-panel' carries 'animation: wizard-in 160ms ease-out', and
+  // '@keyframes wizard-in' starts at 'translateY(100%)', which puts every pixel
+  // of the panel BELOW the bottom of the viewport. axe resolves a background by
+  // sampling points of an element's rect, and it can resolve nothing for an
+  // element that is not on screen, so a run that lands inside those 160ms
+  // returns no result at all for the panel's text.
+  //
+  // That is not a smaller number. It is 0 of 7 help paragraphs and 0 of 6
+  // progress lines, in both palettes, with '0 contrast failure(s)' beside it,
+  // which is precisely the vacuous pass the R6 guard was written to refuse. The
+  // guard did refuse it, which is the only reason this was ever visible rather
+  // than being a green gate measuring an off-screen panel.
+  //
+  // It is also a RACE and not a constant. Probing on 2026-09-11 caught the same
+  // screen at y=844 on one run and y=595 on the next, and the walk repaints on
+  // every press so the animation restarts for every screen. That is why this
+  // failed on this machine and passed on the one before it.
+  //
+  // Waited for by asking the animations whether they have finished, not by
+  // sleeping for 160ms and hoping. This project has fixed the same shape of bug
+  // twice already, in 'a6d1314' and '4d26e5f': a fixed wait in front of
+  // asynchronous work is a bug with a delay on it. An empty animation list
+  // resolves immediately, so removing the animation later costs nothing here.
+  await Promise.all(
+    panel.getAnimations().map(a => a.finished.catch(() => undefined)),
+  );
 
   // MEASURED FIRST, WITH THE PAGE EXACTLY AS A SELLER HAS IT. The axe run below
   // hides everything behind the layer, and a width compared against a hidden
@@ -436,6 +500,74 @@ const WIZARD_SCREEN = `(async () => {
     wide: wide,
   });
 })()`;
+
+/**
+ * Opens a text section and measures the formatting buttons. Feature 028.
+ *
+ * Returns what axe REACHED as well as what the page drew, which is the lesson
+ * feature 027 Phase 6 paid for: a structural count is satisfied by an element
+ * nobody measured. Six buttons on screen and two of them checked is a gate
+ * reporting a pass about four controls it never looked at.
+ */
+async function auditFormatBar() {
+  await waitFor(
+    `[...document.querySelectorAll('#surface button')].some(x => /^Open /.test((x.textContent||'').trim()))`,
+    "the example to offer a section to open",
+  );
+  // "How to order" rather than the first text section on the page, because the
+  // first one is the demonstration notice and a later session may well delete
+  // it. Any text section would do; this one is named so a failure says which.
+  await evaluate(`(() => {
+    const b = [...document.querySelectorAll('#surface button')]
+      .find(x => /^Open How to order/.test((x.textContent||'').trim()))
+      ?? [...document.querySelectorAll('#surface button')]
+        .find(x => /^Open /.test((x.textContent||'').trim()));
+    if (b) b.click();
+  })()`);
+  await waitFor(
+    `document.querySelectorAll('#surface .format-bar button').length >= 6`,
+    "the text section to draw its formatting buttons",
+  );
+
+  return JSON.parse(
+    await evaluate(`(async () => {
+      const bar = document.querySelector('#surface .format-bar');
+      const buttons = [...bar.querySelectorAll('button')];
+
+      const r = await axe.run(document.body, {
+        runOnly: { type: 'rule', values: ['color-contrast'] },
+        resultTypes: ['violations', 'passes', 'incomplete'],
+      });
+
+      const reached = new Map();
+      for (const group of [['passes', r.passes], ['incomplete', r.incomplete], ['violations', r.violations]]) {
+        for (const v of group[1]) {
+          for (const n of v.nodes) {
+            if (typeof n.target[0] !== 'string') continue;
+            const found = document.querySelector(n.target[0]);
+            if (found) reached.set(found, group[0]);
+          }
+        }
+      }
+      const measured = b => reached.get(b) === 'passes' || reached.get(b) === 'violations';
+
+      return JSON.stringify({
+        drawn: buttons.length,
+        measured: buttons.filter(measured).length,
+        unmeasured: buttons
+          .filter(b => !measured(b))
+          .map(b => ({ name: b.getAttribute('aria-label') || '', how: reached.get(b) || 'not evaluated' })),
+        nodes: r.violations.flatMap(v => v.nodes
+          .filter(n => typeof n.target[0] === 'string' && (document.querySelector(n.target[0])?.closest('.format-bar')))
+          .map(n => ({
+            target: n.target.join(' '),
+            summary: (n.failureSummary || '').split('\\n').filter(Boolean).slice(-1)[0] || '',
+            html: (n.html || '').slice(0, 90),
+          }))),
+      });
+    })()`),
+  );
+}
 
 /**
  * Opens the wizard, measures every screen of it, and closes it again.
@@ -572,7 +704,7 @@ async function auditScheme(scheme) {
   await injectAxe();
   const wizard = await auditWizard();
 
-  await loadRealContent();
+  const format = await loadRealContent();
 
   await injectAxe();
   const result = await evaluate(`(async () => {
@@ -615,7 +747,7 @@ async function auditScheme(scheme) {
       folded: document.querySelectorAll('#surface details[open] .field').length,
     });
   })()`);
-  return { ...JSON.parse(result), wizard };
+  return { ...JSON.parse(result), wizard, format };
 }
 
 let failed = 0;
@@ -624,8 +756,46 @@ try {
   await send("Page.enable");
   await send("Runtime.enable");
 
+  // THE VIEWPORT IS SET HERE, NOT BY `--window-size`, AND IT IS THEN CHECKED.
+  //
+  // This gate asked Chrome for a 390 by 844 window and never once looked at
+  // what it got. On Chrome 152 it got 500 by 749: neither `--headless=new` nor
+  // `--headless` produces a headless browser any more, so the window carries a
+  // tab strip and an address bar, and `--window-size` sizes the window rather
+  // than the content. All four combinations were measured on 2026-09-11 and
+  // only a device metrics override gives the page the size this gate claims to
+  // be testing at.
+  //
+  // The consequence was not a smaller number, which is what makes it worth
+  // this comment. The whole wizard panel starts at y=749 in a 749 tall
+  // viewport, so every one of its help and progress paragraphs sat outside the
+  // viewport, axe could resolve a background for none of them, and the walk
+  // reported "0 of 7 read by axe" in both palettes. The R6 guard from Phase 6
+  // of feature 027 caught it and refused the pass, which is the only reason
+  // this was ever visible.
+  //
+  // `scripts/menu-file.mjs` already had both halves of this, and its comment
+  // records why: a gate whose ruler moves with the thing it measures reports a
+  // pass about nothing. Its `mobile: false` is copied here for the same reason
+  // it gives, so that a page wider than the screen overflows rather than
+  // widening the layout viewport to fit itself.
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+
+  const got = await evaluate(`innerWidth + 'x' + innerHeight`);
+  if (got !== "390x844") {
+    console.error(
+      `  the viewport is ${got} and this gate only means anything at 390x844. Everything it measures, including "0 overflow(s) at 390px", would be measured somewhere else.`,
+    );
+    failed++;
+  }
+
   for (const scheme of ["light", "dark"]) {
-    const { violations, checked, sections, fields, hints, pages, folded, wizard } =
+    const { violations, checked, sections, fields, hints, pages, folded, wizard, format } =
       await auditScheme(scheme);
     const nodes = violations.flatMap((v) => v.nodes);
 
@@ -697,6 +867,28 @@ try {
     // is the trap three tests fell into earlier in this project. The example
     // storefront has several sections and an opened one has several fields, so
     // this refuses to report a pass it did not earn.
+    // The formatting buttons, feature 028. Drawn AND measured, both demanded,
+    // because a structural count is satisfied by an element axe skipped and
+    // this project has now caught that four times.
+    console.log(
+      `${scheme} formatting: ${format.drawn} buttons drawn (${format.measured} read by axe), ${format.nodes.length} contrast failure(s)`,
+    );
+    if (format.drawn < 6 || format.measured < 6) {
+      console.error(
+        `  ${scheme} formatting: ${format.drawn} of 6 buttons drawn and ${format.measured} of 6 read by axe. The rest were never checked, so this run proves less than it claims.`,
+      );
+      for (const miss of format.unmeasured) {
+        console.error(`    ${miss.name}: ${miss.how}`);
+      }
+      failed++;
+    }
+    for (const n of format.nodes) {
+      failed++;
+      console.log(`  ${n.target}`);
+      console.log(`    ${n.summary}`);
+      console.log(`    ${n.html}`);
+    }
+
     if (sections < 3 || fields < 3 || pages < 1 || folded < 5) {
       console.error(
         `  ${scheme}: only ${sections} sections, ${fields} fields, ${folded} folded fields and ${pages} listed pages on screen. Something did not render, so this run proves less than it claims.`,

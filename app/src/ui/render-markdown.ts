@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Renders the compiled Markdown for the preview.
  *
  * Constitution Principle VII: the preview renders the COMPILED OUTPUT, never an
@@ -112,9 +112,18 @@ function decodeEntities(text: string): string {
     .replace(/&amp;/g, "&");
 }
 
-/** Backslash escapes the escaper added, removed for display. */
+/**
+ * Backslash escapes the escaper added, removed for display.
+ *
+ * `=` joined this set with feature 028, and it is not optional. The escaper now
+ * backslashes every equals sign in a run of two or more, and a line that is
+ * equals signs and nothing else, so that a seller's own writing cannot become a
+ * setext heading or a highlight on a paste host. Without the same character
+ * here, the preview shows the seller `A \=\=highlight\=\=` and the Copy tab
+ * would be the only honest surface in the app.
+ */
 function unescape(text: string): string {
-  return decodeEntities(text).replace(/\\([\\`*_{}[\]()#+\-.!|~^$])/g, "$1");
+  return decodeEntities(text).replace(/\\([\\`*_{}[\]()#+\-.!|~^$=])/g, "$1");
 }
 
 /**
@@ -140,7 +149,23 @@ function inline(text: string): DocumentFragment {
   // Both halves are needed. The escaping stops the seller's text from ever
   // supplying the delimiter; this stops the delimiter being looked for in the
   // wrong place.
-  const pattern = /(!?)\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)|(\*\*)([^*]+)\*\*|(\*)([^*]+)\*/g;
+  // `~~` and `==` joined with feature 028, and they are safe here for the same
+  // reason `**` is: this renderer only ever sees compiled output, and a live
+  // tilde or a live doubled equals sign cannot be seller text by the time it
+  // gets here. The escaper turns a seller's `~` into `&#126;` and backslashes
+  // every `=` in a run of two or more, so both markers in this pattern can only
+  // have been written by `emitInline`.
+  //
+  // That is the same argument the label pattern above rests on, and it is worth
+  // restating rather than assumed: the forgery bug happened because a pattern
+  // was asked to tell the seller's words from the compiler's structure when
+  // they were the same characters. Here they cannot be the same characters.
+  // `***` before `**` before `*`, because the longer run has to win. Without
+  // the first of those, `***word***` matched the `**` branch, whose content
+  // class `[^*]+` cannot start with an asterisk, so the whole thing fell
+  // through to plain text and the seller read their own asterisks.
+  const pattern =
+    /(!?)\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)|(\*\*\*)([^*]+)\*\*\*|(\*\*)([^*]+)\*\*|(~~)([^~]+)~~|(==)([^=]+)==|(\*)([^*]+)\*/g;
 
   let last = 0;
   for (const match of text.matchAll(pattern)) {
@@ -172,12 +197,28 @@ function inline(text: string): DocumentFragment {
         frag.append(a);
       }
     } else if (match[4] !== undefined) {
+      // Bold and italic together. A strong holding an em, which is what the
+      // compiler emits it as and what it means.
       const strong = document.createElement("strong");
-      strong.append(unescape(match[5] ?? ""));
+      const em = document.createElement("em");
+      em.append(inline(match[5] ?? ""));
+      strong.append(em);
       frag.append(strong);
     } else if (match[6] !== undefined) {
+      const strong = document.createElement("strong");
+      strong.append(inline(match[7] ?? ""));
+      frag.append(strong);
+    } else if (match[8] !== undefined) {
+      const del = document.createElement("del");
+      del.append(inline(match[9] ?? ""));
+      frag.append(del);
+    } else if (match[10] !== undefined) {
+      const mark = document.createElement("mark");
+      mark.append(inline(match[11] ?? ""));
+      frag.append(mark);
+    } else if (match[12] !== undefined) {
       const em = document.createElement("em");
-      em.append(unescape(match[7] ?? ""));
+      em.append(inline(match[13] ?? ""));
       frag.append(em);
     }
 

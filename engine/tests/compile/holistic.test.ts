@@ -41,8 +41,20 @@ describe("H-2: every declared capability must be consulted by something", () => 
       // `localImages` earns its place here the same way the rest did: the menu,
       // gallery and profile emitters all consult it, and the fallback it
       // declares is proved by `local-image-never-published.test.ts`.
+      "highlight",
       "localImages",
       "maxHeadingLevel",
+      // `strikethrough` and `highlight` earn their place the same way the rest
+      // did, and this list is the gate that makes that a rule rather than a
+      // hope. Both are consulted by `emitInline`, and each declares a fallback
+      // proved by its own test in `inline.test.ts`: the words are published
+      // plain and `mark_unsupported` names the section.
+      //
+      // Adding them to the list was a separate, deliberate act from adding them
+      // to `Capabilities`, and the gate made it so: the contract was written
+      // first and this test failed until a consumer existed. That is the rule
+      // in `capabilities.ts` working rather than being quoted.
+      "strikethrough",
       "tables",
       "thematicBreak",
     ]);
@@ -63,6 +75,8 @@ describe("H-2: every declared capability must be consulted by something", () => 
         "tables",
         "hardBreak",
         "localImages",
+        "strikethrough",
+        "highlight",
         "escapeStyle",
         "maxBytes",
       ] as const) {

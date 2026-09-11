@@ -50,6 +50,47 @@ answerable without reading fifty commit messages.
 | [025 the pages sidebar](025-pages-sidebar/) | 2026-09-07 | **before** | yes | yes | no | no |
 | [026 selling modes](026-selling-modes/) | 2026-09-08 | **before** | yes | yes | no | no |
 | [027 the setup wizard](027-setup-wizard/) | 2026-09-08 | **before** | yes | yes | yes | **yes** |
+| [028 formatting buttons](028-text-formatting/) | 2026-09-11 | **before** | yes | yes | no | **yes** |
+
+**028's holistic review column said `owed` for part of 2026-09-11**, because two
+attempts at it died on the account session limit, and a required step that has
+not happened should not be recorded as a judgement that it was unnecessary. It
+ran on the third attempt and the column is `yes`.
+
+**It found three ways the buttons corrupted a seller's text**, all in one
+function, all reaching a buyer's page, and none catchable by the tests that
+existed: Bold then Italic silently deleted the bold; a selection spanning two
+bold spans deleted four characters; and a selection crossing a line break
+published literal asterisks around the seller's sentences.
+
+The reason no test caught the first two is the part worth carrying, and it is
+the same finding 027's review produced: the only test that combined two marks
+used Bold and Cross out, and `**` and `~~` share no characters, so **it could
+not discriminate.**
+
+Verifying those findings turned up a fourth the review had scored as passing.
+`***word***` compiled to a bold containing a literal asterisk plus a stray one,
+so bold and italic together was broken in both orders and had been since feature
+008. Nothing had ever reached it, because typing three asterisks by hand is
+unlikely. Two buttons make it one tap, which is the general lesson: **an
+affordance makes a latent gap reachable.**
+
+**028 is worth reading for what it found rather than for what it built.** The
+feature is six buttons over a field. Building it surfaced three defects in
+shipped code that nobody was looking for: a seller's own sentence could become a
+heading on both paste hosts because `=` was escaped nowhere; the new highlight
+grammar destroyed four characters of a hand-drawn underline, found by reading a
+golden diff rather than by a test; and the contrast gate had been measuring an
+off-screen wizard panel at 500x749 while printing "0 overflow(s) at 390px". The
+last of those is the fourth time a gate here has been green about a surface it
+never measured, and the R6 guard that feature 027 built is the only reason it
+was visible.
+
+**It is also the fifth time a requested feature already existed.** Bold, italics
+and links have compiled since feature 008. The previous four cases were fixed by
+renaming a control; this one could not be, because there was no control at all,
+only a hint telling the seller to type asterisks. That is the sharpest statement
+of what this project is for that the repository contains.
 
 024 is the fullest set in the repository: spec, plan, tasks, research, data
 model, contracts, a quickstart, an analysis and a holistic review. It is also

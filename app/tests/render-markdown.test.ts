@@ -39,6 +39,18 @@ function renderCompiled(...blocks: Block[]): HTMLElement {
   return render(compile(page(...blocks), "portable").markdown);
 }
 
+/**
+ * The same, for a host that renders the marks feature 028 added.
+ *
+ * `portable` declares neither, so compiling there drops them and would make a
+ * test of `del` and `mark` assert against output no emitter produces for a host
+ * that has them. Still compiled rather than hand written: the point of this
+ * whole file is that the renderer draws what the compiler emits.
+ */
+function renderCompiledFor(target: string, ...blocks: Block[]): HTMLElement {
+  return render(compile(page(...blocks), target).markdown);
+}
+
 const DANGEROUS = /^\s*(javascript|data|vbscript|file):/i;
 
 function urls(host: HTMLElement): string[] {
@@ -218,9 +230,20 @@ describe("the entities the escaper produces are shown as their characters", () =
     expect(host.textContent).not.toContain("&#");
   });
 
-  it("shows a doubled tilde as text, matching what the host will do", () => {
-    const host = renderCompiled({ id: "p", kind: "prose", text: "~~not struck~~" });
-    expect(host.textContent).toContain("~~not struck~~");
+  it("shows a tilde the grammar did not claim as text, matching what the host will do", () => {
+    // AMENDED BY FEATURE 028. This compiled `~~not struck~~` and asserted the
+    // preview showed those characters literally, which was right while
+    // strikethrough was not a construct: a doubled tilde could only be an
+    // accident. It is now something a seller can ask for, and `renderCompiled`
+    // compiles for `portable`, which does not render it, so the markers are
+    // dropped and the words stay. That is the fallback, seen exactly where
+    // Principle VII promises the seller will see it.
+    //
+    // The property underneath is unchanged and is what is asserted: a tilde the
+    // grammar did not claim is still inert.
+    const host = renderCompiled({ id: "p", kind: "prose", text: "~~ spaced ~~ and 50~60" });
+    expect(host.textContent).toContain("~~ spaced ~~");
+    expect(host.textContent).toContain("50~60");
     expect(host.querySelector("del, s, strike")).toBeNull();
   });
 
@@ -284,5 +307,112 @@ describe("it draws what the compiler emits", () => {
 
   it("makes a rule from a divider", () => {
     expect(render("---").querySelector("hr")).not.toBeNull();
+  });
+
+  it("shows escaped equals signs as equals signs, not as backslashes", () => {
+    // Compiled, not hand written, because the point is that this renderer and
+    // the escaper agree. Feature 028 made the escaper backslash every equals
+    // sign in a run of two or more, so a seller's own writing cannot become a
+    // setext heading or a highlight on a paste host. If `=` were missing from
+    // this renderer's strip list the seller would read `A \=\=highlight\=\=`
+    // in the preview while the Copy tab showed the truth.
+    // Written with the SPACED form on purpose. `==highlight==` is a mark a
+    // seller asked for, and `renderCompiled` compiles for `portable`, which
+    // drops it. `a == b` is the form the grammar refuses on every host, so it
+    // is escaped everywhere and is the case that actually exercises this strip
+    // list rather than the fallback.
+    const host = renderCompiled({
+      id: "t",
+      kind: "prose",
+      text: "a == b and Bundle = 3 items",
+    });
+    expect(host.textContent).toContain("a == b and Bundle = 3 items");
+    expect(host.textContent).not.toContain("\\=");
+    // Still text rather than a mark, because the grammar refused it.
+    expect(host.querySelector("mark")).toBeNull();
+  });
+
+  it("draws a strikethrough and a highlight on a host that renders them", () => {
+    const host = renderCompiledFor("rentry", {
+      id: "t",
+      kind: "prose",
+      text: "~~Sold out~~ and ==limited run==",
+    });
+    expect(host.querySelector("del")?.textContent).toBe("Sold out");
+    expect(host.querySelector("mark")?.textContent).toBe("limited run");
+  });
+
+  it("draws neither on a host that cannot, which is Principle VII on screen", () => {
+    // The seller sees the words flat, here, before publishing. The compiler
+    // raised a warning at the same moment; this is the other half of it.
+    const host = renderCompiledFor("portable", {
+      id: "t",
+      kind: "prose",
+      text: "~~Sold out~~ and ==limited run==",
+    });
+    expect(host.querySelector("del")).toBeNull();
+    expect(host.querySelector("mark")).toBeNull();
+    expect(host.textContent).toContain("Sold out and limited run");
+  });
+
+  it("keeps formatting inside a mark", () => {
+    const host = renderCompiledFor("rentry", {
+      id: "t",
+      kind: "prose",
+      text: "==a **bold** word==",
+    });
+    expect(host.querySelector("mark strong")?.textContent).toBe("bold");
+  });
+
+  it("draws bold and italic together", () => {
+    const host = renderCompiledFor("rentry", {
+      id: "t",
+      kind: "prose",
+      text: "***word***",
+    });
+    expect(host.querySelector("strong em")?.textContent).toBe("word");
+    // Not the seller's own asterisks. Before the `***` branch was added ahead of
+    // the `**` one, this fell through to plain text, because `**`'s content
+    // class cannot begin with an asterisk.
+    expect(host.textContent).not.toContain("*");
+  });
+
+  it("draws a link inside bold, which it used to lose", () => {
+    // A PRE-EXISTING GAP, closed as a consequence of this feature rather than
+    // as its own fix, and recorded so it is not mistaken for new behaviour.
+    // The compiler has emitted `**[shop](url)**` since feature 008 and
+    // `inline.test.ts` asserts it. This renderer set the inner text with
+    // `unescape` rather than recursing, so the seller's link arrived in the
+    // preview as the literal characters of a link. Feature 028 needed
+    // recursion for `==a **bold** word==` and the four branches now share it.
+    const host = renderCompiledFor("rentry", {
+      id: "t",
+      kind: "prose",
+      text: "**[my shop](https://e.test/shop)**",
+    });
+    expect(host.querySelector("strong a")?.getAttribute("href")).toBe("https://e.test/shop");
+    expect(host.querySelector("strong a")?.textContent).toBe("my shop");
+  });
+
+  it("cannot be made to draw a mark out of a seller's own words", () => {
+    // The forgery class, one construct along. An item name carrying the markers
+    // must not become a mark, on any host, because the grammar never claimed
+    // it: the spaced form is refused and the escaper backslashes the equals
+    // signs and entity encodes the tildes.
+    const host = renderCompiledFor("rentry", {
+      id: "t",
+      kind: "prose",
+      text: "a == b and 50~60 and == spaced ==",
+    });
+    expect(host.querySelector("mark")).toBeNull();
+    expect(host.querySelector("del")).toBeNull();
+    expect(host.textContent).toContain("a == b and 50~60 and == spaced ==");
+  });
+
+  it("does not turn a seller's underline into a heading", () => {
+    // The defect feature 028 closed, measured where a seller would see it.
+    const host = renderCompiled({ id: "t", kind: "prose", text: "My shop\n=" });
+    expect(host.querySelector("h1")).toBeNull();
+    expect(host.textContent).toContain("=");
   });
 });

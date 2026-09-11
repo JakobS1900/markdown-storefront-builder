@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The small set of primitives every screen is built from.
  *
  * Accessibility lives here rather than in each screen. Constitution Principle
@@ -129,6 +129,20 @@ export function field(opts: {
   multiline?: boolean;
   hint?: string;
   inputMode?: string;
+  /**
+   * Offer the formatting buttons above this field.
+   *
+   * Opt in, and it must stay opt in. `formatInline` is called from exactly one
+   * place in the engine, the text section emitter, so this is the only field in
+   * the application whose contents can carry formatting. Every other multiline
+   * field here is a line-oriented list that is published as plain text, and a
+   * Bold button on one of those would promise something the compiler refuses.
+   *
+   * The string is what the buttons are named after, so a page with three text
+   * sections does not give a screen reader three identical "Bold" buttons. Same
+   * problem and same answer as `rowTools` in `forms.ts`.
+   */
+  formatting?: string;
 }): HTMLElement {
   const id = nextFieldId();
   const hintId = `${id}-hint`;
@@ -150,8 +164,229 @@ export function field(opts: {
   return el("div", { class: "field" }, [
     el("label", { for: id }, [opts.label]),
     ...(opts.hint === undefined ? [] : [el("p", { class: "hint", id: hintId }, [opts.hint])]),
+    ...(opts.formatting === undefined
+      ? []
+      : [formattingBar(control as HTMLTextAreaElement, opts.formatting)]),
     control,
   ]);
+}
+
+/**
+ * What each button does to the selection.
+ *
+ * `wrap` puts its marker on both sides. `line` toggles a prefix on every line
+ * the selection touches. `link` is its own shape because it needs somewhere to
+ * put an address.
+ *
+ * The markers are the ones the engine's grammar recognises, and that is the
+ * whole design: this writes what a seller could have typed, so there is no
+ * second way for formatting to reach a document and nothing here that the
+ * compiler does not already understand. A button for something outside the
+ * whitelist would produce text, which is exactly what should happen.
+ */
+const FORMATS = [
+  { key: "bold", label: "Bold", glyph: "B", wrap: "**", placeholder: "bold text" },
+  { key: "italic", label: "Italic", glyph: "I", wrap: "*", placeholder: "italic text" },
+  { key: "strike", label: "Cross out", glyph: "S", wrap: "~~", placeholder: "crossed out" },
+  { key: "highlight", label: "Highlight", glyph: "H", wrap: "==", placeholder: "highlighted" },
+  // WORDS, NOT SYMBOLS, AND THE CONTRAST GATE IS WHY.
+  //
+  // These two were a chain emoji and a bullet character. The gate drew all six
+  // and reported that axe had read a colour out of only four: it returns no
+  // result at all for these, in both palettes, so their contrast was a claim
+  // nobody had checked. The four letters beside them were measured fine.
+  //
+  // A short word is measurable, needs no legend, and survives a font that has
+  // no glyph for a symbol. The cost is two wider buttons, which the row wraps
+  // for at narrow widths anyway.
+  { key: "link", label: "Link", glyph: "Link", placeholder: "link text" },
+  { key: "list", label: "Bullet list", glyph: "List", line: "- ", placeholder: "first thing" },
+] as const;
+
+/**
+ * The formatting buttons, and the three traps they are built around.
+ *
+ * ONE: a click blurs the field, and a blur repaints. `typing()` in `store.ts`
+ * is true only while a text field holds focus, and `repaint()` defers entirely
+ * while it is. An ordinary button click flips that false, the repaint lands
+ * mid-edit, and `render` calls `replaceChildren`, destroying the textarea under
+ * the seller's hands. `preventDefault` on `mousedown` is what stops it: focus
+ * never leaves, so the selection is still there when the handler runs.
+ *
+ * TWO: the change goes back through the listener `field` already installed,
+ * by dispatching `input`. Not by calling the store. This feature therefore adds
+ * no second path by which prose reaches a document, which matters because there
+ * is exactly one today and every guarantee about undo and repainting hangs off
+ * it.
+ *
+ * THREE: it edits the live control. A field reference does not survive a
+ * repaint, so nothing here is captured and reused later.
+ */
+function formattingBar(control: HTMLTextAreaElement, within: string): HTMLElement {
+  return el(
+    "div",
+    { class: "format-bar", role: "group", "aria-label": `Formatting for ${within}` },
+    FORMATS.map((format) => {
+      const node = button({
+        // Named for the field it acts on. Three text sections on one page
+        // otherwise offer a screen reader three buttons called "Bold" with
+        // nothing to tell them apart.
+        label: `${format.label}, in ${within}`,
+        glyph: format.glyph,
+        onClick: () => {
+          apply(control, format);
+          // The one line that makes this a change rather than a redrawn box.
+          control.dispatchEvent(new Event("input", { bubbles: true }));
+        },
+      });
+      // Keeps the caret where the seller left it. Without this the button takes
+      // focus, the field loses it, and the repaint that follows replaces the
+      // element being typed into.
+      node.addEventListener("mousedown", (event) => event.preventDefault());
+      return node;
+    }),
+  );
+}
+
+/**
+ * Applies one format to whatever the seller has selected.
+ *
+ * THREE THINGS HERE WERE FOUND BY THE HOLISTIC REVIEW AND EVERY ONE OF THEM
+ * REACHED A BUYER'S PAGE. Read this before simplifying any of the guards.
+ *
+ * The first version decided "is this already formatted" by looking at the
+ * `marker.length` characters immediately outside the selection. That is not the
+ * same question, and it was wrong three ways:
+ *
+ *   - Bold then Italic on one word. After Bold the text is `**word**` with
+ *     `word` selected. Italic's marker is `*`, and the characters just outside
+ *     the selection ARE `*`, because they are the tails of the bold markers. It
+ *     "unwrapped" them: `**word**` became `*word*` and **the bold silently
+ *     vanished**, with nothing on screen saying so.
+ *   - A selection spanning two separate bold spans. `**a** and **b**` with
+ *     `a** and **b` selected: both ends match, so it stripped the outer pair of
+ *     two DIFFERENT pairs and **deleted four characters of the seller's text**.
+ *   - Neither case could be caught by the tests that existed, because the one
+ *     test that combined two marks used Bold and Cross out, and `**` and `~~`
+ *     share no characters. A fixture whose value is the harmless one cannot
+ *     discriminate.
+ *
+ * The guards below ask the real question instead: is this selection the whole
+ * interior of exactly one pair of this marker, with nothing of that marker
+ * inside it and no longer run of the same character running into it.
+ */
+function apply(control: HTMLTextAreaElement, format: (typeof FORMATS)[number]): void {
+  const value = control.value;
+  const from = control.selectionStart;
+  const to = control.selectionEnd;
+  const selected = value.slice(from, to);
+
+  if ("line" in format) {
+    applyLines(control, format.line, format.placeholder);
+    return;
+  }
+
+  const body = selected === "" ? format.placeholder : selected;
+
+  if (format.key === "link") {
+    // The address is the one thing a button cannot guess, so the caret is left
+    // where it goes rather than a placeholder being invented for it.
+    const text = `[${body}](`;
+    control.value = `${value.slice(0, from)}${text})${value.slice(to)}`;
+    const caret = from + text.length;
+    control.setSelectionRange(caret, caret);
+    return;
+  }
+
+  const marker = format.wrap;
+  const char = marker[0] ?? "";
+
+  // A SELECTION CROSSING A LINE BREAK IS WRAPPED LINE BY LINE, NOT AS A BLOCK.
+  //
+  // The grammar's patterns all capture with `[^\n]+?`, so a marker pair with a
+  // newline between its halves is not a construct and never can be. Wrapping
+  // the block would put `**` around a passage and publish it as literal
+  // asterisks either side of the seller's sentence: worse than nothing
+  // happening, because it is visible rubbish rather than an inert no-op.
+  //
+  // Selecting a whole passage and pressing Bold is the most natural thing a
+  // button invites, so this is not an edge case, it is the common one. The
+  // per-line answer is what the seller meant and it is what the grammar reads.
+  if (selected.includes("\n")) {
+    const wrapped = selected
+      .split("\n")
+      .map((line) => (line.trim() === "" ? line : `${marker}${line}${marker}`))
+      .join("\n");
+    control.value = `${value.slice(0, from)}${wrapped}${value.slice(to)}`;
+    control.setSelectionRange(from, from + wrapped.length);
+    return;
+  }
+
+  /** Whether a run of this marker's character continues past `at`. */
+  const runsInto = (at: number): boolean => value[at] === char;
+
+  // Already wrapped, markers inside the selection: the seller selected the word
+  // together with its markers.
+  if (
+    selected.startsWith(marker) &&
+    selected.endsWith(marker) &&
+    selected.length > marker.length * 2 &&
+    // Nothing of this marker in the middle, or the two ends belong to different
+    // pairs and stripping them is the character-deleting bug above.
+    !selected.slice(marker.length, -marker.length).includes(char) &&
+    // And no longer run of the same character running into either end, which is
+    // what made `*` mistake the tail of `**` for an italic marker.
+    !runsInto(from - 1) &&
+    !runsInto(to)
+  ) {
+    const bare = selected.slice(marker.length, -marker.length);
+    control.value = `${value.slice(0, from)}${bare}${value.slice(to)}`;
+    control.setSelectionRange(from, from + bare.length);
+    return;
+  }
+
+  // Already wrapped, markers outside the selection: the seller selected only
+  // the word between them, which is what this function leaves selected after a
+  // press, so it is the shape a second press actually meets.
+  const before = value.slice(Math.max(0, from - marker.length), from);
+  const after = value.slice(to, to + marker.length);
+  if (
+    before === marker &&
+    after === marker &&
+    !selected.includes(char) &&
+    !runsInto(from - marker.length - 1) &&
+    !runsInto(to + marker.length)
+  ) {
+    control.value = `${value.slice(0, from - marker.length)}${selected}${value.slice(to + marker.length)}`;
+    control.setSelectionRange(from - marker.length, from - marker.length + selected.length);
+    return;
+  }
+
+  control.value = `${value.slice(0, from)}${marker}${body}${marker}${value.slice(to)}`;
+  // The word stays selected, so a second press can undo it and so the seller
+  // can see what changed. With nothing selected the placeholder is selected
+  // instead, so the next keystroke replaces it rather than joining it.
+  control.setSelectionRange(from + marker.length, from + marker.length + body.length);
+}
+
+/** Toggles a line prefix on every line the selection touches. */
+function applyLines(control: HTMLTextAreaElement, prefix: string, placeholder: string): void {
+  const value = control.value;
+  // Grown out to whole lines first. A selection that starts mid-word still
+  // means "these lines" to the person who made it.
+  const start = value.lastIndexOf("\n", Math.max(0, control.selectionStart - 1)) + 1;
+  const end = value.indexOf("\n", control.selectionEnd);
+  const stop = end === -1 ? value.length : end;
+
+  const block = value.slice(start, stop);
+  const lines = block === "" ? [placeholder] : block.split("\n");
+  const already = lines.every((line) => line.startsWith(prefix));
+  const next = lines
+    .map((line) => (already ? line.slice(prefix.length) : `${prefix}${line}`))
+    .join("\n");
+
+  control.value = `${value.slice(0, start)}${next}${value.slice(stop)}`;
+  control.setSelectionRange(start, start + next.length);
 }
 
 /**

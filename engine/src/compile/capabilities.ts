@@ -56,6 +56,29 @@ export interface Capabilities {
    * warning is somewhere a seller might screenshot.
    */
   readonly localImages: boolean;
+  /**
+   * Whether this host renders `~~struck out~~`.
+   *
+   * The fallback is that the words are published plain, with no markers left
+   * behind for a reader to puzzle over, and `mark_unsupported` names the
+   * section it happened in. Not bold, and not the literal tildes: a seller who
+   * strikes out a discontinued item and sees `~~Oak sign~~` on their published
+   * page has been let down twice over.
+   */
+  readonly strikethrough: boolean;
+  /**
+   * Whether this host renders `==highlighted==`.
+   *
+   * Not part of CommonMark or GFM, so this is the first capability here where
+   * the honest answer for the portable baseline is no. The fallback is the same
+   * as `strikethrough`'s and for the same reasons.
+   *
+   * Principle VII does the rest, and it is why plain-with-a-warning is a real
+   * answer rather than a shrug: the preview renders the compiled output for the
+   * host the seller has chosen, so they see the word flat AND are told which
+   * host will not show it, before they publish rather than after.
+   */
+  readonly highlight: boolean;
   /** Which escaping rules apply to artist text. Never optional. */
   readonly escapeStyle: "commonmark";
   /**
