@@ -139,7 +139,27 @@ Copy tab.
 
 - [ ] T048 **The holistic review over the whole feature diff**, with a fresh reviewer, run sequentially rather than in parallel. Five chunks is over `CLAUDE.md`'s line, so this is mandatory. It has found something real on every feature here that ran it, and on 027 it caught a wrong price going to buyers.
 - [ ] T049 Read every `CHUNK N:` comment left in the code and resolve or carry each one deliberately. Delete the ones that are done.
-- [ ] T050 Drive the six buttons in a real browser per [quickstart.md](quickstart.md), including the fallback: switch the host to portable and confirm the marks go plain **and the message appears**.
+- [x] T050 Drive the six buttons in a real browser per [quickstart.md](quickstart.md), including the fallback: switch the host to portable and confirm the marks go plain **and the message appears**.
+
+  **Done, headless Chrome at 390x844, eleven checks, all clean.** The ones jsdom
+  cannot make: a REAL pointer press on Bold, dispatched through CDP so the
+  browser's own focus handling runs, produced `Pay a **deposit** first`,
+  **focus never left the textarea**, the word was still selected afterwards,
+  and the Copy tab carried `Pay a **deposit** first`. Also measured: no
+  sideways scroll on the page or the row, and every one of the six buttons at
+  least 44 by 44 CSS pixels.
+
+  **The script tripped over this project's own documented trap and it is worth
+  recording.** Its first attempt reached the Copy tab with `element.click()`
+  and timed out waiting for the output box. A programmatic click does not blur,
+  so the textarea kept focus, `typing()` stayed true, and the repaint that
+  draws that tab is deferred while it is. The app was correct; the driver was
+  not. Fixed by dispatching a real pointer press.
+
+  The fallback half is covered by `app/tests/mark-warning.test.ts` rather than
+  here, including the seam it found: the page preview shows the words plain for
+  a host that cannot highlight while the menu file preview, on the same screen,
+  shows the highlight, because it compiles for a target that can.
 - [x] T051 Compile all eight starting points and the bundled example for all four targets, before and after, and confirm byte identical output. FR-028-21. This is the same measurement 026 made and the same command produces it.
 
   **Done, and it corroborates 026's own sweep exactly.** 9 documents, 4 targets,
