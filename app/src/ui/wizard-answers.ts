@@ -127,25 +127,45 @@ export function starterIdFor(answers: WizardAnswers): string {
  * the words "tell me your scent and colour preferences" underneath it, which
  * reads as a mistake they made.
  *
- * The line between what survives and what goes is the contract's own, written
- * at `availability` in `descriptor.ts`: price, unit, availability and leadTime
- * "qualify the offer rather than describing the thing", which is what blurb and
- * includes do. An offer survives being renamed. A description does not.
+ * THE LINE USED TO BE DRAWN ONE FIELD TOO WIDE, AND IT SHIPPED A WRONG PRICE.
+ * It was taken from the contract's own grouping at `availability` in
+ * `descriptor.ts`, where price, unit, availability and leadTime "qualify the
+ * offer rather than describing the thing". That is true of the FIELDS. It is
+ * not true of a VALUE carried across a rename: `freelance-services` ships
+ * `unit: "per hour"` and `art-commissions` ships `unit: "per character"`, and
+ * both of those describe the product that was there before. Somebody who picked
+ * Freelance services, typed "Logo design" and "300", and then took question 6's
+ * own advice to leave the amount alone, published
+ * `| Logo design | USD 300 per hour |` to every host. Found by feature 027's
+ * holistic review at T048 and proved by compiling it.
+ *
+ * Six of the eight starting points ship `unit: "each"`, including
+ * `handmade-and-crafts`, which is the default every test uses. So the rename
+ * tests all passed while being run against the one value that happens to be
+ * harmless. **A fixture whose value is the neutral one cannot discriminate.**
+ *
+ * So the line is now: a renamed row keeps only what is structural or what the
+ * seller themselves supplied. `price` is the deliberate exception and it is
+ * data model rule 3, which chose it and tests it: a leftover number is wrong in
+ * a way a seller sees immediately, where "per hour" reads as something they
+ * chose.
  *
  * Named rather than deleted from, so that a field added to a row later is
  * dropped by default. Getting that wrong in the other direction leaks the
- * example's content into somebody's page silently.
+ * example's content into somebody's page silently, which is this bug again.
  */
 function offerOnly(tier: Tier, name: string): Tier {
   return {
     // The row's own identifier, kept: it is what anything pointing at this row
-    // uses, and a new one would break a selection for nothing.
+    // uses, and a new one would break a selection for nothing. Never emitted.
     id: tier.id,
     name,
     price: tier.price,
-    ...(tier.unit === undefined ? {} : { unit: tier.unit }),
-    ...(tier.availability === undefined ? {} : { availability: tier.availability }),
-    ...(tier.leadTime === undefined ? {} : { leadTime: tier.leadTime }),
+    // `unit`, `availability` and `leadTime` are deliberately NOT carried. Each
+    // describes the offer that was there before the rename. Questions 5 and 6
+    // put the seller's own `availability` and `unit` back in `withAnswers`
+    // immediately below, so answering them still works; skipping them now
+    // leaves the row saying nothing rather than saying the template's words.
   };
 }
 

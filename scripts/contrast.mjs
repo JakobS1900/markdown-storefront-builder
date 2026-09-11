@@ -283,9 +283,27 @@ async function injectAxe() {
   await evaluate(readFileSync(AXE, "utf8"));
 }
 
-/** How many questions the wizard asks, and how many screens that makes. */
-const WIZARD_QUESTIONS = 6;
-const WIZARD_SCREENS = WIZARD_QUESTIONS + 1;
+/**
+ * How many questions the wizard asks, READ OFF THE WIZARD RATHER THAN TYPED.
+ *
+ * This was `const WIZARD_QUESTIONS = 6` and that was R6's own failure mode
+ * reintroduced inside the gate written to prevent it. Every guard below is a
+ * `<` comparison against it, so a seventh question would have been walked as
+ * six screens, counted six help lines against a threshold of six, and reported
+ * a pass while leaving a whole new screen unmeasured. A gate that measures less
+ * does not complain about it, and a hardcoded total is how it comes to measure
+ * less. Found by the holistic review at T048.
+ *
+ * The progress line already prints the total on screen one, "Question 1 of 6",
+ * so the number is there to be read and does not need a second copy here.
+ * `app/tests/a11y.test.ts` solves the same problem by importing `QUESTION_COUNT`
+ * from the module; a browser gate cannot import, but it can look.
+ */
+const QUESTION_TOTAL = `(() => {
+  const line = document.querySelector('#wizard-panel .wizard-progress');
+  const found = /Question \\d+ of (\\d+)/.exec(line ? line.textContent || '' : '');
+  return found === null ? 0 : Number(found[1]);
+})()`;
 
 /**
  * Everything one wizard screen is worth: its contrast, its parts, its width.
@@ -430,7 +448,8 @@ const WIZARD_SCREEN = `(async () => {
  * this file already records. So: measure it alone, shut it, then load the
  * example and run the storefront pass unchanged.
  *
- * WHY EVERY SCREEN. Six questions and a finish, and they do not draw the same
+ * WHY EVERY SCREEN. However many questions there are, plus a finish, and they do
+ * not draw the same
  * things: only the first has nine choices, only four of them have a text field,
  * and `.wizard-help` and `.wizard-progress` are `var(--muted)` on
  * `var(--panel)`, a pairing that exists nowhere else on that background. A pass
@@ -451,6 +470,17 @@ async function auditWizard() {
   })()`);
   await waitFor(`!!document.querySelector('#wizard-panel')`, "the wizard to open");
 
+  // Asked once, on screen one, before anything is pressed. A zero here means
+  // the progress line did not say what it always says, and walking on would be
+  // guessing at how far to go.
+  const questions = Number(await evaluate(QUESTION_TOTAL));
+  if (!Number.isInteger(questions) || questions < 1) {
+    throw new Error(
+      `the wizard's progress line did not name a question total, so this run cannot know how many screens it owes. Read '${String(questions)}'.`,
+    );
+  }
+  const screens = questions + 1;
+
   // `help` and `progress` count what the DOM drew; `helpMeasured` and
   // `progressMeasured` count what axe got a colour out of. Both are kept
   // because they fail differently: the first catches a screen that stopped
@@ -470,7 +500,7 @@ async function auditWizard() {
   const wide = [];
   const unmeasured = [];
 
-  for (let screen = 1; screen <= WIZARD_SCREENS; screen++) {
+  for (let screen = 1; screen <= screens; screen++) {
     console.log(`  Measuring screen ${screen}...`);
     const measured = JSON.parse(await evaluate(WIZARD_SCREEN));
     seen.screens++;
@@ -481,7 +511,7 @@ async function auditWizard() {
     wide.push(...measured.wide.map((m) => ({ ...m, screen })));
     unmeasured.push(...measured.unmeasured.map((m) => ({ ...m, screen })));
 
-    if (screen === WIZARD_SCREENS) break;
+    if (screen === screens) break;
 
     console.log(`  Clicking next for screen ${screen + 1}...`);
     // Next is a real control on every question screen and is the only way
@@ -498,10 +528,10 @@ async function auditWizard() {
     // was already there, and the finish screen has no progress line at all.
     const next = screen + 1;
     await waitFor(
-      next <= WIZARD_QUESTIONS
+      next <= questions
         ? `/Question ${next} of/.test(document.querySelector('#wizard-panel .wizard-progress')?.textContent || '')`
         : `[...document.querySelectorAll('#wizard-panel button')].some(x => /Make my page/.test(x.textContent || ''))`,
-      `the wizard to reach screen ${next} of ${WIZARD_SCREENS}`,
+      `the wizard to reach screen ${next} of ${screens}`,
     );
   }
 
@@ -514,7 +544,7 @@ async function auditWizard() {
   })()`);
   await waitFor(`!document.querySelector('#wizard-panel')`, "the wizard to close");
 
-  return { ...seen, nodes, wide, unmeasured };
+  return { ...seen, questions, owed: screens, nodes, wide, unmeasured };
 }
 
 async function auditScheme(scheme) {
@@ -611,14 +641,14 @@ try {
     // walk that stopped early, or a screen that stopped drawing its help,
     // measures less without failing anything, and this is what says so.
     if (
-      wizard.screens < WIZARD_SCREENS ||
+      wizard.screens < wizard.owed ||
       wizard.choices < 9 ||
       wizard.fields < 4 ||
-      wizard.help < WIZARD_QUESTIONS ||
-      wizard.progress < WIZARD_QUESTIONS
+      wizard.help < wizard.questions ||
+      wizard.progress < wizard.questions
     ) {
       console.error(
-        `  ${scheme} wizard: only ${wizard.screens} screens, ${wizard.choices} choices, ${wizard.fields} fields, ${wizard.help} help lines and ${wizard.progress} progress lines measured, against ${WIZARD_SCREENS}, 9, 4, ${WIZARD_QUESTIONS} and ${WIZARD_QUESTIONS} expected. Something did not render, so this run proves less than it claims.`,
+        `  ${scheme} wizard: only ${wizard.screens} screens, ${wizard.choices} choices, ${wizard.fields} fields, ${wizard.help} help lines and ${wizard.progress} progress lines measured, against ${wizard.owed}, 9, 4, ${wizard.questions} and ${wizard.questions} expected. Something did not render, so this run proves less than it claims.`,
       );
       failed++;
     }
@@ -633,12 +663,9 @@ try {
     // reports text it cannot resolve a background for as `incomplete`, which
     // this gate would otherwise discard in silence. So the coverage is demanded
     // by name, and a shortfall names the paragraph and quotes axe's own reason.
-    if (
-      wizard.helpMeasured < WIZARD_SCREENS ||
-      wizard.progressMeasured < WIZARD_QUESTIONS
-    ) {
+    if (wizard.helpMeasured < wizard.owed || wizard.progressMeasured < wizard.questions) {
       console.error(
-        `  ${scheme} wizard: axe read a colour out of only ${wizard.helpMeasured} of ${WIZARD_SCREENS} help paragraphs and ${wizard.progressMeasured} of ${WIZARD_QUESTIONS} progress lines. The rest were drawn and never checked, so this run proves less than it claims.`,
+        `  ${scheme} wizard: axe read a colour out of only ${wizard.helpMeasured} of ${wizard.owed} help paragraphs and ${wizard.progressMeasured} of ${wizard.questions} progress lines. The rest were drawn and never checked, so this run proves less than it claims.`,
       );
       for (const m of wizard.unmeasured) {
         console.error(`    screen ${m.screen}, ${m.what}: ${m.how}. ${m.why}`);

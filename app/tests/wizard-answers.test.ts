@@ -220,10 +220,8 @@ describe("the first item", () => {
     // typed "Carved oak sign" gets a picture of resin coasters and the words
     // "tell me your scent and colour preferences" underneath it.
     //
-    // The line between what goes and what stays is the contract's own, at
-    // `availability` in descriptor.ts: price, unit, availability and leadTime
-    // qualify the OFFER, and blurb, includes, details and the rest describe the
-    // THING. The offer survives being renamed. The description does not.
+    // A renamed row keeps only what is structural or what the seller supplied.
+    // `price` is the one deliberate exception, and it is data-model rule 3.
     const doc = documentFromAnswers(await starterNamed(DEFAULT_STARTER_ID), {
       firstItem: "Carved oak sign",
     });
@@ -235,6 +233,65 @@ describe("the first item", () => {
     expect(tier.imageUrls).toBeUndefined();
     expect(tier.localImageIds).toBeUndefined();
     expect(tier.cost).toBeUndefined();
+    expect(tier.unit).toBeUndefined();
+    expect(tier.availability).toBeUndefined();
+    expect(tier.leadTime).toBeUndefined();
+  });
+
+  it("does not publish the example's amount against the seller's own item", async () => {
+    // THE REGRESSION THIS TEST EXISTS FOR, found by the holistic review at T048
+    // after every other test here passed over it.
+    //
+    // `unit` was carried across a rename on the argument that it qualifies the
+    // offer. Two starting points ship a `unit` that describes the PRODUCT:
+    // `freelance-services` is "per hour" and `art-commissions` is "per
+    // character". So somebody who picked Freelance services, typed their item
+    // and their price, and took question 6's own advice to leave the amount
+    // alone, published `Logo design | USD 300 per hour`.
+    //
+    // IT IS DRIVEN AGAINST THOSE TWO STARTERS BY NAME AND NOT AGAINST
+    // `DEFAULT_STARTER_ID`. Six of the eight ship `unit: "each"`, the default is
+    // one of them, and every other rename test here used it. A fixture whose
+    // value is the harmless one cannot fail, which is why this went to a
+    // reviewer rather than to a red test.
+    for (const [id, theirs] of [
+      ["freelance-services", "per hour"],
+      ["art-commissions", "per character"],
+    ] as const) {
+      const starter = await starterNamed(id);
+      expect([id, firstTier(starter).unit]).toEqual([id, theirs]);
+
+      const doc = documentFromAnswers(starter, { firstItem: "Logo design", firstPrice: "300" });
+      expect([id, firstTier(doc).unit]).toEqual([id, undefined]);
+
+      // The SELLER'S OWN ROW, not the whole page. The other rows were not
+      // renamed and keep their own amounts, correctly: an early version of this
+      // test searched the whole output and failed on art-commissions for that
+      // reason, which is a fixture telling the truth about the wrong thing.
+      for (const target of ALL_TARGETS) {
+        const row = compile(doc, target)
+          .markdown.split("\n")
+          .find((line) => line.includes("Logo design"));
+        expect([id, target.id, row?.includes(theirs)]).toEqual([id, target.id, false]);
+      }
+    }
+  });
+
+  it("still publishes the amount when the seller actually gave one", async () => {
+    // The other half, so the fix above cannot be satisfied by dropping `unit`
+    // on the floor entirely. Question 6 is answered, so it reaches the page.
+    const doc = documentFromAnswers(await starterNamed("freelance-services"), {
+      firstItem: "Logo design",
+      firstPrice: "300",
+      amount: "per project",
+    });
+    expect(firstTier(doc).unit).toBe("per project");
+    for (const target of ALL_TARGETS) {
+      expect([target.id, compile(doc, target).markdown.includes("300 per project")]).toEqual([
+        target.id,
+        true,
+      ]);
+    }
   });
 
   it("keeps the row's own identifier, so nothing that pointed at it is lost", async () => {

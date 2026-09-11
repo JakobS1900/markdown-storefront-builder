@@ -21,6 +21,40 @@ function asSurface(value: unknown): Surface | undefined {
 }
 
 /**
+ * Takes a layer's claim off the entry BEFORE going back to it.
+ *
+ * `history.back()` is asynchronous: the entry does not change, and `popstate`
+ * does not fire, until the traversal completes. So a second dismiss arriving in
+ * that window still saw `wizard: true`, queued a SECOND `history.back()`, and
+ * the second one spent the entry belonging to the surface underneath. On Build
+ * there is nothing underneath by design, so a real WebView finishes the
+ * activity: the app closes on somebody who was trying to shut a panel.
+ *
+ * That window is not theoretical. `finish` in `wizard.ts` awaits a lazily
+ * imported starter document, an IndexedDB write and a page refresh before it
+ * dismisses, and every other way out stays live and redrawn throughout: the
+ * close control, the backdrop, Escape and the system back gesture. `making`
+ * guards `finish` against running twice, which is a guard on one symptom; this
+ * is the mechanism, and it covers all five paths at once.
+ *
+ * **This is put at the choke point rather than at the callers**, the way
+ * `repaint`'s own focus guard in `store.ts` sits at the choke point rather than
+ * at everything that repaints. A second dismiss now finds the flag already gone
+ * and closes the layer directly instead of traversing again.
+ *
+ * The `popstate` handler reads `getState()`, never this flag, so clearing it
+ * early changes nothing about how the traversal is handled when it lands.
+ *
+ * Found by feature 027's holistic review at T048. The sidebar has the same
+ * shape and shipped with it, which is the stronger argument for fixing the
+ * mechanism here than for guarding one more caller.
+ */
+function disown(layer: "sidebar" | "wizard"): void {
+  const current = (history.state ?? {}) as Record<string, unknown>;
+  history.replaceState({ ...current, [layer]: false }, "");
+}
+
+/**
  * Records a move between surfaces so that back has somewhere to return to.
  *
  * At most one entry ever exists beyond the first screen, which is the part that
@@ -84,8 +118,10 @@ export function sidebarOwnsHistory(): boolean {
  * rather than merely similar.
  */
 export function dismissSidebar(): void {
-  if (sidebarOwnsHistory()) history.back();
-  else closeSidebar();
+  if (sidebarOwnsHistory()) {
+    disown("sidebar");
+    history.back();
+  } else closeSidebar();
 }
 
 /**
@@ -112,8 +148,10 @@ export function wizardOwnsHistory(): boolean {
  * exactly once and the stack cannot deepen by a press per open.
  */
 export function dismissWizard(): void {
-  if (wizardOwnsHistory()) history.back();
-  else closeWizard();
+  if (wizardOwnsHistory()) {
+    disown("wizard");
+    history.back();
+  } else closeWizard();
 }
 
 /** Sends a system back gesture to the surface its history entry names. */

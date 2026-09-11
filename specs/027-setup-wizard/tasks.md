@@ -129,9 +129,9 @@ contrast gate green about a surface it never laid out.
 
 ## Phase 7: Review, proof and release
 
-- [ ] T048 **One holistic review over the whole feature diff**, by a fresh reviewer. Mandatory: this is six chunks, and per chunk reviews structurally cannot see a seam where both sides are internally correct. Feature 024's holistic review found two high severity defects of exactly that shape. The seams to look at are named in `plan.md`: the answer set to the document, and the wizard's finish to `openBackup`.
-- [ ] T049 Fix the review's findings. Auto-apply the mechanical ones, batch any genuine decisions into one question.
-- [ ] T050 Confirm the bundled example and all eight starting points still compile byte identically, the way feature 026 proved it: compile against the engine before and after and diff the bytes. It should be trivially true here because no engine code was touched, and it is cheap to prove rather than assert.
+- [x] T048 **One holistic review over the whole feature diff**, by a fresh reviewer. Mandatory: this is six chunks, and per chunk reviews structurally cannot see a seam where both sides are internally correct. Feature 024's holistic review found two high severity defects of exactly that shape. The seams to look at are named in `plan.md`: the answer set to the document, and the wizard's finish to `openBackup`.
+- [x] T049 Fix the review's findings. Auto-apply the mechanical ones, batch any genuine decisions into one question.
+- [x] T050 Confirm the bundled example and all eight starting points still compile byte identically, the way feature 026 proved it: compile against the engine before and after and diff the bytes. It should be trivially true here because no engine code was touched, and it is cheap to prove rather than assert.
 - [ ] T051 Drive it in a browser at 390px following `quickstart.md`, including the check that matters most: the store name reaches the **Copy tab**, not just the editor.
 - [ ] T052 Drive it on the handset following `quickstart.md` and `docs/WORKFLOW.md`. Check `mWakefulness` immediately before each `screencap`, and set `svc power stayon` back to `false` afterwards.
 - [ ] T053 [P] Update `docs/HANDOFF.md` and `specs/README.md`, and the block between the SPECKIT markers in `CLAUDE.md`. That block has now rotted twice; it does not update itself.

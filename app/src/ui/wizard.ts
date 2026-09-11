@@ -212,11 +212,24 @@ const QUESTIONS: readonly Question[] = [
     forget: () => answerWizard({ firstItem: undefined, firstPrice: undefined }),
   },
   {
-    heading: "How does that reach a buyer?",
-    help: "The word you pick here is the word your page prints.",
+    // "How is this available?" rather than "How does that reach a buyer?".
+    //
+    // The options come from `SELLING_MODE_WORDS` and one of the four is
+    // "Sold out", which is not a way anything reaches a buyer, so the old
+    // heading was a question its own answers did not all answer. Reading the
+    // map rather than retyping it is FR-124 and is right; filtering it here to
+    // save the wording would put the parallel list back. So the question moves
+    // to fit the four answers that exist. Found by the holistic review at T048.
+    //
+    // The help says "If your page lists prices" because one starting point,
+    // "Portfolio and about me", ships with no prices at all and drops this
+    // answer on the floor by design (FR-122). The old wording promised that
+    // wizard the word would be printed, and for that seller nothing is.
+    heading: "How is this available?",
+    help: "If your page lists prices, the word you pick here is the word it prints.",
     ask: (answers, next) => [
       choices({
-        label: "How it reaches a buyer",
+        label: "How it is available",
         chosen: answers.mode,
         options: MODES.map(([value, label]) => ({ value, label })),
         onChoose: (value) => answerWizard({ mode: value as SellingMode }),
