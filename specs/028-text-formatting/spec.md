@@ -51,6 +51,33 @@ Made by Jakob on 2026-09-11, in the session that writes them down:
 3. **Pasting a whole existing page is not in this feature.** It is specified
    separately once this ships.
 
+## Amendment, 2026-09-11: this feature now closes a live defect
+
+The host verification written for this feature found one, and it is in shipped
+code rather than in anything being built here.
+`docs/research/2026-09-11-marks-verification.md` has the evidence.
+
+**A seller's own sentence can become a heading, on both paste hosts.** A line
+containing nothing but equals signs, directly under a line of text, is a setext
+heading, and one equals sign is enough. The seller's line is turned into an
+`<h1>` and the equals signs disappear. Underlining a heading with a row of
+equals is a plain-text habit older than Markdown, so this is reachable by
+somebody laying out a menu by hand rather than by somebody attacking the app.
+
+The equivalent with dashes has always been safe, because the escaper protects
+`#`, `+` and `-` at the start of a line. It does not protect `=`, which appears
+in none of its three sets. The protection was correct and had a hole in it the
+width of one character.
+
+A second, smaller one from the same probe: text.is pairs `==` markers that have
+a space directly inside them and rentry does not, so `a == b and c == d`
+highlights on one host and not the other. Two hosts that run the same stack,
+disagreeing again, which is the thing `targets.ts` already warns about twice.
+
+**Both are covered by FR-028-14 as written**, which is why no requirement
+changed. This section exists so that nobody later reads that requirement as
+routine.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - I can make a word bold without knowing how (Priority: P1)
