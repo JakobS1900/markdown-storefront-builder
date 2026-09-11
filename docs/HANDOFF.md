@@ -14,15 +14,63 @@ with `gh release view v0.9.0`.
 **Feature 026 is DONE and SHIPPED.** `026-selling-modes` is merged to master.
 
 **In progress: feature 027, the setup wizard. Branch `027-setup-wizard`.
-Phases 1 to 5 are DONE. Phase 6, the gates, is HALF DONE and was interrupted
-mid flight on 2026-09-10.**
+Phases 1 to 6 are DONE as of 2026-09-11. Phase 7, the holistic review and the
+release, is the remaining work.**
 
-**READ THIS FIRST, IT IS THE ONLY URGENT PART.** The session was cut off while
-two subagents were still running. Their work may or may not have landed. **Run
-`git log --oneline -6` and `git status` BEFORE anything else and believe them
-over the rest of this file.**
+**Phase 6 is finished and committed as `bc86758`**, "test(027): the contrast
+gate walks the wizard, and proves it read it". T042 through T047 are all ticked
+in `specs/027-setup-wizard/tasks.md`. `npm run verify` is green whole and
+unpiped at that commit, numbers under "Current state".
 
-What was true at the moment of the cut:
+**Nothing was lost when the 2026-09-10 session was cut**, and this is worth
+recording because the file spent a day telling the next session to check. The
+two subagents that were still running had landed chunk A as a commit and left
+chunk B as an uncommitted diff in `scripts/contrast.mjs`. A later session ran
+against the same tree and also landed nothing. `git log` matched this file
+exactly, `git status` still said `M scripts/contrast.mjs`, and no app code had
+been touched by anybody. The chunk B diff was good and was kept rather than
+rewritten, per the rule about never throwing away work to recover from a
+failure. It was the right call: it was most of T044 and T043b already done.
+
+**THE DEAD SUBAGENT'S LAST WORDS WERE RIGHT, AND THIS IS THE FINDING OF PHASE
+6.** It died on the account session limit saying it did not trust its own gate:
+
+> Three `.wizard-help` paragraphs (screens 3, 6, 7) did not appear even though
+> they are the same colour. I need to know why before I trust this gate.
+
+It was correct, and the reason is now the most useful thing in
+`scripts/contrast.mjs`. **Counting what a screen DREW is not the same as
+knowing axe MEASURED it.** The first version of the wizard walk counted
+elements and passed. Asking axe which elements it had actually reached said
+three of the seven help paragraphs were drawn and never checked, in both
+palettes, with axe's own reason:
+
+> Element's background color could not be determined because it partially
+> overlaps other elements
+
+axe decides a background by sampling the element stack at several points of the
+rect, and `document.elementsFromPoint` returns everything at a point whether or
+not it is painted over. **So an opaque panel does not save you**: the app behind
+a modal is in the stack regardless. Those three paragraphs happened to land
+across the edge of the add-a-section dock behind them, and the other four were
+measured only by the luck of where they fell.
+
+The fix is that the axe run hides everything behind the layer and puts it back
+afterwards. That changes nothing about the quantity being measured, which is why
+it is not the gate moving its own ruler: `.wizard-panel` is `var(--panel)`, fully
+opaque, so no pixel of the rendered colour comes from behind it, and `.wizard` is
+`position: fixed; inset: 0`, so nothing behind it affects the panel's layout
+either. Only the instrument's ability to resolve the pair changes. T043b's widths
+are deliberately taken BEFORE that, with the page exactly as a seller has it, so
+the overflow ruler never moves with the thing it measures.
+
+**The general lesson, which is the fourth variation on the same theme in this
+repo: a structural count can be satisfied by an element nobody measured.** The
+guard now demands both, and a shortfall names the paragraph and quotes axe's
+reason.
+
+The historical detail of the cut, kept because the process record is worth
+having:
 
 - **Chunk A landed**: `9c51c4f test(027): the a11y gate walks every screen of
   the wizard`. T042, T043, T043a and T046. One file,
@@ -40,38 +88,18 @@ What was true at the moment of the cut:
   clean. `npm run verify` was NOT re-run whole that round, deliberately,
   because chunk B's unfinished work was in the tree and would have been
   reported on. **So T047 still owes one clean whole run.**
-- **Chunk B was IN FLIGHT and never reported**: T044, T045 and T043b, the
-  contrast gate. Its brief is `.superpowers/sdd/tasks/chunk-b-brief.md` and is
-  complete: hand it to a fresh implementer as is.
+- **Chunk B is now DONE too**, T044, T045 and T043b, finished on 2026-09-11 from
+  the diff it left behind. Its brief is `.superpowers/sdd/tasks/chunk-b-brief.md`
+  and both of its rulings were implemented rather than revisited: storage is
+  cleared per scheme so both palettes reach the empty state, and the wizard gets
+  its own axe run before the example loads and is closed before the main run.
 
-  **IT HAS UNCOMMITTED WORK IN THE TREE: `scripts/contrast.mjs`, modified and
-  not staged.** `git status --short` says `M scripts/contrast.mjs` and nothing
-  else, run at the moment this was written. Read that diff before deciding
-  anything; do not throw it away unread, per `CLAUDE.md` on never deleting work
-  to recover from a failure.
+  Mid run it had also touched `app/src/styles.css`, outside its brief, and by
+  the end that edit was gone. Nothing in the final commit touches app code:
+  `git status` was checked clean of `app/src` before committing.
 
-  Mid run it had also touched `app/src/styles.css`, which is app code and
-  outside its brief, and by the end that edit was gone from the tree. So it
-  either put it back itself or never finished it. If a contrast failure turns
-  out to need a palette change, that is a real finding for T048 and a separate
-  decision, not something to slip into the gate's own commit.
-
-  **It died on the account session limit, not on a bug, and its last words are
-  a real lead worth more than the code it left behind:**
-
-  > Three `.wizard-help` paragraphs (screens 3, 6, 7) did not appear even
-  > though they are the same colour. I need to know why before I trust this
-  > gate.
-
-  **Start there.** Screens 3, 6 and 7 are the picture question, "What does that
-  price buy?" and the finish. If a `.wizard-help` in `var(--muted)` on
-  `var(--panel)` is not being counted, then either the walk is not reaching
-  those screens or axe is skipping them, and EITHER answer means the gate is
-  measuring less than it claims. That is the precise failure R6 exists to
-  refuse, found by the gate's own author before he trusted it, which is the
-  right instinct. Do not paper over it by lowering the guard's numbers.
-- **T047 was not started**: `npm run verify` whole, tick the Phase 6 boxes in
-  `specs/027-setup-wizard/tasks.md`, which are all still `- [ ]`, and commit.
+- **T047 is done**: `npm run verify` whole and unpiped, exit 0, boxes ticked,
+  committed as `bc86758`.
 
 **The full ledger is `.superpowers/sdd/tasks/progress.md`.** It carries the
 pre-flight conflict table, all three rulings, both review verdicts in detail,
@@ -103,7 +131,7 @@ header and the first table rows. That is the third file in this repo, after
 `app/src/styles.css` and `app/tests/a11y.test.ts`. `CLAUDE.md` already forbids
 it. Use Write or Edit, always.
 
-`c191f97` is the last commit with CODE in it, and it is the tree every number in
+`bc86758` is the last commit with CODE in it, and it is the tree every number in
 this file describes. Anything after it on this branch is documentation, this
 sentence included, which is why HEAD will not match that hash and nothing is
 wrong when it does not.
@@ -183,16 +211,20 @@ fixes, not a fortnight in one. The policy and the reasoning are in
 only the handoff still knows. It no longer needs to be asked for, per the rule
 change above.
 
-**Current state**: this file describes the tree at `c191f97` on
+**Current state**: this file describes the tree at `bc86758` on
 `027-setup-wizard`, and `npm run verify` is green on it, run whole and unpiped
-from PowerShell on 2026-09-09:
-**78 test files, 1473 tests, a11y 53, contrast 411 elements, 45 fields, 32
-folded fields and 39 hints with 0 failures in both light and dark, secret scan
-clean over 447 files, dash scan clean over 322 files, menu file gate clean, pwa
-update gate clean, exit code 0.**
+from PowerShell on 2026-09-11:
+**78 test files, 1480 tests, a11y 60, contrast 411 elements, 45 fields, 32
+folded fields and 39 hints with 0 failures in both light and dark, PLUS the
+wizard walked in both palettes at 7 screens, 15 choices, 4 fields, 7 help lines
+all 7 read by axe, 6 progress lines all 6 read by axe, 4 hints, 0 contrast
+failures and 0 overflows at 390px; secret scan clean over 447 files, dash scan
+clean over 322 files, menu file gate clean, pwa update gate clean, exit code 0.**
 
 Those are the numbers to expect. If they are lower, something stopped rendering
-rather than something being fine.
+rather than something being fine. **"7 read by axe" is the one that matters
+most**: it was 4 before the layer was isolated, and 4 is what a gate reports
+when it is quietly measuring less than it claims.
 
 **The scan counts moved for a reason worth knowing, and it was a real bug.**
 `c191f97` fixes it. Both scans enumerated with `git ls-files`, which lists
@@ -204,12 +236,13 @@ moment the gate ran. Proved both ways before and after, with an untracked file
 carrying an em dash and another carrying an AWS key id. **Stage before you
 trust a scan on any older commit than this one.**
 
-**a11y and contrast did NOT move, at 53 and 411, and that is NOT fine any
-more.** Phase 4 added the layer and Phase 5 added the way into it, and neither
-gate opens the wizard, so a modal surface with nine buttons on its first
-screen, six question screens and a finish screen is measured by nothing at all.
-Phase 6 exists for exactly this and it is the next work. This project has three
-times found a gate green about a surface it never laid out.
+**a11y and contrast used to sit at 53 and 411 with the wizard measured by
+nothing at all**, which was correct in Phase 3 and stopped being correct the
+moment there was a surface. **Phase 6 fixed it**: a11y is 60 and the contrast
+gate now walks all seven wizard screens in both palettes. The storefront's 411
+did not move, and it was not supposed to: the wizard is measured on its own
+pass, before the example loads, so that the modal layer cannot shrink the main
+number. That was ruling 2 and it held.
 
 Before those, feature 023 completed as `fa8eb28`, feature 022's missing holistic
 review ran (`b69266a` the test, `20d3192` the findings), two directly requested
@@ -270,33 +303,37 @@ honest record of it.
 ## Next up, in order
 
 1. **Check the branch, then run `npm run verify` from PowerShell.** The branch
-   command is at the top of this file. Expect **1473 tests, a11y 53, contrast
-   clean in both palettes at 411 elements**, secret scan 447, dash scan 322,
-   menu file and pwa gates green, exit 0. If it fails, read "Traps" below before
-   believing it: several of its failures are environmental rather than real.
+   command is at the top of this file. Expect **1480 tests, a11y 60, contrast
+   clean in both palettes at 411 elements plus the wizard walked at 7 screens
+   with 7 help lines read by axe**, secret scan 447, dash scan 322, menu file
+   and pwa gates green, exit 0. If it fails, read "Traps" below before believing
+   it: several of its failures are environmental rather than real.
 
-   Green at `c191f97` on 2026-09-09. Numbers under "Current state".
+   Green at `bc86758` on 2026-09-11. Numbers under "Current state".
 
-2. **Feature 027 Phase 6, tasks T042 to T047, is the next work, and it is the
-   one this feature most needs.** `specs/027-setup-wizard/tasks.md` has 58
-   tasks; 43 are done.
+2. **Feature 027 Phase 7 is the next work: the holistic review, the proofs, and
+   the release.** `specs/027-setup-wizard/tasks.md` has 58 tasks; 51 are done.
+   T048 to T054 remain.
 
-   **Neither gate has ever seen the wizard.** a11y has been 53 and contrast 411
-   across phases 4 and 5, which was correct in Phase 3 and stopped being correct
-   the moment there was a surface. What is unmeasured: a `role="dialog"` layer,
-   nine choice buttons on the first screen, six question screens, a finish
-   screen, and `.wizard-help` / `.wizard-progress` in `var(--muted)` on
-   `var(--panel)` in both palettes.
+   **Phase 6 is DONE.** Both gates now see the wizard. a11y went 53 to 60 and
+   walks every screen; the contrast gate walks all seven screens in both
+   palettes and proves axe read every help paragraph. Details and the finding
+   are at the top of this file. Do not redo any of it.
 
-   `research.md` R6 is the record of why this matters here specifically: the
-   contrast gate went from 164 elements to 137 when feature 025 moved the page
-   list, and nothing failed, because **a gate that measures less does not
-   complain about it.** T044 and T045 exist to give the wizard a counted guard
-   and then to break it, the way `folded` and `pages` already work.
+   **T048, the holistic review, is the gate on everything after it, and it is
+   carrying more than usual.** Six chunks, and Phase 3 never got its two per
+   chunk reviews at all because the subagent died on a rate limit. That debt is
+   written into the code as a `CHUNK 2:` comment at the top of
+   `app/src/ui/wizard-answers.ts`, and that comment should be the first thing
+   the review reads. The seams `plan.md` names are the answer set to the
+   document, and the wizard's finish to `openBackup`.
 
-   T043a is the one easiest to skip and should not be: FR-132's 44 by 44
-   minimum, in CI, because Constitution VI requires the gate to fail on it and
-   driving it by eye at T051 is a second opinion rather than the mechanism.
+   **Dispatch reviewers SEQUENTIALLY, never in parallel.** On 2026-09-09 both
+   died on the same rate limit having read nothing, which cost two reviews for
+   one failure.
+
+   Then T049 fixes, T050 the byte identical compile proof, T051 the browser
+   drive at 390px, T052 the handset, T053 the docs, T054 the release.
 
 3. **Phases 4 and 5 are DONE, both reviewed twice.** `be5c8f7` is the layer and
    the six screens; `f703ddb` is the way in and the way out.
@@ -1141,6 +1178,22 @@ SEQUENTIALLY rather than at once is what keeps one failure from costing both.
   it.** The fix each time was a counted guard, `pages` then `folded`, that
   refuses a pass. The way it was found was dumping what the browser actually had
   on screen, not reading the code that opens things.
+- **Counting what was DRAWN is not knowing what was MEASURED, and that is the
+  fourth variation on the same theme here.** The first three were a gate that
+  measured less and did not say so; this one is a gate that counted the right
+  number of elements while its instrument had quietly declined to look at three
+  of them. `scripts/contrast.mjs` now demands both, and the coverage number is
+  the one to watch. **Ask of any counted guard: does it count the things, or
+  does it count the things that were actually checked?** They are different
+  questions and only the second one is the guarantee.
+- **axe cannot see a background through a modal, and an opaque panel does not
+  save it.** `document.elementsFromPoint` returns everything at a point whether
+  or not it is painted over, and axe compares the element stack at several
+  points of a rect. If they disagree it reports `incomplete`, which a gate
+  collecting only violations throws away in silence. Any future surface layered
+  over the app has this problem. The answer is to hide what is behind for the
+  measurement, which is safe precisely when the layer is opaque and
+  `position: fixed`, and to say in the code why that is not moving the ruler.
 - **A thing people do constantly through a field that was not built for it is a
   missing feature being worked around, not a convention that has settled.** From
   `sold-out`, which was specified out on the argument that `price` is free text
