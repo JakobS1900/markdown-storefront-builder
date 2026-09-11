@@ -31,6 +31,11 @@ const ROOT = fileURLToPath(new URL("../app/dist/", import.meta.url));
 const AXE = fileURLToPath(new URL("../node_modules/axe-core/axe.min.js", import.meta.url));
 const PORT = 8799;
 const CDP_PORT = 9481;
+// Named once because the origin has to be spelled the same way twice: the URL
+// the page is navigated to, and the origin whose storage is cleared before it.
+// A clear that names a slightly different origin succeeds, clears nothing, and
+// leaves the second scheme warm without saying so.
+const ORIGIN = `http://127.0.0.1:${PORT}`;
 
 // The default is per platform, not per author's laptop. A Windows path handed
 // to spawn on Linux fails as ENOENT and then as "headless Chrome did not
@@ -264,15 +269,282 @@ async function loadRealContent() {
   await waitFor(`!!document.querySelector('.pages-panel .pages li')`, "the pages panel to list a page");
 }
 
+/**
+ * Puts axe on the page, once per page load.
+ *
+ * Called by the wizard pass and again by the storefront pass, which run against
+ * the same document. Injecting the whole library twice is a quarter of a
+ * megabyte of source evaluated for nothing, and it would silently discard any
+ * state axe holds. A navigation clears `window`, so this injects once per
+ * scheme and the second caller finds it already there.
+ */
+async function injectAxe() {
+  if ((await evaluate("typeof window.axe !== 'undefined'")) === true) return;
+  await evaluate(readFileSync(AXE, "utf8"));
+}
+
+/** How many questions the wizard asks, and how many screens that makes. */
+const WIZARD_QUESTIONS = 6;
+const WIZARD_SCREENS = WIZARD_QUESTIONS + 1;
+
+/**
+ * Everything one wizard screen is worth: its contrast, its parts, its width.
+ *
+ * One evaluate rather than three, because all three describe the SAME screen
+ * and the wizard repaints on every press. Asking separately would let a repaint
+ * land between the questions and produce three answers about two screens.
+ */
+const WIZARD_SCREEN = `(async () => {
+  const panel = document.querySelector('#wizard-panel');
+  const layer = document.querySelector('.wizard');
+  const page = document.documentElement;
+
+  // MEASURED FIRST, WITH THE PAGE EXACTLY AS A SELLER HAS IT. The axe run below
+  // hides everything behind the layer, and a width compared against a hidden
+  // page would be a ruler moving with the thing it measures, which is the
+  // mistake 'npm run menu-file' shipped once and this file exists to refuse.
+  // So T043b's numbers are taken here, before anything is touched.
+  //
+  // Reported with both numbers, because "it overflows" is not a diagnosis. The
+  // panel as well as the page: a panel that scrolls sideways inside a page that
+  // does not is still a screen somebody has to drag.
+  const wide = [
+    { what: 'the page', scroll: page.scrollWidth, client: page.clientWidth },
+    { what: 'the wizard panel', scroll: panel.scrollWidth, client: panel.clientWidth },
+  ].filter(m => m.scroll > m.client);
+
+  // EVERYTHING BEHIND THE LAYER IS HIDDEN FOR THE AXE RUN, AND THIS IS NOT THE
+  // GATE MOVING ITS OWN RULER. Read this before deleting it.
+  //
+  // axe decides an element's background by sampling the element stack at
+  // several points of its rect, and if the stacks disagree it refuses to name a
+  // colour and reports 'incomplete': "background color could not be determined
+  // because it partially overlaps other elements". 'document.elementsFromPoint'
+  // returns everything at a point whether or not it is painted over, so an
+  // OPAQUE panel does not save it: what is behind the modal is in the stack
+  // regardless. Three of the seven help paragraphs landed across the edge of
+  // the add-a-section dock behind them and went unmeasured for exactly that,
+  // and the other four were measured only by the luck of where they fell.
+  //
+  // Hiding what is behind changes nothing about the quantity being measured.
+  // '.wizard-panel' is 'background: var(--panel)', fully opaque, so not one
+  // pixel of the rendered colour comes from behind it, and '.wizard' is
+  // 'position: fixed; inset: 0', so nothing below it contributes to the panel's
+  // layout either. What changes is only whether the instrument can resolve the
+  // pair it is being asked about. The alternative was to accept 'incomplete' as
+  // measured, which is the vacuous pass this whole phase exists to refuse.
+  const hidden = [];
+  for (let node = layer; node && node !== document.body; node = node.parentElement) {
+    for (const sibling of node.parentElement.children) {
+      if (sibling === node || !(sibling instanceof HTMLElement)) continue;
+      hidden.push([sibling, sibling.style.display]);
+      sibling.style.display = 'none';
+    }
+  }
+
+  // 'passes' and 'incomplete' are asked for as well as 'violations', and they
+  // are the whole reason this screen function is not three lines long.
+  //
+  // A violation list cannot answer the question this walk has to answer: did
+  // axe LOOK at the text. An element axe declined to evaluate produces no
+  // violation, which is indistinguishable from one it evaluated and liked. That
+  // is the R6 failure one layer in from where it was last caught, so the run is
+  // asked what it reached rather than only what it disliked. Without the extra
+  // resultTypes axe returns only the FIRST node of each of those arrays, which
+  // would make the coverage count below silently wrong rather than absent.
+  const r = await axe.run(document.body, {
+    runOnly: { type: 'rule', values: ['color-contrast'] },
+    resultTypes: ['violations', 'passes', 'incomplete'],
+  });
+
+  for (const put of hidden) put[0].style.display = put[1];
+
+  // Which elements axe actually reached, and how it left each one.
+  //
+  // A result node names its element with a unique CSS selector rather than
+  // holding a reference, so this resolves them back. 'target' is an array to
+  // allow for frames: this gate runs one document, so the first entry is the
+  // whole address, and a nested array would mean the page grew an iframe, which
+  // is worth skipping rather than guessing at.
+  const reached = new Map();
+  for (const group of [['passes', r.passes], ['incomplete', r.incomplete], ['violations', r.violations]]) {
+    for (const v of group[1]) {
+      for (const n of v.nodes) {
+        if (typeof n.target[0] !== 'string') continue;
+        const found = document.querySelector(n.target[0]);
+        if (!found) continue;
+        reached.set(found, {
+          how: group[0],
+          why: (n.any || []).concat(n.all || []).map(c => c.message).filter(Boolean).join(' | '),
+        });
+      }
+    }
+  }
+
+  // The muted-on-panel text, one entry per paragraph, saying whether axe got a
+  // colour pair out of it. '.wizard-help' and '.wizard-progress' are
+  // var(--muted) on var(--panel), the pairing that exists nowhere else on that
+  // background and the entire reason this walk was written. Both 'passes' and
+  // 'violations' count as measured, because both mean axe resolved the pair and
+  // formed an opinion. 'incomplete' and a miss do not: those are text nobody
+  // has checked, reported by a gate that would otherwise say it had.
+  const muted = [...panel.querySelectorAll('.wizard-help, .wizard-progress')].map(e => {
+    const seen = reached.get(e);
+    return {
+      what: e.className,
+      how: seen ? seen.how : 'not evaluated',
+      why: seen ? seen.why : 'axe returned no result for this element at all',
+      text: (e.textContent || '').trim().slice(0, 60),
+    };
+  });
+  const measured = m => m.how === 'passes' || m.how === 'violations';
+
+  return JSON.stringify({
+    helpMeasured: muted.filter(m => m.what.indexOf('wizard-help') !== -1 && measured(m)).length,
+    progressMeasured: muted.filter(m => m.what.indexOf('wizard-progress') !== -1 && measured(m)).length,
+    // Carried out whole rather than counted, because "one was not measured" is
+    // not a diagnosis and axe's own reason string usually is.
+    unmeasured: muted.filter(m => !measured(m)),
+    nodes: r.violations.flatMap(v => v.nodes.map(n => ({
+      target: n.target.join(' '),
+      summary: (n.failureSummary || '').split('\\n').filter(Boolean).slice(-1)[0] || '',
+      html: (n.html || '').slice(0, 90),
+    }))),
+    choices: panel.querySelectorAll('.wizard-choices li').length,
+    fields: panel.querySelectorAll('input, textarea, select').length,
+    help: panel.querySelectorAll('.wizard-help').length,
+    progress: panel.querySelectorAll('.wizard-progress').length,
+    hints: panel.querySelectorAll('.hint').length,
+    wide: wide,
+  });
+})()`;
+
+/**
+ * Opens the wizard, measures every screen of it, and closes it again.
+ *
+ * WHY IT GETS ITS OWN AXE RUN, BEFORE THE EXAMPLE IS LOADED. The wizard is a
+ * modal layer over everything else, and axe reports text it believes is
+ * obscured as `incomplete` rather than as a violation. This gate collects only
+ * violations, so leaving the layer up over the storefront would SHRINK the main
+ * measurement instead of adding to it, which is the exact shape of the two bugs
+ * this file already records. So: measure it alone, shut it, then load the
+ * example and run the storefront pass unchanged.
+ *
+ * WHY EVERY SCREEN. Six questions and a finish, and they do not draw the same
+ * things: only the first has nine choices, only four of them have a text field,
+ * and `.wizard-help` and `.wizard-progress` are `var(--muted)` on
+ * `var(--panel)`, a pairing that exists nowhere else on that background. A pass
+ * that opened the first screen and stopped would leave most of a new surface
+ * unmeasured in both palettes.
+ */
+async function auditWizard() {
+  console.log(`  Waiting for wizard to open...`);
+  // The trigger lives on the empty state and nowhere else, which is why the
+  // caller clears storage first. If this is missing, the app is not empty.
+  await waitFor(
+    `!!document.querySelector('[aria-controls="wizard-panel"]')`,
+    "the empty state to offer the wizard",
+  );
+  await evaluate(`(() => {
+    const t = document.querySelector('[aria-controls="wizard-panel"]');
+    if (t) t.click();
+  })()`);
+  await waitFor(`!!document.querySelector('#wizard-panel')`, "the wizard to open");
+
+  // `help` and `progress` count what the DOM drew; `helpMeasured` and
+  // `progressMeasured` count what axe got a colour out of. Both are kept
+  // because they fail differently: the first catches a screen that stopped
+  // drawing its help, the second catches one that draws it where axe cannot
+  // read it. Either one alone would have a blind spot the other covers.
+  const seen = {
+    screens: 0,
+    choices: 0,
+    fields: 0,
+    help: 0,
+    progress: 0,
+    hints: 0,
+    helpMeasured: 0,
+    progressMeasured: 0,
+  };
+  const nodes = [];
+  const wide = [];
+  const unmeasured = [];
+
+  for (let screen = 1; screen <= WIZARD_SCREENS; screen++) {
+    console.log(`  Measuring screen ${screen}...`);
+    const measured = JSON.parse(await evaluate(WIZARD_SCREEN));
+    seen.screens++;
+    for (const part of ["choices", "fields", "help", "progress", "hints", "helpMeasured", "progressMeasured"]) {
+      seen[part] += measured[part];
+    }
+    nodes.push(...measured.nodes.map((n) => ({ ...n, screen })));
+    wide.push(...measured.wide.map((m) => ({ ...m, screen })));
+    unmeasured.push(...measured.unmeasured.map((m) => ({ ...m, screen })));
+
+    if (screen === WIZARD_SCREENS) break;
+
+    console.log(`  Clicking next for screen ${screen + 1}...`);
+    // Next is a real control on every question screen and is the only way
+    // forward that does not also take the answer back: Skip forgets what was
+    // answered, which would be a different walk from the one somebody doing
+    // this for real takes.
+    await evaluate(`(() => {
+      const b = [...document.querySelectorAll('#wizard-panel button')]
+        .find(x => (x.textContent || '').trim() === 'Next');
+      if (b) b.click();
+    })()`);
+    // Waited for by what the next screen SAYS, not by a sleep. The progress
+    // line names its own number, so this cannot be satisfied by the screen that
+    // was already there, and the finish screen has no progress line at all.
+    const next = screen + 1;
+    await waitFor(
+      next <= WIZARD_QUESTIONS
+        ? `/Question ${next} of/.test(document.querySelector('#wizard-panel .wizard-progress')?.textContent || '')`
+        : `[...document.querySelectorAll('#wizard-panel button')].some(x => /Make my page/.test(x.textContent || ''))`,
+      `the wizard to reach screen ${next} of ${WIZARD_SCREENS}`,
+    );
+  }
+
+  console.log(`  Closing wizard...`);
+  // Closed, not finished. Finishing would build a page and leave the app in a
+  // state the storefront pass would then have to undo.
+  await evaluate(`(() => {
+    const b = document.querySelector('#wizard-panel [aria-label="Close setup"]');
+    if (b) b.click();
+  })()`);
+  await waitFor(`!document.querySelector('#wizard-panel')`, "the wizard to close");
+
+  return { ...seen, nodes, wide, unmeasured };
+}
+
 async function auditScheme(scheme) {
   await send("Emulation.setEmulatedMedia", {
     features: [{ name: "prefers-color-scheme", value: scheme }],
   });
-  await send("Page.navigate", { url: `http://127.0.0.1:${PORT}/` });
+  // Both schemes start cold, or the second one never sees the empty state.
+  //
+  // The two runs share one Chrome profile, so the dark run used to reopen an
+  // app that already held the example page in IndexedDB. The wizard's only way
+  // in is a trigger on the empty state, so the dark palette's wizard would have
+  // gone unmeasured while the run reported a pass: the vacuity this file
+  // exists to refuse. `loadRealContent` is tolerant of either state on purpose
+  // and is unaffected.
+  //
+  // about:blank first, because clearing IndexedDB out from under a page that
+  // holds an open connection to it is a delete the browser is entitled to defer
+  // until that connection closes. Navigating away closes it, so the clear
+  // happens against nothing and cannot be half done.
+  await send("Page.navigate", { url: "about:blank" });
+  await send("Storage.clearDataForOrigin", { origin: ORIGIN, storageTypes: "all" });
+  await send("Page.navigate", { url: `${ORIGIN}/` });
   await sleep(2500);
+
+  await injectAxe();
+  const wizard = await auditWizard();
+
   await loadRealContent();
 
-  await evaluate(readFileSync(AXE, "utf8"));
+  await injectAxe();
   const result = await evaluate(`(async () => {
     const r = await axe.run(document.body, {
       runOnly: { type: 'rule', values: ['color-contrast'] },
@@ -313,7 +585,7 @@ async function auditScheme(scheme) {
       folded: document.querySelectorAll('#surface details[open] .field').length,
     });
   })()`);
-  return JSON.parse(result);
+  return { ...JSON.parse(result), wizard };
 }
 
 let failed = 0;
@@ -323,8 +595,73 @@ try {
   await send("Runtime.enable");
 
   for (const scheme of ["light", "dark"]) {
-    const { violations, checked, sections, fields, hints, pages, folded } = await auditScheme(scheme);
+    const { violations, checked, sections, fields, hints, pages, folded, wizard } =
+      await auditScheme(scheme);
     const nodes = violations.flatMap((v) => v.nodes);
+
+    // The wizard first, because it was measured first, and on its own line so a
+    // future session can see at a glance what the walk actually drew.
+    console.log(
+      `\n${scheme} wizard: ${wizard.screens} screens, ${wizard.choices} choices, ${wizard.fields} fields, ${wizard.help} help lines (${wizard.helpMeasured} read by axe), ${wizard.progress} progress lines (${wizard.progressMeasured} read by axe), ${wizard.hints} hints, ${wizard.nodes.length} contrast failure(s), ${wizard.wide.length} overflow(s) at 390px`,
+    );
+
+    // Seven screens, and the parts that only some of them draw. The first
+    // question alone offers nine choices, four questions carry a text field,
+    // and every question carries one help paragraph and one progress line. A
+    // walk that stopped early, or a screen that stopped drawing its help,
+    // measures less without failing anything, and this is what says so.
+    if (
+      wizard.screens < WIZARD_SCREENS ||
+      wizard.choices < 9 ||
+      wizard.fields < 4 ||
+      wizard.help < WIZARD_QUESTIONS ||
+      wizard.progress < WIZARD_QUESTIONS
+    ) {
+      console.error(
+        `  ${scheme} wizard: only ${wizard.screens} screens, ${wizard.choices} choices, ${wizard.fields} fields, ${wizard.help} help lines and ${wizard.progress} progress lines measured, against ${WIZARD_SCREENS}, 9, 4, ${WIZARD_QUESTIONS} and ${WIZARD_QUESTIONS} expected. Something did not render, so this run proves less than it claims.`,
+      );
+      failed++;
+    }
+
+    // Drawn is not measured, and this is the half that has never been demanded
+    // anywhere in this file.
+    //
+    // Every screen carries one help paragraph and every question carries one
+    // progress line, both var(--muted) on var(--panel), which is the pairing
+    // this whole phase exists to check. A count of the ELEMENTS is satisfied by
+    // a paragraph axe skipped, and axe skipping it is not hypothetical: it
+    // reports text it cannot resolve a background for as `incomplete`, which
+    // this gate would otherwise discard in silence. So the coverage is demanded
+    // by name, and a shortfall names the paragraph and quotes axe's own reason.
+    if (
+      wizard.helpMeasured < WIZARD_SCREENS ||
+      wizard.progressMeasured < WIZARD_QUESTIONS
+    ) {
+      console.error(
+        `  ${scheme} wizard: axe read a colour out of only ${wizard.helpMeasured} of ${WIZARD_SCREENS} help paragraphs and ${wizard.progressMeasured} of ${WIZARD_QUESTIONS} progress lines. The rest were drawn and never checked, so this run proves less than it claims.`,
+      );
+      for (const m of wizard.unmeasured) {
+        console.error(`    screen ${m.screen}, ${m.what}: ${m.how}. ${m.why}`);
+        console.error(`      "${m.text}"`);
+      }
+      failed++;
+    }
+    for (const n of wizard.nodes) {
+      failed++;
+      console.log(`  wizard screen ${n.screen}: ${n.target}`);
+      console.log(`    ${n.summary}`);
+      console.log(`    ${n.html}`);
+    }
+    // Counted as a failure the same way a contrast violation is. FR-132 is one
+    // requirement in two halves, and this is the half a browser can settle: the
+    // window is 390 wide because that is the phone this is built for.
+    for (const m of wizard.wide) {
+      failed++;
+      console.error(
+        `  ${scheme} wizard screen ${m.screen}: ${m.what} is ${m.scroll}px wide inside ${m.client}px, so it scrolls sideways at 390px.`,
+      );
+    }
+
     console.log(
       `\n${scheme}: ${checked} elements, ${sections} sections, ${fields} fields, ${folded} folded fields, ${hints} hints, ${pages} pages listed, ${nodes.length} contrast failure(s)`,
     );

@@ -116,14 +116,14 @@ that page is untouched whether you finish or abandon.
 **Goal**: The new surface is actually measured. This project has twice found the
 contrast gate green about a surface it never laid out.
 
-- [ ] T042 Extend `app/tests/a11y.test.ts` with the wizard on screen **at every question**, asserting no axe violations, every control named, and no placeholder.
-- [ ] T043 [P] Assert in `app/tests/a11y.test.ts` that the focus trap holds and that everything behind the wizard is `inert` while it is open.
-- [ ] T043a **FR-132, which nothing else asserts.** Add to `app/tests/a11y.test.ts`: every control on every wizard question meets the 44 by 44 minimum, checked the way the existing touch target assertion checks it. Constitution VI requires CI to fail on this, so driving it by eye in T051 is not the mechanism, only a second opinion.
-- [ ] T043b [P] Assert no horizontal overflow with the wizard open at 390px. The contrast gate runs a real browser at that width and is where a layout assertion can mean something.
-- [ ] T044 Extend `scripts/contrast.mjs` to open the wizard, count what it drew, and **refuse a pass if it cannot see it**, the way it now counts `folded` and `pages`. Record the before and after element counts in the commit.
-- [ ] T045 **Break the contrast guard.** Stop the gate opening the wizard and confirm it refuses to report a pass rather than passing with a smaller number. Quote the refusal.
-- [ ] T046 **Break the a11y addition.** Strip an accessible name from a wizard control and confirm the gate fires. Put it back.
-- [ ] T047 Run `npm run contrast` in both palettes with the wizard measured, and `npm run verify` whole. Commit Phase 6.
+- [x] T042 Extend `app/tests/a11y.test.ts` with the wizard on screen **at every question**, asserting no axe violations, every control named, and no placeholder.
+- [x] T043 [P] Assert in `app/tests/a11y.test.ts` that the focus trap holds and that everything behind the wizard is `inert` while it is open.
+- [x] T043a **FR-132, which nothing else asserts.** Add to `app/tests/a11y.test.ts`: every control on every wizard question meets the 44 by 44 minimum, checked the way the existing touch target assertion checks it. Constitution VI requires CI to fail on this, so driving it by eye in T051 is not the mechanism, only a second opinion.
+- [x] T043b [P] Assert no horizontal overflow with the wizard open at 390px. The contrast gate runs a real browser at that width and is where a layout assertion can mean something.
+- [x] T044 Extend `scripts/contrast.mjs` to open the wizard, count what it drew, and **refuse a pass if it cannot see it**, the way it now counts `folded` and `pages`. Record the before and after element counts in the commit.
+- [x] T045 **Break the contrast guard.** Stop the gate opening the wizard and confirm it refuses to report a pass rather than passing with a smaller number. Quote the refusal.
+- [x] T046 **Break the a11y addition.** Strip an accessible name from a wizard control and confirm the gate fires. Put it back.
+- [x] T047 Run `npm run contrast` in both palettes with the wizard measured, and `npm run verify` whole. Commit Phase 6.
 
 ---
 
