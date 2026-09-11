@@ -4,12 +4,34 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## FEATURE 028 IS IN PROGRESS. Read this section before anything below it.
+## FEATURE 028 IS DONE AND SHIPPED as `v0.11.0`. Read this before anything below.
+
+**Released 2026-09-11.** Merged to master with `--no-ff` as `f4d1b2f`, pushed,
+tagged, and the GitHub Release carries the signed APK: 3,233,712 bytes,
+`isDraft: false`, `isPrerelease: false`, checked with `gh release view v0.11.0`.
+The tag is on `origin`, confirmed with `git ls-remote --tags origin`. That is
+the fifth feature in a row merged `--no-ff`, which is settled practice here.
+
+**56 of 58 tasks ticked.** The two left are T056's bookkeeping and T057, which
+is this edit. Nothing on 028 is outstanding.
+
+**THE NEXT FEATURE IS 029, pasting a whole messy existing page** from rentry or
+pastebin. It was 028's slot until Jakob chose the formatting buttons on
+2026-09-11. `docs/ROADMAP.md:259-290` carries the standing thinking and two
+conclusions worth not rediscovering: widening the backup file picker to accept
+`.md` would be WORSE than the gap, because every such file is refused by the
+validator and the seller reads "That file is not a saved page", so the feature
+looks broken rather than absent; and the real work is a parser, not a file
+input, because the engine compiles a document to Markdown and has no path in the
+other direction at all. Start it from a paste box, not a file picker.
+
+The other standing candidate is the share sheet preview under T058, roughly two
+lines in `MainActivity.java`, now carried past five releases without being
+raised.
 
 **Branch `028-text-formatting`. Formatting buttons over a Text section, plus
-strikethrough and highlight.** Spec, plan, research, data model, tasks and all
-five implementation chunks are DONE and committed. 49 of 58 tasks ticked.
-`npm run verify` is green whole and unpiped.
+strikethrough and highlight.** Spec, plan, research, data model, tasks, five
+implementation chunks, the holistic review, a browser pass and a handset pass.
 
 **Where it came from**: a tester said bold, italics and highlighting were
 missing. Two of the three have compiled since feature 008 and the only
@@ -29,37 +51,56 @@ the paste import stays out.
 
 ### Current state, measured
 
-`npm run verify` whole and unpiped from PowerShell, exit 0, at `f756ddd`:
-**79 test files, 1551 tests, a11y 61, contrast 411 elements / 12 sections / 45
+`npm run verify` whole and unpiped from PowerShell, exit 0, at `3f5073d`:
+**80 test files, 1572 tests, a11y 61, contrast 411 elements / 12 sections / 45
 fields / 32 folded / 39 hints with 0 failures in both palettes, PLUS the wizard
 walked at 7 screens with 7 of 7 help lines and 6 of 6 progress lines read by
 axe, PLUS the formatting bar at 6 of 6 buttons read by axe in both palettes,
-secret scan 456, dash scan 331, menu file and pwa gates clean.**
+secret scan 457, dash scan 332, menu file and pwa gates clean.**
 
 Those are the numbers to expect. a11y was 60 and is 61; the formatting line is
 new. **If the formatting line says fewer than 6 read by axe, something stopped
 being measured** rather than something being fine.
 
-### What is LEFT, in order
+### THE HOLISTIC REVIEW EARNED ITS COST AGAIN, AND THIS TIME IT CAUGHT THREE WAYS THE BUTTONS DESTROYED TEXT
 
-1. **T048, the holistic review, is NOT DONE and is MANDATORY.** Five chunks is
-   over `CLAUDE.md`'s line. **Two attempts died on the account session limit**
-   (resets 3:20pm America/Los_Angeles on 2026-09-11), which is the same failure
-   as 2026-09-09. Dispatch a fresh reviewer over `git diff efe8400..HEAD`. The
-   brief that was used is worth reusing: the toggle logic in `dom.ts` (`apply`,
-   `applyLines`), the `*` versus `**` interaction, round tripping button output
-   back through `compile()`, the `warned` Set's scope, and vacuous assertions.
-2. **T052 and T053, the handset pass.** The Moto G7 `ZY2262PFGQ` is connected
-   and an offline emulator is attached beside it, so **every `adb` call needs
-   `-s ZY2262PFGQ`**. JDK 21 is at `C:\Program Files\Java\jdk-21`. Check
-   `dumpsys power` for `mWakefulness` immediately before every `screencap`.
-   What to look for: the six buttons reachable with the software keyboard up,
-   the selection surviving a tap, and **Jakob's two pages not moving**. They are
-   "Untitled page, 9/1/2026" and "Ridgeline Carry, 8/31/2026".
-3. **T054 to T056, the release.** versionCode **16**, versionName **0.11.0**.
-   Bump with Edit, never `Set-Content`. Merge to master `--no-ff`, push, tag
-   `v0.11.0`, publish the Release with the signed APK attached.
-4. **T057, T058**: update this file and `specs/README.md`.
+Read this before touching `apply()` in `app/src/ui/dom.ts`. Two attempts at the
+review died on the account session limit, which is the same failure as
+2026-09-09; the third ran. Every finding was reproduced against the real logic
+and the real compiler before anything was changed.
+
+1. **Silent loss.** Bold then Italic on one word. After Bold the text is
+   `**word**` with `word` selected, and Italic's `*` matched **the tails of the
+   bold markers**, so it "unwrapped" them. `**word**` became `*word*` and the
+   bold vanished with nothing on screen saying so.
+2. **Deletion.** A selection spanning two separate bold spans. `**a** and **b**`
+   with `a** and **b` selected: both ends matched `**`, so it stripped the outer
+   markers of two DIFFERENT pairs and **deleted four characters**.
+3. **Visible rubbish.** A selection crossing a line break. Every pattern in the
+   grammar captures with `[^\n]+?`, so a pair with a newline between its halves
+   is not a construct and never can be. `**line1\nline2**` published as literal
+   asterisks either side of the seller's sentences. **Selecting a passage and
+   pressing Bold is the most natural thing a button invites**, so this was the
+   common case, not an edge.
+
+**WHY NO TEST COULD HAVE CAUGHT THE FIRST TWO, which is the lesson.** The one
+test that combined two marks used Bold and Cross out, and `**` and `~~` share no
+characters. **A fixture whose value is the harmless one cannot discriminate.**
+That is the same finding 027's review produced, in a different disguise.
+
+**A fourth, found while verifying the others, which the review had scored as
+passing.** `***word***` compiled to `**\*word**\*`, a bold containing a literal
+asterisk plus a stray one, so bold and italic together was broken in BOTH orders
+and had been since feature 008. Nothing had ever reached it, because typing
+three asterisks by hand is unlikely. **Two buttons make it one tap.** The
+general lesson: an affordance makes a latent gap reachable.
+
+Fixed with no new node kind: `***` parses as a strong holding an em, which is
+what it means, and `emitInline` writes `**` then `*` so it round trips.
+
+The review also confirmed clean and these are NOT re-checked: the escaper and
+its equals rule, the run guard, the `warned` Set's scoping, both amended tests
+as honest, every capability citation, and principles I, IV and VII.
 
 ### What this feature found that nobody was looking for
 
@@ -169,8 +210,42 @@ fixed, committed, and proved firing.
 
 ---
 
-**Released**: `v0.10.1`, versionCode 15, versionName 0.10.1, the empty state's
-button swap. `v0.10.0` is `fdf1548`, versionCode 14.
+## What was verified on the handset, 2026-09-11, for 028
+
+Moto G7 `ZY2262PFGQ`, release build, real key, versionCode 16 / 0.11.0 confirmed
+by `dumpsys package`. **Do not re-probe these.**
+
+- **THE BUTTONS ARE REACHABLE WITH THE SOFTWARE KEYBOARD UP.** All six sit above
+  the field once it opens, and the field keeps focus. This is the one question
+  no gate here can answer, and it was T053's whole reason for existing.
+- **The placeholder is inserted SELECTED.** Bold pressed on an empty field, then
+  "deposit" typed, gave `**deposit**`: the typing replaced the placeholder
+  rather than joining it.
+- **Both new marks reach the compiled output**, read off the Copy tab as
+  `**deposit==limited==**` for rentry.
+- **The glyph styling works on the device**: B bold, I italic, S struck through,
+  H carrying the accent wash. Six on one row at handset width, no wrapping, no
+  sideways scroll.
+- **PRINCIPLE V HOLDS, MEASURED.** Jakob's pages were "Untitled page, last
+  edited 9/1/2026" and "Ridgeline Carry, last edited 8/31/2026" before the run
+  and are exactly those two, with those dates, after it. Two probe pages were
+  made and both removed. Sixteen screenshots and a UI dump were deleted from the
+  device and `stay_on_while_plugged_in` is back to 0.
+- **Opening a page does not change its date**, proved incidentally: his 9/1 page
+  was open when the app launched and still read 9/1/2026 afterwards. That is why
+  a probe can be cleaned up safely.
+
+**`adb pull` needs `MSYS_NO_PATHCONV=1` too**, not just `adb shell`. This file
+already says it about `adb shell`; the pull rewrote its remote path to
+`C:/Program Files/Git/sdcard/...` and failed. **PowerShell avoids the whole
+class** and is what the rest of that run used.
+
+---
+
+**Released**: `v0.11.0`, versionCode 16, versionName 0.11.0, the formatting
+buttons. Merge commit `f4d1b2f`, tag on `origin`, Release carries the signed APK
+at 3,233,712 bytes.
+`v0.10.1` is the empty state's button swap. `v0.10.0` is `fdf1548`, versionCode 14.
 `v0.9.0` is `c0f58fc`, `v0.8.0` is `49ab971`, `v0.7.1` is `d27f470`, `v0.7.0` is
 `108c4a7`. **Every tag through 0.10.0 is on `origin`**, confirmed with
 `git ls-remote --tags origin` on 2026-09-11, `origin/master` is at `fdf1548`,

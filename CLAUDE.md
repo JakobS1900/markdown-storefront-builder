@@ -8,21 +8,21 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
-**Feature 028 is IN PROGRESS**: `specs/028-text-formatting/`, formatting buttons
-over a Text section. Spec, plan, research, data model and quickstart are
-written; `specs/028-text-formatting/plan.md` is the plan of record. Five chunks,
-so its holistic review is mandatory rather than optional.
+**Nothing is in progress right now.** The next feature has not been started.
 
-**028 is NOT the paste import.** It was earmarked for that and Jakob chose the
+Most recently finished: `specs/028-text-formatting/`, formatting buttons over a
+Text section plus strikethrough and highlight, released as `v0.11.0` on
+2026-09-11 and verified on the handset. Five chunks, a holistic review, 56 of
+its 58 tasks. 024 through 027 before it are also done and released.
+
+**028 was NOT the paste import.** It was earmarked for that and Jakob chose the
 formatting buttons instead on 2026-09-11, after a tester reported bold, italics
-and highlighting as missing. Two of those three have worked since feature 008
-and had no control, only a hint telling the seller to type asterisks. **Pasting
-a whole messy existing page is now 029**, to be specified once 028 ships.
+and highlighting as missing. Two of those three had worked since feature 008 and
+had no control, only a hint telling the seller to type asterisks.
 
-Most recently finished: `specs/027-setup-wizard/`, the question by question
-front door, released as `v0.10.0` on 2026-09-11 and verified on the handset.
-All seven phases, 57 of its 58 tasks, with T051 explained in `tasks.md` rather
-than ticked. 024, 025 and 026 before it are also done and released.
+**The next feature is 029, pasting a whole messy existing page** from rentry or
+pastebin. Not specified yet. `docs/ROADMAP.md:259-290` has the standing
+thinking.
 
 **That is a claim with an expiry date**, true only while `docs/HANDOFF.md` still
 says so. Believe the handoff over this block, always.
@@ -34,8 +34,9 @@ the most recent work and nothing was in progress, and stayed that way through
 three releases and two whole features. Then it said 027 was specified with no
 implementation code, and stayed that way through all seven of its phases and its
 release. **The block does not update itself. Whoever finishes a feature updates
-it.** It was updated on 2026-09-11 by the session that finished 027, which is
-the rule working rather than the rule being needed again.
+it.** It was updated on 2026-09-11 by the session that finished 027, and again
+the same day by the session that finished 028, which is the rule working rather
+than the rule being needed again.
 This block used to name
 `specs/002-compile-skeleton/plan.md` as "the current plan". It had been finished
 for a month, so every session began by reading a description of work already
