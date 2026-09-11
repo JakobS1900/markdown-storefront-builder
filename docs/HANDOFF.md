@@ -4,7 +4,8 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-**Released**: `v0.10.0`, from `fdf1548`, versionCode 14, versionName 0.10.0.
+**Released**: `v0.10.1`, versionCode 15, versionName 0.10.1, the empty state's
+button swap. `v0.10.0` is `fdf1548`, versionCode 14.
 `v0.9.0` is `c0f58fc`, `v0.8.0` is `49ab971`, `v0.7.1` is `d27f470`, `v0.7.0` is
 `108c4a7`. **Every tag through 0.10.0 is on `origin`**, confirmed with
 `git ls-remote --tags origin` on 2026-09-11, `origin/master` is at `fdf1548`,
@@ -411,9 +412,9 @@ by `dumpsys package`. **Do not re-probe these.**
    with `--no-ff` if that has not happened by the time you read this; the branch
    command at the top of this file tells you.
 
-   **The one thing still open on it is a question for Jakob, not work**: the
-   empty state's two controls, item 5 under "What T048 found". It is in "Blocked
-   on Jakob".
+   **The question T048 left open is now answered and shipped.** Jakob chose to
+   swap the empty state's two controls on 2026-09-11 and it went out as
+   `v0.10.1`. Nothing on 027 is outstanding.
 
 3. **Pick the next feature.** 028 is already named and chosen: pasting a whole
    messy existing page from rentry or pastebin, deferred out of 027 on
@@ -1378,16 +1379,35 @@ SEQUENTIALLY rather than at once is what keeps one failure from costing both.
 
 ## Blocked on Jakob
 
-- **The empty state's two controls: which one should be primary?** Raised by
-  feature 027's holistic review and seen on the handset on 2026-09-11. Today
-  "See an example page" is the solid purple button and "Answer a few questions",
-  the control the whole feature exists for, is the ghost outline beside it. On
-  the device the purple one does take the eye. The argument against promoting
-  the wizard is that two solid accents next to each other is the six-primaries
-  problem in miniature, which is a real rule this project already learned; the
-  argument for is that somebody who cannot work out what to type is not served
-  by a demonstration of somebody else's shop. **A swap, not an addition**, so it
-  stays one accent either way. Not done, because it is taste and it is yours.
+- **The empty state's two controls: ASKED AND ANSWERED on 2026-09-11. Jakob
+  chose the swap, and it shipped as `v0.10.1`.** "Answer a few questions" has
+  the accent; "See an example page" is a plain button. Do not re-ask and do not
+  revert it on the reasoning in `6b8bc45`, which is addressed below.
+
+  **The research is worth keeping, because three of its four findings are facts
+  about this app rather than opinions**, and the comment in `build.ts` carries
+  them:
+
+  - The empty state's own sentence names answering questions, adding a section
+    and beginning from a template. **"See an example page" is not in that
+    list**, so the loudest control on the screen was the one the screen never
+    mentioned.
+  - **The example is not a preview.** It calls `openBackup`, so it hands a new
+    seller a page of somebody else's products and then tells them to start
+    their own somewhere else. It is also the only one of the three that crosses
+    the network, so it is the slowest and the only one that can fail.
+  - `6b8bc45` never forbade this. That commit is about the COUNT, "seven
+    primaries is no primary", and a swap keeps it at exactly one. What it also
+    said, calling the example "the thing a new person should press", was written
+    on 2026-09-05, **three days before the wizard was specified**. It was true
+    when there was nothing better.
+  - The one piece of first hand evidence this feature has is a person who opened
+    a starting point and could not work out what to type. A pre-filled page of
+    someone else's shop is that same thing again.
+
+  The argument the other way was put to him and is real: a finished page teaches
+  what the product IS in one tap, where six questions ask somebody to commit
+  before they know why. He chose the swap anyway.
 
 - **The share sheet cannot preview the exported menu file**, and this has now
   been carried past FOUR releases without being put to you. Sending works and

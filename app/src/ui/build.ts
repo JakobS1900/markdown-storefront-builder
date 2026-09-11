@@ -125,7 +125,6 @@ function revealSection(blockId: string): void {
 function emptyState(state: State): HTMLElement[] {
   const load = button({
     label: "See an example page",
-    variant: "primary",
     onClick: () => {
       load.disabled = true;
       announce("Loading an example.");
@@ -178,6 +177,10 @@ function emptyState(state: State): HTMLElement[] {
   // dismissed by closing the app, which is not dismissing it. FR-133.
   const wizard = button({
     label: "Answer a few questions",
+    // THE ONE PRIMARY ON THIS SCREEN. Jakob's call on 2026-09-11, after the
+    // question was researched rather than argued from taste. See the note on
+    // the row below for the evidence, and `6b8bc45` for why it is exactly one.
+    variant: "primary",
     // From the state this render was given, not read back out of the store.
     // `buildSurface` already holds it and passes it to `showsEmptyState`, so
     // reaching past that for one field is a second way of doing what the
@@ -195,22 +198,42 @@ function emptyState(state: State): HTMLElement[] {
     el("p", { class: "empty" }, [
       "Your page is empty. Answer a few questions and I will make one, add a section below, or begin from a template.",
     ]),
-    // CHUNK 5: this is NOT the primary control, and the spec does not settle
-    // which of the two entry points a newcomer should press first.
+    // SETTLED 2026-09-11 BY JAKOB: the wizard takes the accent, the example
+    // steps back to a plain button. It was raised by the holistic review at
+    // T048, researched rather than argued from taste, and decided by him.
     //
-    // "See an example page" has been the empty state's one primary since the
-    // restyle, and the reasoning beside the add-a-section row is why nothing is
-    // being promoted here: six primaries on one screen meant no primary at all,
-    // and two competing solid accent buttons is that mistake in miniature. The
-    // argument the other way is real and is the whole point of the feature:
-    // somebody who cannot work out what to type is better served by the wizard
-    // than by a demonstration of somebody else's shop, so the wizard could
-    // fairly take the accent and the example step back to a plain button.
+    // Still exactly ONE solid accent in this row, which is the whole of the
+    // rule `6b8bc45` established. That commit is about the COUNT, "seven
+    // primaries is no primary", not about which control wins, so a swap never
+    // conflicted with it. What the commit also said is the part that went
+    // stale: it called the example "the thing a new person should press",
+    // written on 2026-09-05, three days before this wizard was specified. It
+    // was true when there was nothing better to press.
     //
-    // Left as it is, and put to T048 rather than settled quietly in the chunk
-    // that wrote it, because it is a taste question about a screen and this
-    // chunk cannot see the screen. Its position, first in the row, is what it
-    // gets instead.
+    // The three things that decided it, none of them a matter of opinion:
+    //
+    //   - The empty state's own sentence, right above, names answering
+    //     questions, adding a section and beginning from a template. "See an
+    //     example page" is not in that list, so the loudest control on the
+    //     screen was the one the screen never mentions.
+    //   - The example is not a preview. It calls `openBackup`, so it hands a
+    //     brand new seller a page of somebody else's products and then tells
+    //     them to go and start their own somewhere else. It is also the only
+    //     one of the three that crosses the network, so it is the slowest and
+    //     the only one that can fail.
+    //   - The one piece of first hand evidence this feature has is a person who
+    //     opened a starting point and could not work out what to type. A
+    //     pre-filled page of someone else's shop is that same thing again.
+    //
+    // The argument the other way is real and was put to him with this: a
+    // finished page teaches what the product IS in one tap, where six questions
+    // ask somebody to commit before they know why. He chose the swap anyway.
+    //
+    // `variant` is set in the CALLER rather than forced from CSS, for the
+    // reason `6b8bc45` gives at length: `.adders .btn` scores the same as
+    // `.btn.primary` and sits later in the file, so beating it from the
+    // stylesheet once shipped this row as unreadable white on white, green in
+    // every gate, because no gate reads a colour a browser computed.
     el("div", { class: "adders" }, [wizard, load]),
     starterPicker("starters-group-empty"),
   ];
