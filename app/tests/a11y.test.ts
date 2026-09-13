@@ -49,8 +49,10 @@ import {
   selectBlock,
   selectTiers,
   setPasteText,
+  setPagePasteText,
   setSurface,
   startPasting,
+  startPastingPage,
   updateBlock,
 } from "../src/store.js";
 import { blankBlock } from "../src/ui/forms.js";
@@ -245,6 +247,22 @@ describe("the shell is accessible", () => {
 
     expect(document.querySelector('[aria-label="Paste a price list"]')).not.toBeNull();
     expect(document.querySelectorAll(".paste-lines input[type=checkbox]").length).toBeGreaterThan(0);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("has no axe violations with a proposed pasted page on screen", async () => {
+    const root = mount();
+    startPastingPage();
+    setPagePasteText("# Shop\n\nHello there\n\nPortrait $20\nIcon $10");
+    renderShell(root);
+    const panel = document.querySelector(".page-paste");
+    expect(panel).not.toBeNull();
+    const sections = [...(panel?.querySelectorAll(".page-paste-sections li") ?? [])];
+    expect(sections).toHaveLength(3);
+    for (const section of sections) {
+      const checkbox = section.querySelector<HTMLInputElement>("input[type=checkbox]");
+      expect(checkbox?.labels?.[0]?.textContent?.trim()).not.toBe("");
+    }
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 

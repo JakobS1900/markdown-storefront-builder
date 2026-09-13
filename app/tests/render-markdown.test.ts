@@ -23,6 +23,7 @@ import { compile } from "@mdsb/engine";
 import type { Block, Document } from "@mdsb/engine";
 
 import { renderMarkdown } from "../src/ui/render-markdown.js";
+import { buildProposedBlock, readProposal } from "../src/page-text.js";
 
 function render(markdown: string): HTMLElement {
   const host = document.createElement("div");
@@ -52,6 +53,20 @@ function renderCompiledFor(target: string, ...blocks: Block[]): HTMLElement {
 }
 
 const DANGEROUS = /^\s*(javascript|data|vbscript|file):/i;
+
+it("keeps a hostile whole page paste inert through proposal, compile, and preview", () => {
+  const hostile = "<script>alert(1)</script>\n<img src=x onerror=alert(1)>";
+  const blocks = readProposal(hostile).sections.map((section, index) => ({
+    ...buildProposedBlock(section), id: `p${index}`,
+  })) as Block[];
+  expect(blocks.length).toBeGreaterThan(0);
+  const host = renderCompiled(...blocks);
+  expect(host.textContent).toContain("<script>alert(1)</script>");
+  expect(host.textContent).toContain("<img src=x onerror=alert(1)>");
+  expect(host.querySelector("script, img")).toBeNull();
+  expect([...host.querySelectorAll("*")].flatMap((node) => [...node.attributes])
+    .some((attr) => attr.name.startsWith("on"))).toBe(false);
+});
 
 function urls(host: HTMLElement): string[] {
   return [

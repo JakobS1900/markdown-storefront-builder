@@ -679,6 +679,40 @@ async function auditWizard() {
   return { ...seen, questions, owed: screens, nodes, wide, unmeasured };
 }
 
+async function auditPagePaste() {
+  await waitFor(`!![...document.querySelectorAll('button')].find(b => b.textContent === 'Paste a page you already have')`, "the page paste trigger");
+  await evaluate(`(() => {
+    [...document.querySelectorAll('button')].find(b => b.textContent === 'Paste a page you already have').click();
+    const box = document.querySelector('.page-paste textarea');
+    box.value = '# Shop\\n\\nHello there\\n\\nPortrait $20\\nIcon $10';
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await waitFor(`document.querySelectorAll('.page-paste-sections li').length === 3`, "the pasted page proposal");
+  await injectAxe();
+  const result = JSON.parse(await evaluate(`(async () => {
+    const panel = document.querySelector('.page-paste');
+    const r = await axe.run(panel, {
+      runOnly: { type: 'rule', values: ['color-contrast'] },
+      resultTypes: ['violations', 'passes', 'incomplete'],
+    });
+    return JSON.stringify({
+      sections: panel.querySelectorAll('.page-paste-sections li').length,
+      checkboxes: panel.querySelectorAll('.page-paste-sections input[type=checkbox]').length,
+      measured: r.passes.flatMap(v => v.nodes).length + r.violations.flatMap(v => v.nodes).length,
+      nodes: r.violations.flatMap(v => v.nodes.map(n => ({
+        target: n.target.join(' '),
+        summary: (n.failureSummary || '').split('\\n').filter(Boolean).slice(-1)[0] || '',
+      }))),
+    });
+  })()`));
+  await evaluate(`(() => {
+    const b = [...document.querySelectorAll('.page-paste button')].find(x => x.textContent === 'Done pasting');
+    if (b) b.click();
+  })()`);
+  await waitFor(`!document.querySelector('.page-paste')`, "the page paste panel to close");
+  return result;
+}
+
 async function auditScheme(scheme) {
   await send("Emulation.setEmulatedMedia", {
     features: [{ name: "prefers-color-scheme", value: scheme }],
@@ -702,6 +736,7 @@ async function auditScheme(scheme) {
   await sleep(2500);
 
   await injectAxe();
+  const pagePaste = await auditPagePaste();
   const wizard = await auditWizard();
 
   const format = await loadRealContent();
@@ -747,7 +782,7 @@ async function auditScheme(scheme) {
       folded: document.querySelectorAll('#surface details[open] .field').length,
     });
   })()`);
-  return { ...JSON.parse(result), wizard, format };
+  return { ...JSON.parse(result), pagePaste, wizard, format };
 }
 
 let failed = 0;
@@ -795,9 +830,20 @@ try {
   }
 
   for (const scheme of ["light", "dark"]) {
-    const { violations, checked, sections, fields, hints, pages, folded, wizard, format } =
+    const { violations, checked, sections, fields, hints, pages, folded, pagePaste, wizard, format } =
       await auditScheme(scheme);
     const nodes = violations.flatMap((v) => v.nodes);
+
+    console.log(`\n${scheme} page paste: ${pagePaste.sections} sections, ${pagePaste.checkboxes} checkboxes, ${pagePaste.measured} contrast nodes measured, ${pagePaste.nodes.length} failure(s)`);
+    if (pagePaste.sections < 3 || pagePaste.checkboxes < 3 || pagePaste.measured < 3) {
+      console.error(`  ${scheme} page paste: the proposal or its contrast measurement was incomplete.`);
+      failed++;
+    }
+    for (const n of pagePaste.nodes) {
+      failed++;
+      console.log(`  ${n.target}`);
+      console.log(`    ${n.summary}`);
+    }
 
     // The wizard first, because it was measured first, and on its own line so a
     // future session can see at a glance what the walk actually drew.

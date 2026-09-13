@@ -213,12 +213,12 @@ panel, untick one section, swap another, confirm, and read the Build screen.
 
 **Goal**: the things a machine checks forever, rather than once.
 
-- [ ] T048 Add a case to `app/tests/a11y.test.ts` rendering the panel open with a proposal on screen. Expect the count to go from 61 to 62.
-- [ ] T049 Add a pass to `scripts/contrast.mjs` measuring the panel in both palettes, and **make it refuse to report a pass unless the panel actually had sections on screen**. A gate that measured an empty panel would be green and worthless, which is a mistake this project has already made three times in one afternoon.
-- [ ] T050 Add the XSS corpus case: a paste carrying a script tag, and an image with an `onerror`. Principle IV requires the corpus to grow by one case whenever a new way for user-authored content to arrive is introduced, and a paste is exactly that.
-- [ ] T051 **Confirm the parity snapshot and every golden fixture are byte identical to T002 and T003.** Quote the comparison. This is the claim "the schema does not move" being checked rather than asserted.
+- [x] T048 Add a case to `app/tests/a11y.test.ts` rendering the panel open with a proposal on screen. A11y file now has 62 tests. Focused Vitest exit 0, 62 passed.
+- [x] T049 Add a pass to `scripts/contrast.mjs` measuring the panel in both palettes. `npm run contrast` exit 0: light and dark each drew 3 proposed sections, 3 checkboxes and 16 measured contrast nodes, with 0 failures. The gate refuses fewer than 3 of each.
+- [x] T050 Add the XSS corpus case: a whole page paste carrying `<script>` and `<img onerror>`, taken through proposal, compile and preview. Focused renderer test exit 0, 40 passed.
+- [x] T051 Confirm the parity snapshot and every golden fixture are byte identical to T002 and T003. Parity SHA256 remains `F9F1A45BCD6151A5629C6355EDB249FCFC1D75750F61F1819CAD884317F85DA7`. `git diff --exit-code 6ad878e -- engine/tests/document/parity.snapshot.json engine/tests/compile/golden engine/tests/compile/fixtures` exited 0, and all 55 fixture paths are clean in status. Recorded fixture aggregate at T003 was `1f238e21168390f3011b1890d2aedef4ce1aa16783df14e43ca8b7b55ec9eb52`.
 - [ ] T052 Run `npm run verify` whole and unpiped. Record every number against T001's baseline and explain any that moved.
-- [ ] T053 **Break each new gate once.** Strip the accessible name off a section checkbox and confirm a11y goes red naming it; weaken a colour and confirm contrast goes red naming the ratio. A gate that has never been seen red is not evidence.
+- [x] T053 Break each new gate once. Clearing the first proposed checkbox label made the a11y case fail at the checkbox name assertion. Changing light `--muted` to `#dedede` made contrast exit 1 and name the page paste hint at 1.2:1 against required 4.5:1. Both mutations were restored.
 
 ---
 
