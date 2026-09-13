@@ -50,14 +50,42 @@ index appears in exactly one run, in order, with none missing and none repeated.
 
 **Blocks**: Phases 3, 4 and 5.
 
-- [ ] T004 Export `isTableRule` and the list decoration pattern from `app/src/price-list-text.ts`. **Exports only. Do not change what either does**, and do not copy them into the new module: two definitions of "is this a table rule" is the drift this avoids. `research.md` R13.
-- [ ] T005 Write the failing tests in `app/tests/page-text.test.ts` first, one per row of R3's table, plus the setext pair from R4: a line of `=` under text is a level 1 heading, a line of `-` under text is a level 2 heading, and the same line of `-` with a blank line above it is a rule. Quote the failure.
-- [ ] T006 Create `app/src/page-text.ts` and implement `Line` classification per R3. **No lookahead except the table header**, which is the one case content alone cannot tell apart, exactly as `readCandidates` already documents.
-- [ ] T007 Implement run grouping: maximal groups of adjacent non-blank lines, a blank line ends a run, a heading is a run of one, a rule is a run of one.
-- [ ] T008 Write the **losslessness property test** in `app/tests/page-paste-lossless.test.ts`, generating pastes from a vocabulary of real shapes: headings, rules, tables, product lines, paragraphs, blank runs, Windows line endings, trailing spaces, non-breaking spaces. Assert that the runs, reassembled in order with their blanks, reconstruct the input byte for byte. **Generated, not five hand written examples**: a test over five shapes proves nothing about the sixth shape a seller has. SC-002.
-- [ ] T009 Write the **purity test**: the same text read twice returns a deeply equal result, and the reader is called with `Date.now`, `Math.random` and `document` stubbed to throw. Nothing lints `app/src` for this the way ESLint lints the engine, so the test is the only thing that holds it. `plan.md` Constitution Check, Principle I.
-- [ ] T010 **Break it.** Delete one line's run assignment and confirm the losslessness test goes red naming the missing line, not failing a count. Put it back and quote the failure in the commit.
-- [ ] T011 Run `npm run typecheck`, `npm run lint` and `npm run test`. Commit this phase alone. `CLAUDE.md`: the cross-boundary contract lands first and by itself, and in this feature the runs are that contract.
+- [x] T004 Export `isTableRule` and the list decoration pattern from `app/src/price-list-text.ts`. **Exports only. Do not change what either does**, and do not copy them into the new module: two definitions of "is this a table rule" is the drift this avoids. `research.md` R13.
+
+  Both exported, bodies untouched, and the whole of 023's own suite still green. **`page-text.ts` tightens `isTableRule` rather than changing it**: over a whole page a table's rule must also carry a pipe, or "Terms" over "---" reads as a one column table instead of as the setext heading it is. 023 keeps its looser reading, which is correct where the whole paste is a price list. **`DECORATION` has no consumer yet.** It is exported here because this task puts both exports in the contract chunk, and it is read by Phase 3's builders.
+- [x] T005 Write the failing tests in `app/tests/page-text.test.ts` first, one per row of R3's table, plus the setext pair from R4: a line of `=` under text is a level 1 heading, a line of `-` under text is a level 2 heading, and the same line of `-` with a blank line above it is a rule. Quote the failure.
+
+  53 cases, seen red against a stub with the right signatures rather than only against a missing import, because "cannot find module" proves the import and nothing else: **43 failed, 13 passed**, including `expected [ 'text' ] to deeply equal [ 'blank' ]`, `expected 'text' to be 'heading'` for all six levels, and `expected [ 'text', 'text', 'text' ] to deeply equal [ 'text', 'blank', 'rule' ]` for each of the five rule forms. The 13 that passed against the stub are the cases that assert something is text, which is what the stub returned, and they are the reason the other 43 matter.
+- [x] T006 Create `app/src/page-text.ts` and implement `Line` classification per R3. **No lookahead except the table header**, which is the one case content alone cannot tell apart, exactly as `readCandidates` already documents.
+
+  **R3 is one kind short and one lookbehind short, and both are recorded at the code.** R4's setext rule needs the line BELOW to change the line above, which is a second piece of non-local reading that R3's table does not mention; and the underline itself is not blank, not a heading, not a rule and not text, so it needs a kind of its own. `headingUnderline` is that kind. Without it the underline lands in no run and the losslessness property is a lie.
+- [x] T007 Implement run grouping: maximal groups of adjacent non-blank lines, a blank line ends a run, a heading is a run of one, a rule is a run of one.
+
+  **Blank lines get runs of their own** rather than being dropped between the runs around them, so "every line index is in exactly one run" is true of the data structure instead of being bookkeeping every caller has to redo. This phase's own independent test is stated that way, and T022's proposal level version needs the blanks from somewhere.
+- [x] T008 Write the **losslessness property test** in `app/tests/page-paste-lossless.test.ts`, generating pastes from a vocabulary of real shapes: headings, rules, tables, product lines, paragraphs, blank runs, Windows line endings, trailing spaces, non-breaking spaces. Assert that the runs, reassembled in order with their blanks, reconstruct the input byte for byte. **Generated, not five hand written examples**: a test over five shapes proves nothing about the sixth shape a seller has. SC-002.
+
+  24 shapes, 200 seeded pages, three properties: every line claimed exactly once, the runs reassembled give the page back, and the ranges are contiguous and honest about their own length. The seed is fixed and printed with every failure.
+
+  **One character does change, and "byte for byte" has to be read against that.** R11 chose to split on `\r?\n`, so a Windows paste comes back with Unix line endings. The test compares against the page with its terminators settled and says so at the top of the file, rather than normalizing both sides and quietly asserting less than it claims. Every other character, smart quotes, trailing spaces and non breaking spaces included, comes back untouched.
+- [x] T009 Write the **purity test**: the same text read twice returns a deeply equal result, and the reader is called with `Date.now`, `Math.random` and `document` stubbed to throw. Nothing lints `app/src` for this the way ESLint lints the engine, so the test is the only thing that holds it. `plan.md` Constitution Check, Principle I.
+
+  In `page-text.test.ts`, with the reading taken inside the rigging and every assertion made after it is torn down. A `Date.now` left throwing while `expect` runs would fail the test for the wrong reason, and a test that can fail for the wrong reason stops being evidence.
+- [x] T010 **Break it.** Delete one line's run assignment and confirm the losslessness test goes red naming the missing line, not failing a count. Put it back and quote the failure in the commit.
+
+  `from = to + 1` changed to `from = to + 2`, which drops the first line of every run after the first. All three properties went red on seed 2, and the first one named the lines rather than counting them:
+
+  ```text
+  - "missing": [],
+  + "missing": [
+  +   "line 2: \"Terms\"",
+  +   "line 4: \"Non breaking spaces come out of a browser copy\"",
+  + ],
+  ```
+
+  The contiguity property added `run 1 starts at 3 after a run ending at 1`. Put back, and all 56 green again.
+- [x] T011 Run `npm run typecheck`, `npm run lint` and `npm run test`. Commit this phase alone. `CLAUDE.md`: the cross-boundary contract lands first and by itself, and in this feature the runs are that contract.
+
+  All three alone and unpiped, exit 0 each. **82 test files and 1628 tests, against T001's 80 and 1572**: two new files, 56 new tests. Dash scan clean over 341 files.
 
 ---
 

@@ -47,7 +47,15 @@ const DELIMITERS: readonly { id: Delimiter; pattern: string }[] = [
 
 // Leading list decoration from a Markdown or plain text list. It is how the
 // seller wrote a list, not part of what they are selling.
-const DECORATION = /^\s*(?:[-*+]\s+|\d+[.)]\s+)/;
+//
+// Exported for feature 029's page reader (T004), which reads a whole pasted
+// page rather than one price list and has to answer the same two questions
+// this file already answers. Nothing about it moves: exporting a pattern
+// changes this module's surface and not what it does. The alternative was a
+// second copy of it in `page-text.ts`, which is two definitions of "how did
+// the seller decorate this list" that can drift apart without either side
+// failing. `specs/029-paste-a-page/research.md` R13.
+export const DECORATION = /^\s*(?:[-*+]\s+|\d+[.)]\s+)/;
 
 // A Markdown table's rule, such as "| --- | :-- |". Pipes, dashes, colons and
 // space only, and at least one dash so a row of empty cells is not mistaken
@@ -63,7 +71,17 @@ function isBlank(line: string): boolean {
   return line.trim() === "";
 }
 
-function isTableRule(line: string): boolean {
+/**
+ * Whether this line is the rule under a Markdown table's header row.
+ *
+ * Exported for feature 029's page reader (T004), for the reason above
+ * `DECORATION`: one definition of this shape, in the module that already had
+ * to have one. `page-text.ts` adds a condition of its own on top rather than
+ * changing this, because over a whole page a bare row of dashes is nearly
+ * always a divider or a setext underline, and over a pasted price list it is
+ * nearly always this. Both readings are right where they are.
+ */
+export function isTableRule(line: string): boolean {
   const trimmed = line.trim();
   return trimmed !== "" && TABLE_RULE.test(trimmed) && trimmed.includes("-");
 }
