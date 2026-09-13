@@ -405,6 +405,12 @@ function repaintSoon(): void {
   }, QUIET_MS);
 }
 
+export function resetStoreForTests(): void {
+  if (pendingRepaint !== undefined) clearTimeout(pendingRepaint);
+  pendingRepaint = undefined;
+  listeners.clear();
+}
+
 /**
  * What the interface is built out of, ignoring anything a person types.
  *

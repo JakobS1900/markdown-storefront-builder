@@ -128,13 +128,20 @@ the heading line is simply part of the text again, because it always was.
 ## R7: The page title is copied from the first heading, never consumed by it
 
 **Decision: if the paste's first non-blank line is a heading, its text becomes
-the document title AND that heading still becomes a Heading section.**
+the document title AND that heading still remains visible in the proposed
+content.**
 
 Consuming it would be a quiet act of vandalism. The title is private, and the
 field's own hint says so: "Only you see this. It is how the page is listed when
 you come back." A published page whose visible `# Willow's Prints` had been
 moved into a field only the seller can see would come out of this app missing
 its own title.
+
+R6 is the narrow exception to "becomes a Heading section": a first heading
+directly above a price run becomes that Prices section's heading. It is still
+not consumed by the private title, because the heading line stays inside the
+Prices section's source and comes back verbatim if the seller swaps that section
+to Text.
 
 ## R8: Confirming goes through `openBackup`
 
@@ -230,14 +237,39 @@ holistic review keeps finding here.
 
 ## Amendments after contact with the code
 
-Chunk 1, 2026-09-12. Four of the decisions above were incomplete rather than
+Chunk 1, 2026-09-12. Most of the decisions above were incomplete rather than
 wrong, and they are corrected here rather than quietly diverging from the code.
+One of them, the reason recorded for R13's pipe condition, was simply wrong, and
+it is marked as wrong below with the mutation that disproved it. A quietly
+corrected claim would be worse than the original error.
 
 **R3 is one kind and one lookbehind short.** It says "no lookahead except the
 table header", which is true, and it does not mention that R4's setext rule
 needs the line BELOW to reach back and reclassify the line above. That is a
 second piece of non-local reading, and the underline itself needs a kind of its
 own, `headingUnderline`. `data-model.md` carries the corrected table.
+
+**R4 has a cost and it lands on a product line.** A line directly above a row of
+dashes becomes a level 2 heading, and that line is often somebody's product:
+
+```
+Sketch - 30
+Full colour - 80
+---
+```
+
+reads as text, heading, underline, and `Full colour - 80` stops being a product.
+The behaviour stands, because R4 chose CommonMark deliberately and this is
+CommonMark. What was missing was the record and a test, so chunk 2 and the
+holistic review would have met it as a surprise. `app/tests/page-text.test.ts`
+now pins it.
+
+Two things make it defensible rather than merely chosen. This reading is more
+conservative than CommonMark, which makes the WHOLE preceding paragraph into the
+heading where this promotes only its last line. And a seller whose page has this
+shape is already being shown a heading there by their own paste host, so matching
+it is Principle VII rather than a mistake. FR-029-18 lets them swap the section
+back if it was not what they meant.
 
 **R11's "change nothing else about any character" has exactly one exception, and
 it is the `\r`.** Splitting on `\r?\n` drops it, so a page written on Windows
@@ -254,15 +286,42 @@ with gates that measured nothing.
 
 **R13's "one definition, do not duplicate" survives, with a condition on top.**
 `isTableRule` accepts a bare `---`, and over a price list that is correct: a lone
-row of dashes inside one is the rule under its header. Over a whole page it is
-almost never that. It is a divider, or it is a setext underline, and neither
-shape exists in the paste 023 was built for. `page-text.ts` therefore requires a
+row of dashes inside one is the rule under its header. `page-text.ts` requires a
 table rule to carry a pipe as well, as a condition of its own, and 023's looser
 reading does not move.
 
-**The cost is stated rather than hidden**: a single column Markdown table whose
-rule line carries no pipe at all is not recognised as a table here. That shape is
-vanishingly rare, and FR-029-18 lets the seller swap the section.
+**The reason first written down for that condition was false, and the correction
+matters more than the condition does.** Chunk 1 recorded that requiring the pipe
+is what lets `Terms` over `---` read as a heading rather than as a one column
+table. It is not. In `readLines` the setext branch runs before `THEMATIC_BREAK`
+and before the table rule check, so `Terms` over `---` is already a heading and a
+bare `---` under a blank line is already a rule, whatever this condition says. A
+reviewer disproved the claim by mutation on 2026-09-12: deleting
+`&& trimmed.includes("|")` leaves `"Terms\n---"`, `"Terms\n-----"`,
+`"Terms\n\n---"`, `"# H\n---"`, `"---"`, `"---\n---"`, `"  ---  "` and a real
+pipe table classified exactly as before.
 
-**`DECORATION` is exported and has no consumer yet.** T004 puts both exports in
-the contract chunk. Phase 3's builders are where it is read.
+**What the pipe actually buys** is the short and colon bearing dash rows, `--`,
+`:--:`, `:-:` and `- -`, in the positions the setext rule does not claim. All
+four are table rules to 023, correctly, because inside a pasted price list that
+is what they are. Mid page they are a seller's punctuation, and classifying one
+as `tableRule` would drop a table's furniture into the middle of prose. That is a
+defensible tightening. It is simply not the one that was written down, and
+`app/tests/page-text.test.ts` now pins it under its own name, so deleting the
+condition fails a test about the pipe rather than a test named for the three dash
+bar.
+
+**The cost recorded beside the false claim was misattributed too.** A single
+column Markdown table whose rule carries no pipe, `Item` over `---` over
+`A3 print`, is read as a setext heading. That is true, and it is true in both
+builds, with the pipe condition and without it, so it is a cost of the setext
+ordering in R4 rather than of anything R13 decided. The shape is vanishingly
+rare, and FR-029-18 lets the seller swap the section.
+
+**`DECORATION` was exported by T004 and the export is reverted.** Chunk 1 put it
+in the contract chunk on the grounds that Phase 3's builders would read it. They
+will not: 029 reaches a price list through `readCandidates`, which strips the
+decoration internally, so the pattern had no consumer and a comment claiming one.
+CLAUDE.md's minimalism ladder says do not build for a hypothetical future, and
+re-exporting it is one word on the day something needs it. `isTableRule` stays
+exported, because `page-text.ts` really does call it.

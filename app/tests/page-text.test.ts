@@ -17,7 +17,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { readLines, readRuns, runText } from "../src/page-text.js";
+import { buildProposedBlock, readLines, readProposal, readRuns, runText } from "../src/page-text.js";
 
 /** Every line's kind, which is what most of the classification cases assert. */
 const kinds = (text: string): readonly string[] => readLines(text).map((line) => line.kind);
@@ -47,6 +47,22 @@ describe("R3, a hash heading", () => {
     { line: "##### Even smaller", level: 5 },
     { line: "###### Smallest", level: 6 },
   ])("reads $line as a heading at level $level", ({ line, level }) => {
+    const [read] = readLines(line);
+    expect(read?.kind).toBe("heading");
+    expect(read?.level).toBe(level);
+  });
+
+  it.each([
+    { line: "#", level: 1 },
+    { line: "###", level: 3 },
+    { line: "######", level: 6 },
+  ])("reads $line, with nothing after the hashes, as a heading at level $level", ({ line, level }) => {
+    // The `$` branch of `ATX_HEADING`, which R3's table does not mention and
+    // which the comment above the pattern used to deny outright by saying the
+    // space was always required. Reviewed on 2026-09-12 and kept: CommonMark
+    // permits an empty ATX heading and a seller's own paste host renders one as
+    // a heading, so reading it as text would show them a page their host does
+    // not produce. Principle VII, Honest Fidelity.
     const [read] = readLines(line);
     expect(read?.kind).toBe("heading");
     expect(read?.level).toBe(level);
@@ -95,6 +111,29 @@ describe("R3, a table's rule", () => {
   it("does not read a row of empty cells as a table rule", () => {
     // 023's own reason, kept: at least one dash, or "| | |" is a rule.
     expect(kinds("| | |")).toEqual(["text"]);
+  });
+
+  // The pipe condition `page-text.ts` adds on top of 023's `isTableRule`, pinned
+  // under its own name. Before these cases existed, the only test that went red
+  // when the condition was deleted was the one about three dashes being the
+  // bar, which would have sent the next person reading `THEMATIC_BREAK` instead
+  // of the line that actually changed. Both groups sit under a blank line, in a
+  // position the setext rule cannot claim, because that is where the condition
+  // is the only thing deciding.
+  it.each([{ line: "| --- |" }, { line: "| --- | --- |" }, { line: "|:--:|" }])(
+    "reads $line as a table rule, mid page, because it carries a pipe",
+    ({ line }) => {
+      expect(kinds(`Terms\n\n${line}`)).toEqual(["text", "blank", "tableRule"]);
+    },
+  );
+
+  it.each([
+    { what: "two bare dashes", line: "--" },
+    { what: "a colon fenced pair", line: ":--:" },
+    { what: "a single colon fenced dash", line: ":-:" },
+    { what: "two dashes with a space between them", line: "- -" },
+  ])("does not read $what as a table rule mid page, because it carries no pipe", ({ line }) => {
+    expect(kinds(`Terms\n\n${line}`)).toEqual(["text", "blank", "text"]);
   });
 });
 
@@ -162,6 +201,23 @@ describe("R4, a row of dashes is a heading or a divider depending on what is abo
 
   it("does not underline an underline, so a second row of dashes is a rule", () => {
     expect(kinds("Terms\n===\n---")).toEqual(["heading", "headingUnderline", "rule"]);
+  });
+
+  it("turns the product line directly above a divider into a heading, which is the cost of R4", () => {
+    // Pinned because it is a cost and not a defect, and because chunk 2 and the
+    // holistic review would otherwise meet it as a surprise. "Full colour - 80"
+    // stops being a product: the dashes under it are a setext underline and
+    // CommonMark says so, which R4 chose deliberately.
+    //
+    // Two things make it defensible. This reading is MORE conservative than
+    // CommonMark, which makes the WHOLE preceding paragraph the heading where
+    // this promotes only the last line of it. And a seller whose page has this
+    // shape is already being shown a heading there by their own paste host, so
+    // the app is being faithful rather than wrong. FR-029-18 lets them swap the
+    // section afterwards if it was not what they meant.
+    const read = readLines("Sketch - 30\nFull colour - 80\n---");
+    expect(read.map((line) => line.kind)).toEqual(["text", "heading", "headingUnderline"]);
+    expect(read[1]?.level).toBe(2);
   });
 
   it("does not read a spaced row of dashes as an underline", () => {
@@ -311,7 +367,11 @@ describe("the reader is pure, which nothing but this test enforces", () => {
     let thrown: unknown;
     let read: unknown;
     try {
-      read = readRuns(PAGE);
+      read = {
+        runs: readRuns(PAGE),
+        proposal: readProposal(PAGE),
+        built: readProposal(PAGE).sections.map((section) => buildProposedBlock(section)),
+      };
     } catch (error) {
       thrown = error;
     } finally {
@@ -320,6 +380,10 @@ describe("the reader is pure, which nothing but this test enforces", () => {
     }
 
     expect(thrown).toBeUndefined();
-    expect(read).toEqual(readRuns(PAGE));
+    expect(read).toEqual({
+      runs: readRuns(PAGE),
+      proposal: readProposal(PAGE),
+      built: readProposal(PAGE).sections.map((section) => buildProposedBlock(section)),
+    });
   });
 });

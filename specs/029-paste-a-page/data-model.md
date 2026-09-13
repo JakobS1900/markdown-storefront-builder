@@ -28,9 +28,10 @@ One line of the paste, classified. Exported by `app/src/page-text.ts`.
 | `level` | 1 to 6, only on `heading` | From the `#` count, or 1 for `=` and 2 for `-` |
 
 **`headingUnderline` is the seventh kind and R3 did not name it.** Chunk 1 found
-it on 2026-09-12. A row of `=` under a paragraph line is not the heading, is not
-a rule and is not text, and it has to be something: every line index lands in
-exactly one run or the losslessness property is a lie. The alternative, leaving
+it on 2026-09-12. A row of `=` or of `-` under a paragraph line, both of which R4
+covers, is not the heading, is not a rule and is not text, and it has to be
+something: every line index lands in exactly one run or the losslessness property
+is a lie. The alternative, leaving
 it classified `text` inside a heading run, leaves every later reader asking why a
 heading run holds a text line.
 
@@ -66,6 +67,10 @@ derives from is how the two drift apart."
 |---|---|---|
 | `sections` | `readonly ProposedSection[]` | In the order they will appear |
 | `title` | string, optional | R7. Present only when the paste opens with a heading |
+
+`title` is a copy. It does not consume the heading line: the line still appears
+either as a Heading section or, when R6 applies, inside the absorbed menu
+section's `source`.
 
 ### `ProposedSection`
 

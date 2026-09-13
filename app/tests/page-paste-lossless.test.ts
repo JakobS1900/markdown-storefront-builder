@@ -22,7 +22,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { readRuns, runText } from "../src/page-text.js";
+import { readProposal, readRuns, runText, swapProposalKind } from "../src/page-text.js";
 
 /**
  * The shapes a real page is made of. Each entry is one block of lines, kept
@@ -50,6 +50,12 @@ const SHAPES: readonly (readonly string[])[] = [
   ["Non breaking spaces come out of a browser copy"],
   ["Don’t worry, I’ll post it “first class”"],
   ["- A bullet nobody should lose", "- And another"],
+  // Leading indentation, which no shape here had until 2026-09-12. A page
+  // copied out of a word processor or a fenced code block arrives indented, and
+  // every classification decision is made against a trimmed copy, so the
+  // indentation is exactly the sort of thing a reader can lose without anybody
+  // noticing.
+  ["  Sketch - 30", "    Full colour - 80", "\tCustom piece - DM me"],
   ["> A block quote, which this app does not support and therefore keeps"],
   [" "],
   ["![A3 print](https://example.test/print.png)"],
@@ -74,6 +80,14 @@ function seeded(seed: number): () => number {
 /** One generated page, and the same page with its line endings settled. */
 function generate(seed: number): { paste: string; unix: string } {
   const next = seeded(seed);
+
+  // The empty paste, which no combination of the shapes above can produce and
+  // which a seller reaches by pressing paste with nothing on the clipboard. It
+  // is a page like any other and the reader owes it the same account: one blank
+  // line, one run, nothing lost. Added 2026-09-12 after a review noticed the
+  // generator had never once emitted it.
+  if (next() < 0.05) return { paste: "", unix: "" };
+
   const lines: string[] = [];
   const blocks = 1 + Math.floor(next() * 12);
 
@@ -85,8 +99,16 @@ function generate(seed: number): { paste: string; unix: string } {
   // Mixed line endings inside one paste, which is what a page assembled out of
   // two sources over three years actually looks like.
   const endings = lines.map(() => (next() < 0.3 ? "\r\n" : "\n"));
+
+  // Whether the last line is terminated too. Until 2026-09-12 it never was, so
+  // the generator could not produce the single commonest shape of all: copying
+  // a page out of rentry hands back a trailing newline, which splits into a
+  // final empty string that still has to land in a run.
+  const terminated = next() < 0.5;
   const join = (terminators: readonly string[]): string =>
-    lines.map((line, i) => (i === lines.length - 1 ? line : line + (terminators[i] ?? "\n"))).join("");
+    lines
+      .map((line, i) => (i === lines.length - 1 && !terminated ? line : line + (terminators[i] ?? "\n")))
+      .join("");
 
   return { paste: join(endings), unix: join(endings.map(() => "\n")) };
 }
@@ -101,10 +123,21 @@ describe("no line of a pasted page is ever dropped, duplicated or reordered", ()
       // Which runs claimed each line. Counted rather than marked, so a line
       // claimed twice is as visible as a line claimed by nobody.
       const owners = lines.map(() => 0);
-      for (const run of runs) {
+      // A run claiming an index past the end of the page is its own fault and
+      // gets its own list. It used to fall through the `claimed !== undefined`
+      // guard below and be counted nowhere: not missing, because no real line
+      // went unclaimed, and not claimed twice, because the count it bumped did
+      // not exist. The test's own comment promised both were visible, so the
+      // guard was quietly making the test weaker than it read.
+      const outOfRange: string[] = [];
+      for (const [r, run] of runs.entries()) {
         for (let i = run.from; i <= run.to; i += 1) {
           const claimed = owners[i];
-          if (claimed !== undefined) owners[i] = claimed + 1;
+          if (claimed === undefined) {
+            outOfRange.push(`run ${String(r)} claims line ${String(i)} of a page holding ${String(lines.length)}`);
+            continue;
+          }
+          owners[i] = claimed + 1;
         }
       }
 
@@ -118,11 +151,12 @@ describe("no line of a pasted page is ever dropped, duplicated or reordered", ()
       // for" sends the next person hunting; this prints the line that went
       // missing and its index, which is the difference between a failing test
       // and a useful one.
-      expect({ seed, missing: named((count) => count === 0), claimedTwice: named((count) => count > 1) }).toEqual({
+      expect({
         seed,
-        missing: [],
-        claimedTwice: [],
-      });
+        missing: named((count) => count === 0),
+        claimedTwice: named((count) => count > 1),
+        outOfRange,
+      }).toEqual({ seed, missing: [], claimedTwice: [], outOfRange: [] });
     }
   });
 
@@ -158,6 +192,37 @@ describe("no line of a pasted page is ever dropped, duplicated or reordered", ()
         .filter((fault) => fault !== "");
 
       expect({ seed, faults, end: runs.at(-1)?.to }).toEqual({ seed, faults: [], end: lines.length - 1 });
+    }
+  });
+
+  it("gives back the whole page from proposed section sources, blanks included", () => {
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const { paste, unix } = generate(seed);
+      const proposal = readProposal(paste);
+
+      if (paste.trim() === "") {
+        expect({ seed, sections: proposal.sections }).toEqual({ seed, sections: [] });
+        continue;
+      }
+
+      expect({ seed, rebuilt: proposal.sections.map((section) => section.source).join("\n") }).toEqual({
+        seed,
+        rebuilt: unix,
+      });
+    }
+  });
+
+  it("keeps source accounting unchanged when any swappable section is swapped", () => {
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const { paste, unix } = generate(seed);
+      const proposal = readProposal(paste);
+
+      if (paste.trim() === "") continue;
+
+      const swapped = proposal.sections.map((section, i) =>
+        section.swappable && i % 2 === 0 ? swapProposalKind(section) : section,
+      );
+      expect({ seed, rebuilt: swapped.map((section) => section.source).join("\n") }).toEqual({ seed, rebuilt: unix });
     }
   });
 });

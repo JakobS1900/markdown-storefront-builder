@@ -10,6 +10,7 @@ export default defineConfig({
   },
   test: {
     include: ["engine/tests/**/*.test.ts", "app/tests/**/*.test.ts"],
+    setupFiles: ["./app/tests/setup.ts"],
     // No VITE_IMGUR_CLIENT_ID pin here, deliberately, and it is worth saying
     // why so nobody adds one back.
     //
