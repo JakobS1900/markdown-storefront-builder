@@ -12,6 +12,17 @@ function kindName(section: ProposedSection): string {
   return { heading: "Heading", divider: "Divider", prose: "Text", menu: "Prices" }[section.kind];
 }
 
+function shortContent(source: string): string {
+  const line = source.split("\n").find((part) => part.trim() !== "")?.trim() ?? "blank lines";
+  return line.length > 100 ? `${line.slice(0, 100)}…` : line;
+}
+
+function focusSection(index: number, selector: string): void {
+  const item = document.querySelector(`.page-paste-sections li:nth-child(${String(index + 1)})`);
+  const control = item?.querySelector<HTMLElement>(selector);
+  control?.focus();
+}
+
 function preview(section: ProposedSection): Node[] {
   const lines = section.source.split("\n");
   return [
@@ -41,7 +52,7 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void): 
       : []),
     el("ul", { class: "page-paste-sections" }, sections.slice(0, DRAWN_SECTIONS).map(({ section, index }) => {
       const name = kindName(section);
-      const content = section.source.trim() || "blank lines";
+      const content = shortContent(section.source);
       return el("li", {}, [
         checkbox({
           label: `${name}: ${content}`,
@@ -50,13 +61,14 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void): 
             if (checked) restorePagePasteSection(index);
             else dropPagePasteSection(index);
             refresh();
+            focusSection(index, "input[type=checkbox]");
           },
         }),
         ...preview(section),
         ...(section.swappable
           ? [button({
               label: `Make ${section.kind === "prose" ? "Prices instead of Text" : "Text instead of Prices"}`,
-              onClick: () => { swapPagePasteSection(index); refresh(); },
+              onClick: () => { swapPagePasteSection(index); refresh(); focusSection(index, "button"); },
             })]
           : []),
       ]);
@@ -84,13 +96,21 @@ function fileControl(refresh: () => void, box: HTMLTextAreaElement): Node[] {
       picker.value = "";
       return;
     }
+    const draft = getState().pastingPage;
     open.disabled = true;
     void file.text().then((text) => {
+      // A delayed read belongs only to the draft that started it. Typing,
+      // closing, and reopening all replace that draft object in the store.
+      if (draft === undefined || getState().pastingPage !== draft) return;
       box.value = text;
       setPagePasteText(text);
       refresh();
       announce("Read the file. Review the sections below.");
-    }).catch(() => announce("That file could not be read. Nothing has been changed."))
+    }).catch(() => {
+      if (draft !== undefined && getState().pastingPage === draft) {
+        announce("That file could not be read. Nothing has been changed.");
+      }
+    })
       .finally(() => { open.disabled = false; picker.value = ""; });
   });
   return [open, picker];

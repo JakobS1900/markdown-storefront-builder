@@ -113,3 +113,70 @@ it("caps the preview while retaining the full paste for conversion", () => {
   expect(document.querySelector(".page-paste-body")?.textContent).toContain("5 more lines are included");
   expect(getState().pastingPage?.text).toContain("Line 24");
 });
+
+function deferredFile(): { resolve: (text: string) => void } {
+  const picker = document.querySelector<HTMLInputElement>(".page-paste input[type=file]");
+  if (picker === null) throw new Error("missing file picker");
+  let resolve: (text: string) => void = () => {};
+  const pending = new Promise<string>((done) => { resolve = done; });
+  const file = new File(["old text"], "page.md", { type: "text/markdown" });
+  Object.defineProperty(file, "text", { value: () => pending });
+  Object.defineProperty(picker, "files", { configurable: true, value: [file] });
+  picker.dispatchEvent(new Event("change", { bubbles: true }));
+  return { resolve };
+}
+
+it("does not replace text typed after a file read begins", async () => {
+  live();
+  click("Paste a page you already have");
+  const read = deferredFile();
+  paste("New typed text");
+  read.resolve("Old file text");
+  await Promise.resolve();
+  expect(getState().pastingPage?.text).toBe("New typed text");
+  expect(document.querySelector<HTMLTextAreaElement>(".page-paste textarea")?.value).toBe("New typed text");
+});
+
+it("does not put an old file into a newly opened paste panel", async () => {
+  live();
+  click("Paste a page you already have");
+  const read = deferredFile();
+  click("Done pasting");
+  click("Paste a page you already have");
+  paste("Fresh session");
+  read.resolve("Old file text");
+  await Promise.resolve();
+  expect(getState().pastingPage?.text).toBe("Fresh session");
+  expect(document.querySelector<HTMLTextAreaElement>(".page-paste textarea")?.value).toBe("Fresh session");
+});
+
+it("bounds checkbox names while keeping the longer preview visible", () => {
+  live();
+  click("Paste a page you already have");
+  paste(`Start ${"x".repeat(1000)}\nLast line`);
+  const label = document.querySelector(".page-paste input[type=checkbox]")?.nextElementSibling?.textContent ?? "";
+  expect(label.length).toBeLessThan(160);
+  expect(label).toContain("Start");
+  expect(document.querySelector(".page-paste-preview")?.textContent).toContain("Last line");
+});
+
+it("keeps keyboard focus on the checkbox and swap control after updates", async () => {
+  live();
+  click("Paste a page you already have");
+  paste("Hello there");
+  const checkbox = document.querySelector<HTMLInputElement>(".page-paste input[type=checkbox]");
+  if (checkbox === null) throw new Error("missing checkbox");
+  checkbox.focus();
+  checkbox.checked = false;
+  checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(document.activeElement).toBe(document.querySelector(".page-paste input[type=checkbox]"));
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(document.activeElement).toBe(document.querySelector(".page-paste input[type=checkbox]"));
+  const swap = [...document.querySelectorAll(".page-paste button")].find((node) => node.textContent === "Make Prices instead of Text");
+  if (!(swap instanceof HTMLButtonElement)) throw new Error("missing swap control");
+  swap.focus();
+  swap.click();
+  expect(document.activeElement).toBe([...document.querySelectorAll(".page-paste button")].find((node) => node.textContent === "Make Text instead of Prices"));
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(document.activeElement).toBe([...document.querySelectorAll(".page-paste button")].find((node) => node.textContent === "Make Text instead of Prices"));
+});
