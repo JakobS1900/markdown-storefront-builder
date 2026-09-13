@@ -44,8 +44,8 @@ it("offers a new page from the empty state, then allows dropping and swapping", 
   const boxes = [...document.querySelectorAll<HTMLInputElement>(".page-paste input[type=checkbox]")];
   expect(boxes).toHaveLength(3);
   expect(boxes[1]?.labels?.[0]?.textContent).toMatch(/Text.*Hello there/);
-  const toDrop = boxes[1];
-  if (toDrop === undefined) throw new Error("missing Text section");
+  const toDrop = boxes[0];
+  if (toDrop === undefined) throw new Error("missing Heading section");
   toDrop.checked = false;
   toDrop.dispatchEvent(new Event("change", { bubbles: true }));
   click("Make Prices instead of Text");
@@ -55,6 +55,14 @@ it("offers a new page from the empty state, then allows dropping and swapping", 
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   expect(getState().doc.blocks).toHaveLength(2);
+  expect(getState().doc.blocks[0]).toMatchObject({
+    kind: "menu",
+    tiers: [{ name: "Hello there" }],
+  });
+  expect(getState().doc.blocks[1]).toMatchObject({
+    kind: "menu",
+    tiers: [{ name: "Portrait", price: "$20" }, { name: "Icon", price: "$10" }],
+  });
 });
 
 it("replaces the proposal on a second paste and loses only the draft on close", () => {
