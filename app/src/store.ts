@@ -808,9 +808,14 @@ export function stopPastingPage(): void {
   set({ pastingPage: undefined });
 }
 
+// Covers callers outside the UI too: a second submit cannot create another
+// page while the first storage transaction is still pending.
+let confirmingPagePaste = false;
+
 export async function confirmPagePaste(): Promise<void> {
   const current = state.pastingPage;
-  if (current === undefined) return;
+  if (current === undefined || confirmingPagePaste) return;
+  confirmingPagePaste = true;
   try {
     const proposal = readProposal(current.text);
     const blocks = proposal.sections.flatMap((section, index): Block[] => {
@@ -831,6 +836,8 @@ export async function confirmPagePaste(): Promise<void> {
     set({ pastingPage: undefined, status: { kind: "saved", message: "Opened the paste as a new page. Your previous page is still saved under Your pages on the Build screen." } });
   } catch {
     set({ status: { kind: "error", message: "This paste could not be saved as a new page. Your previous pages are still saved and your pasted text is still here. Try again." } });
+  } finally {
+    confirmingPagePaste = false;
   }
 }
 

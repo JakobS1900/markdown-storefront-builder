@@ -113,10 +113,45 @@ it("keeps the draft and existing page after storage refuses the write", async ()
   const doc = store.getState().doc;
   store.startPastingPage();
   store.setPagePasteText("Hello");
-  vi.spyOn(db, "writePage").mockRejectedValue(new DOMException("Full", "QuotaExceededError"));
+  const writes = vi.spyOn(db, "writePage").mockRejectedValue(new DOMException("Full", "QuotaExceededError"));
   await store.confirmPagePaste();
   expect(await db.listPages()).toEqual(before);
   expect(store.getState().doc).toBe(doc);
   expect(store.getState().pastingPage?.text).toBe("Hello");
   expect(store.getState().status.kind).toBe("error");
+  writes.mockRestore();
+  await store.confirmPagePaste();
+  expect(await db.listPages()).toHaveLength(3);
+  expect(store.getState().pastingPage).toBeUndefined();
+});
+
+it("confirms only once while the storage write is pending", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Hello");
+  let release: () => void = () => {};
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  const write = db.writePage;
+  const writes = vi.spyOn(db, "writePage").mockImplementation(async (page) => {
+    await pending;
+    await write(page);
+  });
+  const first = store.confirmPagePaste();
+  const second = store.confirmPagePaste();
+  release();
+  await Promise.all([first, second]);
+  expect(writes).toHaveBeenCalledTimes(1);
+  expect(await db.listPages()).toHaveLength(3);
+});
+
+it("finishes a committed paste even if refreshing the page list fails", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Hello");
+  const list = vi.spyOn(db, "listPages").mockRejectedValue(new Error("Read failed"));
+  await store.confirmPagePaste();
+  expect(store.getState().status.kind).toBe("saved");
+  expect(store.getState().pastingPage).toBeUndefined();
+  list.mockRestore();
+  expect(await db.listPages()).toHaveLength(3);
+  await store.confirmPagePaste();
+  expect(await db.listPages()).toHaveLength(3);
 });
