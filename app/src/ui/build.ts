@@ -14,6 +14,7 @@ import {
   getState,
   moveBlock,
   openWizard,
+  startPastingPage,
   removeBlock,
   selectBlock,
   setBusy,
@@ -28,6 +29,7 @@ import { showsEmptyState, starterPicker } from "./pages-sidebar.js";
 import { announce, button, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
 import { WIZARD_ID } from "./wizard.js";
+import { pagePastePanel } from "./page-paste.js";
 
 const ADDABLE: Block["kind"][] = [
   "profile",
@@ -196,7 +198,7 @@ function emptyState(state: State): HTMLElement[] {
 
   return [
     el("p", { class: "empty" }, [
-      "Your page is empty. Answer a few questions and I will make one, add a section below, or begin from a template.",
+      "Your page is empty. Answer a few questions and I will make one, paste a page you already have, add a section below, or begin from a template.",
     ]),
     // SETTLED 2026-09-11 BY JAKOB: the wizard takes the accent, the example
     // steps back to a plain button. It was raised by the holistic review at
@@ -234,7 +236,12 @@ function emptyState(state: State): HTMLElement[] {
     // `.btn.primary` and sits later in the file, so beating it from the
     // stylesheet once shipped this row as unreadable white on white, green in
     // every gate, because no gate reads a colour a browser computed.
-    el("div", { class: "adders" }, [wizard, load]),
+    el("div", { class: "adders" }, [
+      wizard,
+      button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
+      load,
+    ]),
+    ...pagePastePanel(),
     starterPicker("starters-group-empty"),
   ];
 }

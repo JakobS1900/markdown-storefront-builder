@@ -186,20 +186,26 @@ and read the stored pages before and after. One more page, none changed.
 **Independent test**: open the app with no page, paste a rentry page, read the
 panel, untick one section, swap another, confirm, and read the Build screen.
 
-- [ ] T034 [US1] Create `app/src/ui/page-paste.ts`. **Refresh the panel's own body, do not repaint.** R9, carried from `price-list-paste.ts` rather than rediscovered: `repaint` refuses while a text field has focus, the paste box IS a focused text field the whole time, so every deferred repaint re-defers and on a phone with the keyboard up the panel never appears at all. Write the reference at the code.
-- [ ] T035 [US1] Draw each proposed section with its kind, a preview of its content, and a checkbox **named by the kind and the content**, the way 023 names a line by the line. "Section 3" is a plausible looking name that tells the seller nothing, which is what the a11y gate exists to catch. FR-029-16, Principle VI.
-- [ ] T036 [US3] Draw the swap control on `prose` and `menu` sections only, and on nothing else. Its label must say what it will become, not what it is.
-- [ ] T037 [US4] Empty or whitespace-only paste: no proposal, no confirm control, and no error. FR-029-27.
-- [ ] T038 [US4] A paste that yields one Text section is still offered, and the wording must not claim a page was recognised. FR-029-28.
-- [ ] T039 [US1] The confirm control says how many sections it will make, is disabled at zero, and **the count is the number actually made**. FR-029-20 and FR-029-21. 023 got this wrong once by counting ticks that included a line the conversion dropped, and told the seller "Add 3 items" for two.
-- [ ] T040 [US1] Apply R10's caps: at most 20 lines of preview per section, at most 100 sections drawn, each with an honest line saying how many more there are. **Cap what is drawn, never what is converted.**
-- [ ] T041 [US1] Add the control to the empty state in `app/src/ui/build.ts`, as a **plain button, not `primary`**. There is exactly one solid accent on that row and it is the wizard, settled by Jakob on 2026-09-11. `6b8bc45` is about the count.
-- [ ] T042 [US1] **Add it to the empty state's own sentence too.** That sentence currently names three ways in, and the T048 research found that the loudest control on the screen was the one the screen never mentioned. A fourth way in that the sentence does not name repeats the mistake that was just fixed.
-- [ ] T043 [US1] The word "import" appears nowhere a seller can read. FR-029-02. Grep the diff for it before committing.
-- [ ] T044 [US1] Offer the file picker as the secondary path, with a real button in front of a hidden input, the same pairing `price-list-paste.ts` and `export.ts` both use because a bare file input has no accessible name. Refuse `.json`, for the reason 023 gives: a saved page opened here would do nothing useful and would blur the line against opening a backup. FR-029-03.
-- [ ] T045 [US3] Write the DOM tests in `app/tests/page-paste.test.ts`: unticking removes a section, swapping changes what is made, a second paste describes itself and not the first, and closing the panel loses only the paste.
-- [ ] T046 [US1] Add the repaint case to `app/tests/repaint-while-typing.test.ts`, or the trap in T034 is documented and unguarded.
-- [ ] T047 Run `npm run typecheck`, `npm run lint` and `npm run test`. Commit.
+- [x] T034 [US1] Create `app/src/ui/page-paste.ts`. **Refresh the panel's own body, do not repaint.** R9, carried from `price-list-paste.ts` rather than rediscovered: `repaint` refuses while a text field has focus, the paste box IS a focused text field the whole time, so every deferred repaint re-defers and on a phone with the keyboard up the panel never appears at all. Write the reference at the code.
+- [x] T035 [US1] Draw each proposed section with its kind, a preview of its content, and a checkbox **named by the kind and the content**, the way 023 names a line by the line. "Section 3" is a plausible looking name that tells the seller nothing, which is what the a11y gate exists to catch. FR-029-16, Principle VI.
+- [x] T036 [US3] Draw the swap control on `prose` and `menu` sections only, and on nothing else. Its label must say what it will become, not what it is.
+- [x] T037 [US4] Empty or whitespace-only paste: no proposal, no confirm control, and no error. FR-029-27.
+- [x] T038 [US4] A paste that yields one Text section is still offered, and the wording must not claim a page was recognised. FR-029-28.
+- [x] T039 [US1] The confirm control says how many sections it will make, is disabled at zero, and **the count is the number actually made**. FR-029-20 and FR-029-21. 023 got this wrong once by counting ticks that included a line the conversion dropped, and told the seller "Add 3 items" for two.
+- [x] T040 [US1] Apply R10's caps: at most 20 lines of preview per section, at most 100 sections drawn, each with an honest line saying how many more there are. **Cap what is drawn, never what is converted.**
+- [x] T041 [US1] Add the control to the empty state in `app/src/ui/build.ts`, as a **plain button, not `primary`**. There is exactly one solid accent on that row and it is the wizard, settled by Jakob on 2026-09-11. `6b8bc45` is about the count.
+- [x] T042 [US1] **Add it to the empty state's own sentence too.** That sentence currently names three ways in, and the T048 research found that the loudest control on the screen was the one the screen never mentioned. A fourth way in that the sentence does not name repeats the mistake that was just fixed.
+- [x] T043 [US1] The word "import" appears nowhere a seller can read. FR-029-02. Grep the diff for it before committing.
+- [x] T044 [US1] Offer the file picker as the secondary path, with a real button in front of a hidden input, the same pairing `price-list-paste.ts` and `export.ts` both use because a bare file input has no accessible name. Refuse `.json`, for the reason 023 gives: a saved page opened here would do nothing useful and would blur the line against opening a backup. FR-029-03.
+- [x] T045 [US3] Write the DOM tests in `app/tests/page-paste.test.ts`: unticking removes a section, swapping changes what is made, a second paste describes itself and not the first, and closing the panel loses only the paste.
+- [x] T046 [US1] Add the repaint case to `app/tests/repaint-while-typing.test.ts`, or the trap in T034 is documented and unguarded.
+- [x] T047 Run `npm run typecheck`, `npm run lint` and `npm run test`. Commit.
+
+  Chunk 4 evidence, 2026-09-13: The first targeted panel run had all three
+  tests red because the empty Build screen did not offer the page paste entry.
+  The panel and repaint tests now cover edits, cancellation, zero selection,
+  preview limits, and focused typing. Typecheck and lint passed. The final full
+  test run passed with 86 files and 1668 tests.
 
 ---
 

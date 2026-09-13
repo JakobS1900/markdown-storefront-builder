@@ -65,6 +65,22 @@ beforeEach(() => {
 });
 
 describe("a repaint never lands on a field being typed into", () => {
+  it("updates the page proposal without replacing the focused paste box", async () => {
+    live();
+    const open = [...document.querySelectorAll("button")].find((button) => button.textContent === "Paste a page you already have");
+    if (!(open instanceof HTMLButtonElement)) throw new Error("missing page paste button");
+    open.click();
+    const box = document.querySelector<HTMLTextAreaElement>(".page-paste textarea");
+    if (box === null) throw new Error("missing page paste box");
+    box.focus();
+    box.value = "# Shop\n\nHello there";
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.querySelectorAll(".page-paste-sections li")).toHaveLength(2);
+    await wait(AFTER_THE_QUIET);
+    expect(document.querySelector(".page-paste textarea")).toBe(box);
+    expect(document.activeElement).toBe(box);
+  });
+
   it("does not replace the focused element after the quiet delay", async () => {
     live();
     const field = titleField();
