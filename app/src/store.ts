@@ -18,6 +18,8 @@ import {
 import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
+import { openBackup } from "./import.js";
+import { buildProposedBlock, readProposal, swapProposalKind } from "./page-text.js";
 import { canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 // A type, and only a type. The answer set is defined beside the pure function
 // that turns it into a page, because that is what gives it its shape; the store
@@ -193,6 +195,13 @@ export interface State {
     readonly blockId: string;
     readonly text: string;
     readonly ticked: readonly number[];
+  };
+  // Separate from `pasting`: its blockId and seven actions edit an existing
+  // price list. A page paste has no destination block and writes a new page.
+  readonly pastingPage?: {
+    readonly text: string;
+    readonly dropped: readonly number[];
+    readonly swapped: readonly number[];
   };
   readonly status: Status;
   readonly storageOk: boolean;
@@ -762,6 +771,67 @@ export function untickAllPasteLines(): void {
 /** Puts the paste screen away and forgets the text. */
 export function stopPasting(): void {
   set({ pasting: undefined });
+}
+
+export function startPastingPage(): void {
+  if (state.pastingPage !== undefined) return;
+  set({ pastingPage: { text: "", dropped: [], swapped: [] } });
+}
+
+export function setPagePasteText(text: string): void {
+  if (state.pastingPage === undefined) return;
+  set({ pastingPage: { text, dropped: [], swapped: [] } });
+}
+
+export function dropPagePasteSection(index: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || readProposal(current.text).sections[index] === undefined || current.dropped.includes(index)) return;
+  set({ pastingPage: { ...current, dropped: [...current.dropped, index] } });
+}
+
+export function restorePagePasteSection(index: number): void {
+  const current = state.pastingPage;
+  if (current === undefined) return;
+  set({ pastingPage: { ...current, dropped: current.dropped.filter((i) => i !== index) } });
+}
+
+export function swapPagePasteSection(index: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || !readProposal(current.text).sections[index]?.swappable) return;
+  const swapped = current.swapped.includes(index)
+    ? current.swapped.filter((i) => i !== index)
+    : [...current.swapped, index];
+  set({ pastingPage: { ...current, swapped } });
+}
+
+export function stopPastingPage(): void {
+  set({ pastingPage: undefined });
+}
+
+export async function confirmPagePaste(): Promise<void> {
+  const current = state.pastingPage;
+  if (current === undefined) return;
+  try {
+    const proposal = readProposal(current.text);
+    const blocks = proposal.sections.flatMap((section, index): Block[] => {
+      if (current.dropped.includes(index)) return [];
+      const block = buildProposedBlock(current.swapped.includes(index) ? swapProposalKind(section) : section);
+      if (block.kind === "menu") return [{ id: newId(), ...block, tiers: block.tiers.map((tier) => ({ id: newId(), ...tier })) }];
+      return [{ id: newId(), ...block }];
+    });
+    if (blocks.length === 0) return;
+    const doc: Document = { ...emptyDocument(state.doc.target), blocks, ...(proposal.title === undefined ? {} : { title: proposal.title }) };
+    // openBackup owns validation and persistence. JSON.stringify lets its
+    // parser refuse a faulty builder result before any stored page changes.
+    const result = await openBackup(JSON.stringify(doc));
+    if (!result.ok) {
+      set({ status: { kind: "error", message: "This paste could not be made into a page. Nothing has been changed. Your pasted text is still here." } });
+      return;
+    }
+    set({ pastingPage: undefined, status: { kind: "saved", message: "Opened the paste as a new page. Your previous page is still saved under Your pages on the Build screen." } });
+  } catch {
+    set({ status: { kind: "error", message: "This paste could not be saved as a new page. Your previous pages are still saved and your pasted text is still here. Try again." } });
+  }
 }
 
 /**

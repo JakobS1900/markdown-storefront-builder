@@ -158,15 +158,24 @@ Heading, Text, Divider, Prices with thirty rows, in that order.
 **Independent test**: drive the store directly with no screen, confirm a paste,
 and read the stored pages before and after. One more page, none changed.
 
-- [ ] T025 [US1] Add `pastingPage` to `State` per `data-model.md`. **A new field, not a widened `pasting`.** R12: `pasting` is scoped to a `blockId` and all seven functions around it write into that block. Write the reason at the field.
-- [ ] T026 [US1] Add the actions: start, set text, drop a section, restore a section, swap a section, stop. Setting the text clears `dropped` and `swapped`, because the indices are into a proposal that has just changed.
-- [ ] T027 [US1] Write the failing test: nothing reaches storage, the open document, or any page until confirm is called. FR-029-19. Assert it by counting writes, not by reading the screen.
-- [ ] T028 [US1] Implement confirm: build the `Document` with `target` copied from the page currently open, serialize it, and hand it to `openBackup`. R8. Do not write a page by hand: `openBackup` runs `parseDocument` and writes nothing if it refuses, which is FR-029-26 for free and turns a reader bug into a refusal rather than a corrupt page.
-- [ ] T029 [US1] Give each built row its `id` with `newId()` **here, in the store, not in the reader**, which is the one impure thing on the path and the reason the reader stays pure. R1.
-- [ ] T030 [US1] Announce the caller's own sentence on success, not `openBackup`'s. Its message is written for a file and reads as nonsense here, which is exactly the problem `starterPicker` already solved the same way. The sentence must say the page arrived as a new page and where the previous one still is. FR-029-23.
-- [ ] T031 [US1] Write the failing test for SC-006: list every stored page and its bytes before, confirm a paste, list again. Exactly one page added, every existing page byte identical. **This is the one this project has the most reason to be careful about.**
-- [ ] T032 [US1] Write the test that a paste the reader somehow read into an invalid document leaves storage untouched and says so, by forcing the builder to emit a block with an empty `id`. Proves the `openBackup` refusal is load bearing rather than assumed.
-- [ ] T033 Run `npm run typecheck`, `npm run lint` and `npm run test`. Commit.
+- [x] T025 [US1] Add `pastingPage` to `State` per `data-model.md`. **A new field, not a widened `pasting`.** R12: `pasting` is scoped to a `blockId` and all seven functions around it write into that block. Write the reason at the field.
+- [x] T026 [US1] Add the actions: start, set text, drop a section, restore a section, swap a section, stop. Setting the text clears `dropped` and `swapped`, because the indices are into a proposal that has just changed.
+- [x] T027 [US1] Write the failing test: nothing reaches storage, the open document, or any page until confirm is called. FR-029-19. Assert it by counting writes, not by reading the screen.
+- [x] T028 [US1] Implement confirm: build the `Document` with `target` copied from the page currently open, serialize it, and hand it to `openBackup`. R8. Do not write a page by hand: `openBackup` runs `parseDocument` and writes nothing if it refuses, which is FR-029-26 for free and turns a reader bug into a refusal rather than a corrupt page.
+- [x] T029 [US1] Give each built row its `id` with `newId()` **here, in the store, not in the reader**, which is the one impure thing on the path and the reason the reader stays pure. R1.
+- [x] T030 [US1] Announce the caller's own sentence on success, not `openBackup`'s. Its message is written for a file and reads as nonsense here, which is exactly the problem `starterPicker` already solved the same way. The sentence must say the page arrived as a new page and where the previous one still is. FR-029-23.
+- [x] T031 [US1] Write the failing test for SC-006: list every stored page and its bytes before, confirm a paste, list again. Exactly one page added, every existing page byte identical. **This is the one this project has the most reason to be careful about.**
+- [x] T032 [US1] Write the test that a paste the reader somehow read into an invalid document leaves storage untouched and says so, by forcing the builder to emit a block with an empty `id`. Proves the `openBackup` refusal is load bearing rather than assumed.
+- [x] T033 Run `npm run typecheck`, `npm run lint` and `npm run test`. Commit.
+
+  Chunk 3 evidence, 2026-09-13: `page-paste-store.test.ts` has six passing
+  tests with real IndexedDB. A deliberate no-op confirm produced four
+  behavioral failures, including two pages instead of three. A deliberate
+  pre-confirm save produced five failures, including two unexpected writes
+  and changed existing records. Both mutations were removed. Full test run:
+  85 files, 1660 tests passed. Typecheck and lint passed. Confirm uses
+  `JSON.stringify` to reach `openBackup`'s parser, so the invalid-builder test
+  exercises that refusal before the validated serializer writes anything.
 
 ---
 
