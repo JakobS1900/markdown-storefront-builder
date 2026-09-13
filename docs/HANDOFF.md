@@ -10,7 +10,7 @@ happening right now and what to do next.
 the whole text of a page off rentry, pastebin or text.is. This was 028's slot
 until Jakob chose the formatting buttons on 2026-09-11.
 
-**Specified, planned and tasked on 2026-09-12, and chunk 1 of 5 has landed.**
+**Specified, planned and tasked on 2026-09-12, and chunks 1 and 2 of 5 have landed.**
 64 tasks in eight phases. A holistic review is required, because five chunks is
 more than roughly three.
 
@@ -23,6 +23,7 @@ more than roughly three.
 | `ac1e5f1` | Phase 1, the baselines this feature is measured against |
 | `6b03cd3` | Chunk 1: a pasted page becomes runs of lines, and loses none of them |
 | `58d0dfc` | What chunk 1 found wrong with its own phase 0 documents |
+| `8f69314` | Chunk 2: proposed sections, the Prices bar, title copying and block builders |
 
 ### Jakob answered both open scope questions on 2026-09-12
 
@@ -70,12 +71,39 @@ writing chunk 2, because three of them constrain it.
 - **Blank lines get runs of their own.** Chunk 2 must read the blanks from the
   runs rather than remembering where the gaps were.
 
+### What chunk 2 added or corrected
+
+Chunk 2 is pure reader work. `readProposal` returns proposed Heading, Divider,
+Text and Prices sections with their original `source`, `swapProposalKind` flips
+only Text and Prices, and `buildProposedBlock` builds id-free blocks for the
+store chunk to finish later.
+
+- **R6 overrides R7 in one narrow case.** The first heading is copied to the
+  private title, but if it sits directly above prices it becomes the Prices
+  heading rather than a separate Heading section. It is still not consumed,
+  because the heading line stays inside that menu section's `source`.
+- **Contact blocks with numbers stay Text.** Handles such as `willow1234` and
+  times such as `5pm` trip the price fallback, so `textRunIsMenu` guards
+  contact-looking blocks before applying the Prices ratio. Image-only runs have
+  the same kind of guard for `A3` and `A4` in alt text.
+- **Mostly Prices sections keep note lines.** A section such as `Sticker - 5`,
+  `Badge - 7`, `Message me first` still proposes Prices, but the note line is
+  carried as an empty-price row rather than disappearing at build time.
+- **The stale jsdom repaint was a test lifecycle bug, not a renderer contract.**
+  `resetStoreForTests` clears deferred repaint timers and subscribers after
+  each Vitest test through `app/tests/setup.ts`. Do not add a no-DOM guard to
+  `renderShell`; the app renderer requires a document.
+- **Dash scan now excludes `.agents/skills/` as vendored tooling.** Those files
+  are generated local skill docs, the same class as `.claude/skills/` and
+  `.specify/`, and are not authored project files.
+
 ### Baselines, and two hashes that must not move
 
 `npm run verify` green on `6ad878e`, exit 0: **80 test files, 1572 tests, a11y
 61, contrast 411 elements plus the wizard at 7 screens in both palettes, secret
 scan 457, dash scan 332, menu file 21.2 KB, pwa gate clean.** After chunk 1: 82
-test files, 1628 tests.
+test files, 1628 tests. After chunk 2: 84 test files, 1654 tests, and dash scan
+clean over 345 authored files.
 
 **The handoff paragraph under 028 expects 1480 tests and a11y 60. That is stale
 rather than wrong**: 028's own later commits added tests after it was written.
@@ -89,19 +117,16 @@ path order:
 
 ### Next up, in order
 
-1. **Chunk 2, which is Phase 3 of `specs/029-paste-a-page/tasks.md`**, T012 to
-   T024: proposals, the Prices bar, heading absorption, the title, and the four
-   block builders. T014 is the trap above and is the single most important line
-   in the feature.
-2. Chunk 3, Phase 4, T025 to T033. **The only chunk that can write anything.**
-3. Chunk 4, Phase 5, T034 to T047. The panel. T034 carries the repaint trap: a
+1. **Chunk 3, which is Phase 4 of `specs/029-paste-a-page/tasks.md`**, T025 to
+   T033. **The only chunk that can write anything.**
+2. Chunk 4, Phase 5, T034 to T047. The panel. T034 carries the repaint trap: a
    repaint deferred while a text field holds focus never lands, and the paste box
    IS a focused text field the whole time.
-4. Chunk 5, Phase 6, T048 to T053. The gates.
-5. **The holistic review, T055. Required, not optional.** On 028 it found three
+3. Chunk 5, Phase 6, T048 to T053. The gates.
+4. **The holistic review, T055. Required, not optional.** On 028 it found three
    ways the feature corrupted a seller's text that four per-chunk reviews had
    each passed.
-6. The browser pass and the handset pass, T056 to T058, then ship, T059 to T064.
+5. The browser pass and the handset pass, T056 to T058, then ship, T059 to T064.
 
 Each chunk gets a fresh implementer, then a fresh spec-compliance reviewer, then
 a fresh code-quality reviewer. That is the constitution's Development Workflow,
