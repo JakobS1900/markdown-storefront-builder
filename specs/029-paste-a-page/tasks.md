@@ -69,8 +69,8 @@ Heading, Text, Divider, Prices with thirty rows, in that order.
 - [ ] T015 [US2] Write the failing test for T014 directly: a paste whose paragraphs contain commas and whose product lines are tab separated must still split on tabs. It must fail before T014 and pass after.
 - [ ] T016 [US2] Implement heading absorption per R6: a heading run immediately above a `menu` run becomes that section's `heading`, and **the heading's line stays inside the section's source range**. Do not absorb a heading into a `prose` section, and write the reason at the code: one heading commonly precedes several paragraphs, so attaching it to the first invents a relationship the seller did not write.
 - [ ] T017 [US3] Implement the title per R7: the paste's first non-blank line, when it is a heading, becomes `Proposal.title` **and still becomes a Heading section**. Write the reason at the code: the title is private, its own hint says "Only you see this", so consuming the heading would publish a page missing its own title.
-- [ ] T018 [US2] Implement the four block builders from `data-model.md`. Build by spreading rather than assigning `undefined`: `exactOptionalPropertyTypes` is on and an explicit `undefined` is a different type from an absent key.
-- [ ] T019 [US2] **Drop `cost` on this path only.** `readLine` produces it and `toProducts` carries it, and a pasted public page has no supplier cost in it. Write the reason at the code: 023 keeps it because there the seller pasted their own spreadsheet; here they pasted their shop window, and `cost` is the field the compiler is forbidden to publish. `data-model.md`, the fields this feature never writes.
+- [ ] T018 [US2] Implement the four block builders from `data-model.md`. Build by spreading rather than assigning `undefined`: `exactOptionalPropertyTypes` is on and an explicit `undefined` is a different type from an absent key. Assert in the same test file that **a price the app cannot read as a number arrives verbatim** ("DM me", "from 45", "45+") and that **inline marks inside a Text section arrive verbatim** (`**bold**`, `*italic*`, `[text](address)`, `~~strike~~`, `==highlight==`), because Text sections use that same grammar. FR-029-10 and FR-029-11.
+- [ ] T019 [US2] **Drop `cost` on this path only.** `readLine` produces it and `toProducts` carries it, and a pasted public page has no supplier cost in it. Write the reason at the code: 023 keeps it because there the seller pasted their own spreadsheet; here they pasted their shop window, and `cost` is the field the compiler is forbidden to publish. `data-model.md`, the fields this feature never writes. Assert in the same test that **no built block ever carries `localImageIds` or `localAvatarId`**, because nothing in a pasted page can refer to this device's storage and a picture address found in text is an address that can be published. FR-029-29.
 - [ ] T020 [US2] Write the failing test that no proposal is ever `gallery` or `profile`, and that a run of image links and a run of contact lines both arrive as `prose` carrying exactly what was written. FR-029-15a, Jakob 2026-09-12.
 - [ ] T021 [US3] Implement the swap: re-read the section's `source` as the other kind. **A swap converts nothing.** Test it both ways round: Text to Prices to Text returns the original proposal exactly, which is the observable form of FR-029-18a.
 - [ ] T022 [US2] Extend the losslessness property test to proposals, not just runs: concatenating every proposed section's `source` in order, blanks included, still reconstructs the input byte for byte, and it holds with any subset of sections swapped.
@@ -153,3 +153,34 @@ panel, untick one section, swap another, confirm, and read the Build screen.
 - [ ] T062 Push, tag, and publish the GitHub Release **with the APK attached**. Verify with `gh release view` and `git ls-remote --tags origin`. `CLAUDE.md`: pushing commits is not shipping, and 024 was pushed and never released, so Jakob reasonably concluded nothing had shipped.
 - [ ] T063 Update `docs/HANDOFF.md`, `specs/README.md`'s status table, `docs/ROADMAP.md`'s known gaps section, and `CLAUDE.md`'s status block. **The block does not update itself. Whoever finishes a feature updates it.**
 - [ ] T064 Record in `docs/ROADMAP.md` what the reader could not recognise in real pastes, so the Gallery and About you question Jakob deferred on 2026-09-12 gets decided on evidence rather than on a second guess.
+
+---
+
+## Coverage, checked rather than assumed
+
+Every requirement in the spec maps to at least one task, and the mapping was
+checked by walking the spec rather than by trusting that writing the tasks from
+it was enough. Two gaps were found that way and closed by widening T018 and T019
+rather than by adding tasks: the verbatim guarantees, FR-029-10 and FR-029-11,
+and the promise about pictures, FR-029-29. All three were requirements that
+nothing would have failed on.
+
+| Requirements | Where |
+|---|---|
+| FR-029-01, 02, 03, 04 | T040 to T044 |
+| FR-029-05, 07, 12, 14 | T005 to T008 |
+| FR-029-06 | T008, T022, T023, and SC-002 |
+| FR-029-08, 09, 10, 11, 13 | T012 to T018, T009 |
+| FR-029-15, 15a, 15b | T005, T018, T020 |
+| FR-029-16, 17, 20, 21 | T035, T039, T045 |
+| FR-029-18, 18a | T021, T036 |
+| FR-029-19, 22, 23, 26 | T027 to T032 |
+| FR-029-24, 25 | T017, T056 |
+| FR-029-27, 28 | T037, T038 |
+| FR-029-29 | T019 |
+| SC-001 to SC-007 | T031, T040, T052, T056, T057 |
+
+**The one requirement with no automated home is FR-029-24**, that the new page is
+immediately editable, compiles, previews and publishes with no further action.
+Nothing short of driving the real app proves it, which is what T056 is, and it is
+recorded here as a manual step rather than left looking covered.
