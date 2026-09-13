@@ -19,13 +19,41 @@ never serialized.
 
 ### `Line`
 
-One line of the paste, classified. Internal to the reader.
+One line of the paste, classified. Exported by `app/src/page-text.ts`.
 
 | Field | Type | Meaning |
 |---|---|---|
 | `text` | string | The line exactly as pasted, never altered |
-| `kind` | `blank` \| `heading` \| `rule` \| `tableRule` \| `tableHeader` \| `text` | R3's table |
+| `kind` | `blank` \| `heading` \| `headingUnderline` \| `rule` \| `tableRule` \| `tableHeader` \| `text` | R3's table, plus the seventh kind below |
 | `level` | 1 to 6, only on `heading` | From the `#` count, or 1 for `=` and 2 for `-` |
+
+**`headingUnderline` is the seventh kind and R3 did not name it.** Chunk 1 found
+it on 2026-09-12. A row of `=` under a paragraph line is not the heading, is not
+a rule and is not text, and it has to be something: every line index lands in
+exactly one run or the losslessness property is a lie. The alternative, leaving
+it classified `text` inside a heading run, leaves every later reader asking why a
+heading run holds a text line.
+
+`level` is a plain number rather than a union of six literals, because the
+constraint lives in the descriptor, integer with min 1 and max 6, and the
+validator enforces it there. The `#` pattern caps the count at six by
+construction, so a union here would buy a cast rather than a guarantee.
+
+### `Run`
+
+One group of neighbouring lines, and the range of the paste it claims. The
+contract chunk 1 exists to produce.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `kind` | `blank` \| `heading` \| `rule` \| `text` | Coarser than `LineKind`: a table's header, rule and rows are all one `text` run |
+| `from`, `to` | number | First and last line index, inclusive |
+| `lines` | `readonly Line[]` | The lines themselves |
+
+**Blank lines get runs of their own.** They produce no section, so skipping them
+would have been cheaper, and it would have put the burden of remembering where
+the gaps were onto every caller that wants to prove nothing was lost. A blank run
+costs one object and turns reassembly into a plain concatenation.
 
 ### `Proposal`
 

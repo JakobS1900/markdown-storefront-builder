@@ -388,8 +388,16 @@ feature. P3 because it does not block anybody who pastes a page.
   editable page carrying all of it in under two minutes, without typing any of
   their own content into the app.
 - **SC-002**: Every character of any pasted text is present in the confirmed page
-  or visibly accounted for before confirming, measured over a corpus of real
-  pastes, with zero exceptions. This is the feature's one absolute.
+  or visibly accounted for before confirming, measured over generated pastes
+  rather than a handful of examples. This is the feature's one absolute.
+
+  **It has exactly one exception and it is named here rather than discovered
+  later.** A Windows line ending's carriage return is dropped, because the reader
+  splits on `\r?\n` and the app's own documents are `\n` throughout. That is the
+  paste's transport convention, not anything the seller wrote. Every other
+  character survives, smart quotes, trailing spaces and non breaking spaces
+  included. Added 2026-09-12, when chunk 1 proved the original wording could not
+  be met literally.
 - **SC-003**: For a page whose prices are laid out in any of the shapes feature
   023 already reads, at least 90 percent of product lines arrive as price rows
   rather than as prose.

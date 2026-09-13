@@ -227,3 +227,42 @@ holistic review keeps finding here.
 - **No second entry point.** The control goes on the empty state only. Starting a
   new page from the sidebar lands on the empty state, so one placement already
   covers both ways somebody arrives with nothing.
+
+## Amendments after contact with the code
+
+Chunk 1, 2026-09-12. Four of the decisions above were incomplete rather than
+wrong, and they are corrected here rather than quietly diverging from the code.
+
+**R3 is one kind and one lookbehind short.** It says "no lookahead except the
+table header", which is true, and it does not mention that R4's setext rule
+needs the line BELOW to reach back and reclassify the line above. That is a
+second piece of non-local reading, and the underline itself needs a kind of its
+own, `headingUnderline`. `data-model.md` carries the corrected table.
+
+**R11's "change nothing else about any character" has exactly one exception, and
+it is the `\r`.** Splitting on `\r?\n` drops it, so a page written on Windows
+comes back with Unix line endings and cannot be reconstructed byte for byte. That
+is the paste's transport convention rather than anything anybody wrote, and the
+app's own documents are `\n` throughout.
+
+**The thing NOT done about it is the part worth recording.** The cheap fix is to
+normalize both sides of the losslessness test, which would make it pass while
+asserting less than it claims. The test instead compares against the page with
+its terminators settled and says so at the top of the file. A test that quietly
+measures less than its name is the failure mode this project has hit four times
+with gates that measured nothing.
+
+**R13's "one definition, do not duplicate" survives, with a condition on top.**
+`isTableRule` accepts a bare `---`, and over a price list that is correct: a lone
+row of dashes inside one is the rule under its header. Over a whole page it is
+almost never that. It is a divider, or it is a setext underline, and neither
+shape exists in the paste 023 was built for. `page-text.ts` therefore requires a
+table rule to carry a pipe as well, as a condition of its own, and 023's looser
+reading does not move.
+
+**The cost is stated rather than hidden**: a single column Markdown table whose
+rule line carries no pipe at all is not recognised as a table here. That shape is
+vanishingly rare, and FR-029-18 lets the seller swap the section.
+
+**`DECORATION` is exported and has no consumer yet.** T004 puts both exports in
+the contract chunk. Phase 3's builders are where it is read.
