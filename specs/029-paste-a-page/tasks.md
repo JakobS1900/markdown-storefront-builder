@@ -28,9 +28,15 @@ seen red is not evidence.
 
 ## Phase 1: Setup
 
-- [ ] T001 Run `npm run verify` from PowerShell, whole and unpiped, and record the numbers in the first commit message. Baseline measured on `6ad878e` on 2026-09-12: **80 test files, 1572 tests, a11y 61, contrast 411 elements plus the wizard at 7 screens in both palettes, secret scan 457, dash scan 332, menu file 21.2 KB, pwa gate clean, exit 0.** Never pipe it through `Select-Object -First N`, which ends the pipeline early and reports a green gate as exit 255.
-- [ ] T002 Record `engine/tests/document/parity.snapshot.json`'s hash now. **A diff to it anywhere in this feature is a defect, not a step.** 029 adds no schema field and `SCHEMA_VERSION` stays at 5.
-- [ ] T003 Record the hashes of every golden fixture directory now, for the same reason. This feature touches no emitter, so no golden file may move. A moved golden means something reached the engine that should not have.
+- [x] T001 Run `npm run verify` from PowerShell, whole and unpiped, and record the numbers. **Measured on `6ad878e` on 2026-09-12, exit 0: 80 test files, 1572 tests, a11y 61, contrast 411 elements plus the wizard at 7 screens with 7 help lines read by axe, in both palettes, secret scan 457, dash scan 332, menu file 21.2 KB with 9 headings and 13 embedded pictures, pwa gate clean.** Never pipe it through `Select-Object -First N`, which ends the pipeline early and reports a green gate as exit 255.
+
+  **The handoff expected 1480 tests and a11y 60 and that is now stale**, not wrong: 028's own later commits added tests after the handoff paragraph was written. The numbers above are the ones this feature is measured against.
+- [x] T002 Record `engine/tests/document/parity.snapshot.json`'s hash now. **A diff to it anywhere in this feature is a defect, not a step.** 029 adds no schema field and `SCHEMA_VERSION` stays at 5.
+
+  `F9F1A45BCD6151A5629C6355EDB249FCFC1D75750F61F1819CAD884317F85DA7`, SHA256.
+- [x] T003 Record the hashes of every golden fixture now, for the same reason. This feature touches no emitter, so no golden file may move. A moved golden means something reached the engine that should not have.
+
+  55 files under `engine/tests/compile/golden` and `engine/tests/compile/fixtures`, SHA256 of their concatenated per-file SHA256s in sorted path order: `1f238e21168390f3011b1890d2aedef4ce1aa16783df14e43ca8b7b55ec9eb52`. T051 recomputes it exactly this way.
 
 ---
 
