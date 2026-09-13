@@ -4,6 +4,111 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## FEATURE 029 IS IN PROGRESS. Read this before anything else in this file.
+
+**Branch `029-paste-a-page`. Bringing in a page you already have**, by pasting
+the whole text of a page off rentry, pastebin or text.is. This was 028's slot
+until Jakob chose the formatting buttons on 2026-09-11.
+
+**Specified, planned and tasked on 2026-09-12, and chunk 1 of 5 has landed.**
+64 tasks in eight phases. A holistic review is required, because five chunks is
+more than roughly three.
+
+| Commit | What |
+|---|---|
+| `09eaca3` | The spec, and Jakob's two scope answers |
+| `a65331d` | The plan, the research and the data model |
+| `6ef423d` | 64 tasks in eight phases |
+| `2a6f22b` | The coverage walk, and the two gaps it found |
+| `ac1e5f1` | Phase 1, the baselines this feature is measured against |
+| `6b03cd3` | Chunk 1: a pasted page becomes runs of lines, and loses none of them |
+| `58d0dfc` | What chunk 1 found wrong with its own phase 0 documents |
+
+### Jakob answered both open scope questions on 2026-09-12
+
+In the session that wrote them down. **Do not re-ask these.**
+
+1. **The reader recognises four kinds, not six.** Heading, Divider, Text and
+   Prices. Gallery and About you are OUT, and arrive as Text, which keeps every
+   word and leaves both available to a later feature that will have real pastes
+   to learn from rather than guesses about them. FR-029-15 and FR-029-15a.
+2. **A proposed section can be swapped between Text and Prices, and nothing
+   else.** Not ticks alone, and not a picker across all six kinds. FR-029-18 says
+   why that one pair is the exception: a price list misread as prose is the one
+   wrong guess the editor cannot fix afterwards, because there is no way to turn
+   a Text section into a Prices section.
+
+### THE TRAP, and it would have been found by a seller rather than by a review
+
+**The delimiter must be inferred PER RUN of product lines, never over the whole
+paste.** `inferDelimiter` in `price-list-text.ts` judges the separator over the
+paste as a whole, deliberately, and its bar is a quarter of meaningful lines
+containing the character. English prose is full of commas. A page with two
+paragraphs and twelve tab separated product lines therefore infers `comma`, and
+every product name is cut at its first comma. `research.md` R2 and task T014.
+
+### What chunk 1 found wrong with the plan it was given
+
+All four are corrected in the documents, and they are worth reading before
+writing chunk 2, because three of them constrain it.
+
+- **R3 was one kind and one lookbehind short.** A setext underline has to reach
+  BACK and turn the line above it into a heading, and the underline itself is not
+  blank, not a heading, not a rule and not text. It needed a seventh kind,
+  `headingUnderline`. Without one it lands in no run and "every line is accounted
+  for" becomes a claim rather than a property.
+- **SC-002 said zero exceptions and could not be met literally.** Splitting on
+  `\r?\n` drops the carriage return, so a Windows paste cannot come back byte for
+  byte. The exception is now named in the spec. **The fix NOT taken is the part
+  worth keeping**: normalizing both sides of the test would have made it pass
+  while asserting less than its name claims, which is this project's four-time
+  failure mode with gates that measured nothing.
+- **`isTableRule` accepts a bare `---`** and is right to over a price list. Over
+  a whole page that is a divider or a setext underline, so `page-text.ts` adds a
+  condition of its own, a table rule must carry a pipe. 023 does not move. The
+  cost is stated: a single column table whose rule has no pipe is not recognised.
+- **Blank lines get runs of their own.** Chunk 2 must read the blanks from the
+  runs rather than remembering where the gaps were.
+
+### Baselines, and two hashes that must not move
+
+`npm run verify` green on `6ad878e`, exit 0: **80 test files, 1572 tests, a11y
+61, contrast 411 elements plus the wizard at 7 screens in both palettes, secret
+scan 457, dash scan 332, menu file 21.2 KB, pwa gate clean.** After chunk 1: 82
+test files, 1628 tests.
+
+**The handoff paragraph under 028 expects 1480 tests and a11y 60. That is stale
+rather than wrong**: 028's own later commits added tests after it was written.
+
+Parity snapshot:
+`F9F1A45BCD6151A5629C6355EDB249FCFC1D75750F61F1819CAD884317F85DA7`.
+The 55 golden fixtures, SHA256 of their concatenated per-file SHA256s in sorted
+path order:
+`1f238e21168390f3011b1890d2aedef4ce1aa16783df14e43ca8b7b55ec9eb52`.
+**A diff to either anywhere in this feature is a defect, not a step.**
+
+### Next up, in order
+
+1. **Chunk 2, which is Phase 3 of `specs/029-paste-a-page/tasks.md`**, T012 to
+   T024: proposals, the Prices bar, heading absorption, the title, and the four
+   block builders. T014 is the trap above and is the single most important line
+   in the feature.
+2. Chunk 3, Phase 4, T025 to T033. **The only chunk that can write anything.**
+3. Chunk 4, Phase 5, T034 to T047. The panel. T034 carries the repaint trap: a
+   repaint deferred while a text field holds focus never lands, and the paste box
+   IS a focused text field the whole time.
+4. Chunk 5, Phase 6, T048 to T053. The gates.
+5. **The holistic review, T055. Required, not optional.** On 028 it found three
+   ways the feature corrupted a seller's text that four per-chunk reviews had
+   each passed.
+6. The browser pass and the handset pass, T056 to T058, then ship, T059 to T064.
+
+Each chunk gets a fresh implementer, then a fresh spec-compliance reviewer, then
+a fresh code-quality reviewer. That is the constitution's Development Workflow,
+not a preference.
+
+---
+
 ## FEATURE 028 IS DONE AND SHIPPED as `v0.11.0`. Read this before anything below.
 
 **Released 2026-09-11.** Merged to master with `--no-ff` as `f4d1b2f`, pushed,
