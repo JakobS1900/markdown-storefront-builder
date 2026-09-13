@@ -10,7 +10,21 @@ happening right now and what to do next.
 the whole text of a page off rentry, pastebin or text.is. This was 028's slot
 until Jakob chose the formatting buttons on 2026-09-11.
 
-**Specified, planned and tasked on 2026-09-12, and chunks 1 and 2 of 5 have landed.**
+**Updated 2026-09-13: all five implementation chunks have landed on the feature
+branch through `e5a030c`, and that commit was pushed to GitHub.**
+The full verification gate passed after the panel lifecycle fix: 86 test files,
+1675 tests, a11y 62, and both contrast palettes plus menu-file and PWA gates.
+The signed build installed on the handset without uninstalling the old app.
+This is not yet merged or released. The holistic review and browser/handset
+paste-flow checks remain open.
+
+The interrupted holistic review raised possible loss of a second numeric table
+column through `cost`. An attempted fix copied that value into visible blurb
+text. That uncommitted fix was withdrawn: T019 explicitly excludes supplier
+costs from published pages. Review the parsing ambiguity before choosing a fix;
+do not bypass that exclusion by publishing the value under another field.
+
+**Specified, planned and tasked on 2026-09-12.**
 64 tasks in eight phases. A holistic review is required, because five chunks is
 more than roughly three.
 
@@ -117,12 +131,8 @@ path order:
 
 ### Next up, in order
 
-1. **Chunk 3, which is Phase 4 of `specs/029-paste-a-page/tasks.md`**, T025 to
-   T033. **The only chunk that can write anything.**
-2. Chunk 4, Phase 5, T034 to T047. The panel. T034 carries the repaint trap: a
-   repaint deferred while a text field holds focus never lands, and the paste box
-   IS a focused text field the whole time.
-3. Chunk 5, Phase 6, T048 to T053. The gates.
+1. Chunks 3 to 5 are complete. Store confirmation, panel lifecycle fixes and
+   accessibility/security gates are committed through `e5a030c`.
 4. **The holistic review, T055. Required, not optional.** On 028 it found three
    ways the feature corrupted a seller's text that four per-chunk reviews had
    each passed.
