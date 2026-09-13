@@ -261,7 +261,9 @@ describe("the shell is accessible", () => {
     expect(sections).toHaveLength(3);
     for (const section of sections) {
       const checkbox = section.querySelector<HTMLInputElement>("input[type=checkbox]");
-      expect(checkbox?.labels?.[0]?.textContent?.trim()).not.toBe("");
+      expect(checkbox, "each proposed section needs a checkbox").not.toBeNull();
+      expect(checkbox?.labels?.length, "each checkbox needs a bound label").toBe(1);
+      expect(checkbox?.labels?.[0]?.textContent?.trim().length ?? 0).toBeGreaterThan(0);
     }
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
