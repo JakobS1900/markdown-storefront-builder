@@ -155,3 +155,27 @@ it("finishes a committed paste even if refreshing the page list fails", async ()
   await store.confirmPagePaste();
   expect(await db.listPages()).toHaveLength(3);
 });
+
+it("does not clear a newer paste session when an earlier confirm finishes", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("First page");
+  let release: () => void = () => {};
+  const waiting = new Promise<void>((resolve) => { release = resolve; });
+  const list = db.listPages;
+  const read = vi.spyOn(db, "listPages").mockImplementation(async () => {
+    await waiting;
+    return list();
+  });
+  const first = store.confirmPagePaste();
+  for (let i = 0; i < 50 && store.getState().doc.blocks.length === 0; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  expect(store.getState().doc.blocks).toHaveLength(1);
+  store.stopPastingPage();
+  store.startPastingPage();
+  store.setPagePasteText("Second paste");
+  release();
+  await first;
+  read.mockRestore();
+  expect(store.getState().pastingPage?.text).toBe("Second paste");
+});

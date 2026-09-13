@@ -51,10 +51,14 @@ it("offers a new page from the empty state, then allows dropping and swapping", 
   click("Make Prices instead of Text");
   expect(document.querySelector(".page-paste")?.textContent).toContain("Add 2 sections as a new page");
   click("Add 2 sections as a new page");
-  for (let i = 0; i < 50 && getState().doc.blocks.length === 0; i += 1) {
+  // Adoption happens before the page-list refresh and final session cleanup.
+  // Wait for the whole confirm, or its late continuation can clear a draft in
+  // the next test when the full suite makes that refresh slower.
+  for (let i = 0; i < 50 && getState().pastingPage !== undefined; i += 1) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   expect(getState().doc.blocks).toHaveLength(2);
+  expect(getState().pastingPage).toBeUndefined();
   expect(getState().doc.blocks[0]).toMatchObject({
     kind: "menu",
     tiers: [{ name: "Hello there" }],

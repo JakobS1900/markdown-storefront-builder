@@ -829,12 +829,16 @@ export async function confirmPagePaste(): Promise<void> {
     // openBackup owns validation and persistence. JSON.stringify lets its
     // parser refuse a faulty builder result before any stored page changes.
     const result = await openBackup(JSON.stringify(doc));
+    // A seller may close this draft and begin another while the storage and
+    // page-list work finishes. The old result must not clear the new draft.
+    if (state.pastingPage !== current) return;
     if (!result.ok) {
       set({ status: { kind: "error", message: "This paste could not be made into a page. Nothing has been changed. Your pasted text is still here." } });
       return;
     }
     set({ pastingPage: undefined, status: { kind: "saved", message: "Opened the paste as a new page. Your previous page is still saved under Your pages on the Build screen." } });
   } catch {
+    if (state.pastingPage !== current) return;
     set({ status: { kind: "error", message: "This paste could not be saved as a new page. Your previous pages are still saved and your pasted text is still here. Try again." } });
   } finally {
     confirmingPagePaste = false;
