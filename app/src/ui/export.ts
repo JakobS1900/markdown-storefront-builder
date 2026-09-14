@@ -11,12 +11,13 @@
  */
 import { PORTABLE, TARGETS, compile, findTarget, serializeDocument } from "@mdsb/engine";
 
-import { getState, setTarget } from "../store.js";
+import { getState, setTarget, startPastingPage } from "../store.js";
 import { handOff } from "../files.js";
 import { openBackup } from "../import.js";
 import { describeBytes } from "../assets.js";
 import { MENU_FILE_NAME, buildMenuFile, fetchAssets, fetchPictures } from "../menu-file.js";
 import { announce, button, el, render, select } from "./dom.js";
+import { pagePastePanel } from "./page-paste.js";
 import { storagePanel } from "./storage.js";
 
 /** Where to paste, per host. Kept beside the target ids it describes. */
@@ -167,9 +168,13 @@ export function exportSurface(container: HTMLElement): void {
       container,
       el("div", { class: "stack" }, [
         el("p", { class: "empty" }, [
-          "There is nothing to copy yet. Add a section on the Build tab first, or open a backup you saved earlier.",
+          "There is nothing to copy yet. Paste a page you already have, add a section on the Build tab, or open a backup you saved earlier.",
         ]),
-        el("div", { class: "adders" }, openBackupControl()),
+        el("div", { class: "adders" }, [
+          button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
+          ...openBackupControl(),
+        ]),
+        ...pagePastePanel(),
       ]),
     );
     return;
@@ -246,7 +251,10 @@ export function exportSurface(container: HTMLElement): void {
           onClick: () => save("page-backup.json", serializeDocument(state.doc), "application/json"),
         }),
         ...openBackupControl(),
+        button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
       ]),
+
+      ...pagePastePanel(),
 
       // Beside the save controls, because this is the surface where the size of
       // what is being sent is already on screen, and because the menu file is

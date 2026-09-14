@@ -2,7 +2,7 @@
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, expect, it } from "vitest";
-import { getState, init, subscribe } from "../src/store.js";
+import { getState, init, setSurface, subscribe } from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
 
 let stop: (() => void) | undefined;
@@ -78,6 +78,17 @@ it("offers page paste after a seller already has sections and keeps the panel op
   expect(document.querySelector(".page-paste")?.textContent).toContain("Fresh menu");
   click("Heading");
   expect(document.querySelector(".page-paste")?.textContent).toContain("Fresh menu");
+});
+
+it("offers page paste on the Copy tab where clipboard work happens", () => {
+  live();
+  setSurface("export");
+  expect(document.querySelector("main")?.textContent).toContain("Paste a page you already have");
+  click("Paste a page you already have");
+  expect(getState().surface).toBe("export");
+  paste("Clipboard menu\n\nSketch - 30");
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Clipboard menu");
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Sketch - 30");
 });
 
 it("replaces the proposal on a second paste and loses only the draft on close", () => {

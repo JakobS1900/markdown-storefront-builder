@@ -248,6 +248,14 @@ panel, untick one section, swap another, confirm, and read the Build screen.
   contrast passed in light and dark with the page paste panel measured at 3
   sections, 3 checkboxes and 16 contrast nodes, menu-file stayed clean at 21.2
   KB, and PWA update stayed clean.
+
+  Follow-up on 2026-09-14: the route also had to live on the Copy tab, because
+  that is where a seller already thinking about clipboard text looks for it.
+  A focused test first failed with the Copy tab offering only Build or backup,
+  then passed after the Copy tab rendered the same page-paste panel in place.
+  `npm run verify`, exit 0: 86 test files and 1681 tests passed, a11y 62,
+  secret scan 488, dash scan 349, contrast clean in light and dark, menu-file
+  clean at 21.2 KB, and PWA update clean.
 - [x] T056 Drive it in a real browser: paste an actual page copied out of rentry, confirm, and read the Build screen, the Preview and the Copy tab. Quote what came out.
 
   Browser evidence, 2026-09-13: in the in-app browser at 390 by 844 against

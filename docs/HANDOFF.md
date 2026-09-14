@@ -18,21 +18,30 @@ sections after the first 100 could be added without ever being reviewable.
 
 The fix does not publish supplier costs under another field. A product-looking
 run with a second numeric value and no unit now stays Text by default, so the
-seller's public words remain visible and editable. The paste button is available
-from an existing Build page and from Your pages, the panel remains visible when
-the page already has content, long proposals page through 100 sections at a
-time, and the page paste panel now has its own phone-safe styling.
+seller's public words remain visible and editable. The paste button is
+available from the Copy tab, from an existing Build page and from Your pages,
+the panel remains visible when the page already has content, long proposals
+page through 100 sections at a time, and the page paste panel now has its own
+phone-safe styling.
 
 `npm run verify` passed after the review fixes: 86 test files, 1680 tests, a11y
 62, secret scan 488, dash scan 349, contrast clean in light and dark with 414
 storefront elements plus the page paste panel at 3 sections, 3 checkboxes and 16
 measured nodes, menu-file clean at 21.2 KB, and PWA update clean.
 
+`npm run verify` passed again on 2026-09-14 after adding the same paste-page
+entry point to the Copy tab, because that is where a seller already thinking
+about clipboard text looks for it: 86 test files, 1681 tests, a11y 62, secret
+scan 488, dash scan 349, contrast clean in light and dark, menu-file clean at
+21.2 KB, and PWA update clean.
+
 The browser pass is complete. In the in-app browser at 390 by 844 against
 `http://localhost:5177/`, a messy page with title text, prose, a heading, two
 price tables, a divider and a final note proposed six sections. Build showed
 the same six sections, Preview rendered them, Copy produced the expected
-Markdown, and console logs stayed empty.
+Markdown, and console logs stayed empty. A follow-up test on 2026-09-14 saw the
+Copy tab route fail before the change, then pass after the Copy tab rendered
+the paste panel in place.
 
 The handset pass is complete on Moto G7 `ZY2262PFGQ`. `npm run android:sync`
 finished, the release APK built with JDK 21 after stopping a stale Java 8 Gradle
