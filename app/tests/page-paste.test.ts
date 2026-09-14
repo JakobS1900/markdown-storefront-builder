@@ -69,6 +69,17 @@ it("offers a new page from the empty state, then allows dropping and swapping", 
   });
 });
 
+it("offers page paste after a seller already has sections and keeps the panel open", () => {
+  live();
+  click("Text");
+  expect(document.querySelector(".empty")).toBeNull();
+  click("Paste a page you already have");
+  paste("Fresh menu");
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Fresh menu");
+  click("Heading");
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Fresh menu");
+});
+
 it("replaces the proposal on a second paste and loses only the draft on close", () => {
   live();
   const original = getState().doc;
@@ -81,6 +92,23 @@ it("replaces the proposal on a second paste and loses only the draft on close", 
   click("Done pasting");
   expect(getState().pastingPage).toBeUndefined();
   expect(getState().doc).toBe(original);
+});
+
+it("lets the seller review and drop sections beyond the first hundred", () => {
+  live();
+  click("Paste a page you already have");
+  paste(Array.from({ length: 102 }, (_, i) => `Section ${String(i + 1)}`).join("\n\n"));
+  expect(document.querySelectorAll(".page-paste-sections li")).toHaveLength(100);
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Showing sections 1 to 100 of 102");
+  click("Show next 2 sections");
+  expect(document.querySelectorAll(".page-paste-sections li")).toHaveLength(2);
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Section 102");
+  const last = [...document.querySelectorAll<HTMLInputElement>(".page-paste input[type=checkbox]")]
+    .find((box) => box.labels?.[0]?.textContent?.includes("Section 102") ?? false);
+  if (last === undefined) throw new Error("missing final section checkbox");
+  last.checked = false;
+  last.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Add 101 sections as a new page");
 });
 
 it("keeps whitespace empty and offers a single short line honestly", () => {

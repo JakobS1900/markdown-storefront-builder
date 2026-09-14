@@ -60,6 +60,18 @@ it("adds exactly one valid page, preserving every stored byte and the current ta
   expect(store.getState().status.message).toMatch(/new page.*previous page.*Your pages/i);
 });
 
+it("keeps a public second numeric column in the confirmed page", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Sketch, 30, 10 slots\nIcon, 12, 2 slots");
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toEqual([
+    expect.objectContaining({
+      kind: "prose",
+      text: "Sketch, 30, 10 slots\nIcon, 12, 2 slots",
+    }),
+  ]);
+});
+
 it("refuses an invalid builder result without writing or replacing the open page", async () => {
   const before = await db.listPages();
   const doc = store.getState().doc;

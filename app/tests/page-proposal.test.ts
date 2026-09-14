@@ -151,6 +151,13 @@ describe("proposing sections from a pasted page", () => {
     expect(JSON.stringify(menu)).not.toContain("localAvatarId");
   });
 
+  it("keeps a public extra numeric column as Text rather than guessing it is private cost", () => {
+    const text = "Sketch, 30, 10 slots\nIcon, 12, 2 slots";
+
+    expect(kinds(text)).toEqual(["prose"]);
+    expect(firstBlock(text)).toEqual({ kind: "prose", text });
+  });
+
   it("leaves image links and contact blocks as Text rather than Gallery or About you", () => {
     const page = [
       "![A3 print](https://example.test/a3.png)",

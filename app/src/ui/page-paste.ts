@@ -8,6 +8,10 @@ import { announce, button, checkbox, el, field } from "./dom.js";
 const DRAWN_SECTIONS = 100;
 const DRAWN_LINES = 20;
 
+interface SectionPage {
+  start: number;
+}
+
 function kindName(section: ProposedSection): string {
   return { heading: "Heading", divider: "Divider", prose: "Text", menu: "Prices" }[section.kind];
 }
@@ -18,7 +22,7 @@ function shortContent(source: string): string {
 }
 
 function focusSection(index: number, selector: string): void {
-  const item = document.querySelector(`.page-paste-sections li:nth-child(${String(index + 1)})`);
+  const item = document.querySelector(`.page-paste-sections li[data-section-index="${String(index)}"]`);
   const control = item?.querySelector<HTMLElement>(selector);
   control?.focus();
 }
@@ -33,7 +37,7 @@ function preview(section: ProposedSection): Node[] {
   ];
 }
 
-function panelBody(refresh: () => void, pending: boolean, confirm: () => void): Node[] {
+function panelBody(refresh: () => void, pending: boolean, confirm: () => void, page: SectionPage): Node[] {
   const draft = getState().pastingPage;
   if (draft === undefined || draft.text.trim() === "") return [];
   const proposal = readProposal(draft.text);
@@ -45,15 +49,43 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void): 
   // The builder and confirm path both make one block per retained proposal.
   // Counting the blocks here keeps the button's promise tied to conversion.
   const count = sections.filter(({ section, index }) => !draft.dropped.includes(index) && buildProposedBlock(section) !== undefined).length;
+  const lastStart = Math.max(0, Math.floor((sections.length - 1) / DRAWN_SECTIONS) * DRAWN_SECTIONS);
+  const start = Math.min(page.start, lastStart);
+  const end = Math.min(sections.length, start + DRAWN_SECTIONS);
+  const paging: Node[] = [];
+  if (start > 0) {
+    const previous = Math.min(DRAWN_SECTIONS, start);
+    paging.push(button({
+      label: `Show previous ${String(previous)} sections`,
+      onClick: () => {
+        page.start = Math.max(0, start - DRAWN_SECTIONS);
+        refresh();
+      },
+    }));
+  }
+  if (end < sections.length) {
+    const next = Math.min(DRAWN_SECTIONS, sections.length - end);
+    paging.push(button({
+      label: `Show next ${String(next)} sections`,
+      onClick: () => {
+        page.start = end;
+        refresh();
+      },
+    }));
+  }
+
   return [
     el("p", {}, [proposal.sections.length === 1 ? "This text can make one editable section." : "Review the sections this text can make."]),
     ...(sections.length > DRAWN_SECTIONS
-      ? [el("p", { class: "paste-capped" }, [`Showing the first ${String(DRAWN_SECTIONS)} of ${String(sections.length)} sections. The remaining sections will also be added.`])]
+      ? [
+          el("p", { class: "paste-capped" }, [`Showing sections ${String(start + 1)} to ${String(end)} of ${String(sections.length)}.`]),
+          el("div", { class: "paste-tools", role: "group", "aria-label": "Review proposed sections" }, paging),
+        ]
       : []),
-    el("ul", { class: "page-paste-sections" }, sections.slice(0, DRAWN_SECTIONS).map(({ section, index }) => {
+    el("ul", { class: "page-paste-sections" }, sections.slice(start, end).map(({ section, index }) => {
       const name = kindName(section);
       const content = shortContent(section.source);
-      return el("li", {}, [
+      return el("li", { "data-section-index": index }, [
         checkbox({
           label: `${name}: ${content}`,
           checked: !draft.dropped.includes(index),
@@ -121,6 +153,7 @@ export function pagePastePanel(): HTMLElement[] {
   if (draft === undefined) return [];
   const body = el("div", { class: "page-paste-body" });
   let pending = false;
+  const page = { start: 0 };
   // R9: repaint defers while a text field has focus. Refresh only this body so
   // the paste textarea and the Android keyboard connection remain intact.
   const confirm = (): void => {
@@ -129,13 +162,13 @@ export function pagePastePanel(): HTMLElement[] {
     refresh();
     void confirmPagePaste().finally(() => { pending = false; refresh(); });
   };
-  const refresh = (): void => body.replaceChildren(...panelBody(refresh, pending, confirm));
+  const refresh = (): void => body.replaceChildren(...panelBody(refresh, pending, confirm, page));
   const input = field({
     label: "Paste the text of your page",
     value: draft.text,
     multiline: true,
     hint: "Review what it will make. Nothing is saved until you press Add.",
-    onInput: (text) => { setPagePasteText(text); refresh(); },
+    onInput: (text) => { page.start = 0; setPagePasteText(text); refresh(); },
   });
   const box = input.querySelector("textarea");
   if (box === null) throw new Error("missing paste box");

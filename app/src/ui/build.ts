@@ -246,6 +246,12 @@ function emptyState(state: State): HTMLElement[] {
   ];
 }
 
+function pagePasteStart(): HTMLElement {
+  return el("div", { class: "adders page-actions", role: "group", "aria-label": "Paste a page you already have" }, [
+    button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
+  ]);
+}
+
 export function buildSurface(container: HTMLElement): void {
   const state = getState();
   const { blocks } = state.doc;
@@ -409,7 +415,7 @@ export function buildSurface(container: HTMLElement): void {
           update(next as typeof state.doc);
         },
       }),
-      ...(showsEmptyState(state) ? emptyState(state) : [list]),
+      ...(showsEmptyState(state) ? emptyState(state) : [pagePasteStart(), ...pagePastePanel(), list]),
       el("h2", { class: "sr-only" }, ["Add a section"]),
       adders,
     ]),

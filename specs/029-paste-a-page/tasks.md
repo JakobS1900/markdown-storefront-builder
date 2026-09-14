@@ -225,7 +225,29 @@ panel, untick one section, swap another, confirm, and read the Build screen.
 ## Phase 7: Review, the browser, and the handset
 
 - [ ] T054 Per-chunk reviews as the work lands: a fresh spec-compliance reviewer then a fresh code-quality reviewer per chunk, per `CLAUDE.md`. Track carry-forwards as `CHUNK N:` code comments at the exact site, never as prose.
-- [ ] T055 **The holistic review over the whole feature diff. Required**, five chunks being more than roughly three. On 028 it found three ways the feature corrupted a seller's text that four per-chunk reviews had each passed, because per-chunk reviews each see one internally correct side of a seam.
+- [x] T055 **The holistic review over the whole feature diff. Required**, five chunks being more than roughly three. On 028 it found three ways the feature corrupted a seller's text that four per-chunk reviews had each passed, because per-chunk reviews each see one internally correct side of a seam.
+
+  Completed on 2026-09-13 with a fresh read-only holistic review over
+  `ac1e5f1774bd64f6dab4867ff82250e6abb99f6e..e5a030ca145ae17ead688a500cedd6857fd98cb2`,
+  then fixed in the working tree. Findings and fixes:
+
+  - A second money-like public column could disappear through `cost`. Fixed by
+    leaving those ambiguous runs as Text unless there is a real unit column, and
+    covered at proposal and confirmed-page level.
+  - The way in existed only on the empty Build page. Fixed by offering page
+    paste on a page that already has sections and from Your pages, switching to
+    Build before opening the panel.
+  - Only the first 100 proposed sections were reviewable. Fixed with previous
+    and next controls that page through long proposals while the confirm count
+    still covers every retained section.
+  - The page paste panel had no matching stylesheet rules. Fixed with bounded
+    scrolling and wrapping preview text.
+
+  Evidence after the fixes: `npm run verify`, exit 0. 86 test files and 1680
+  tests passed, a11y 62 passed, secret scan 488 and dash scan 349 were clean,
+  contrast passed in light and dark with the page paste panel measured at 3
+  sections, 3 checkboxes and 16 contrast nodes, menu-file stayed clean at 21.2
+  KB, and PWA update stayed clean.
 - [ ] T056 Drive it in a real browser: paste an actual page copied out of rentry, confirm, and read the Build screen, the Preview and the Copy tab. Quote what came out.
 - [ ] T057 Prove it on the handset. Check `dumpsys power` for `mWakefulness` **immediately before each `screencap`**, not once at the start: a screenshot under about 20 kB is a sleeping screen until proven otherwise, which cost real time on 2026-09-01. `adb shell svc power stayon usb` holds it awake, and set it back to `false` afterwards because it is the owner's device setting.
 - [ ] T058 Paste on the handset with the keyboard up, which is the only way to prove T034's fix rather than assume it. A phone is where that trap lives and jsdom cannot see it.

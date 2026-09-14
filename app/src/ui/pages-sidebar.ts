@@ -33,6 +33,8 @@ import {
   openPage,
   removePage,
   setBusy,
+  setSurface,
+  startPastingPage,
   type State,
 } from "../store.js";
 import { dismissSidebar } from "../surface-history.js";
@@ -261,6 +263,15 @@ export function pagesPanelContents(state: State): Node[] {
             dismissSidebar();
             announce("Started a new page");
           });
+        },
+      }),
+      button({
+        label: "Paste a page you already have",
+        onClick: () => {
+          setSurface("build");
+          startPastingPage();
+          dismissSidebar();
+          announce("Paste your page text on Build.");
         },
       }),
     ]),

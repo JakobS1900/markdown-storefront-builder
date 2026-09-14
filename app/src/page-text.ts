@@ -398,6 +398,10 @@ function textRunIsContactBlock(lines: readonly Line[]): boolean {
   return lines.length > 0 && lines.every((line) => CONTACT_LINE.test(line.text));
 }
 
+function hasAmbiguousPublicNumber(candidate: ReturnType<typeof readCandidates>[number]): boolean {
+  return candidate.suggested && candidate.cost !== undefined && candidate.unit === undefined;
+}
+
 function textRunIsMenu(run: Run): boolean {
   const nonBlankLines = run.lines.filter((line) => line.text.trim() !== "");
   // FR-029-15a: image links are kept as Text in this feature. `A3` and `A4`
@@ -408,9 +412,11 @@ function textRunIsMenu(run: Run): boolean {
   }
   if (textRunIsContactBlock(nonBlankLines)) return false;
 
+  const candidates = candidatesForRun(run);
+  if (candidates.some(hasAmbiguousPublicNumber)) return false;
+
   if (run.lines.some((line) => line.kind === "tableRule")) return true;
 
-  const candidates = candidatesForRun(run);
   const suggested = candidates.filter((candidate) => candidate.suggested).length;
   const nonBlank = nonBlankLines.length;
 

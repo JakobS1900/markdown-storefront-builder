@@ -10,19 +10,26 @@ happening right now and what to do next.
 the whole text of a page off rentry, pastebin or text.is. This was 028's slot
 until Jakob chose the formatting buttons on 2026-09-11.
 
-**Updated 2026-09-13: all five implementation chunks have landed on the feature
-branch through `e5a030c`, and that commit was pushed to GitHub.**
-The full verification gate passed after the panel lifecycle fix: 86 test files,
-1675 tests, a11y 62, and both contrast palettes plus menu-file and PWA gates.
-The signed build installed on the handset without uninstalling the old app.
-This is not yet merged or released. The holistic review and browser/handset
-paste-flow checks remain open.
+**Updated 2026-09-13: T055, the holistic review, is complete and fixed.**
+The review found three real issues after the five chunks landed: a pasted page
+could silently lose a public second numeric column by treating it as private
+`cost`, the paste entry point was hidden once a seller already had sections, and
+sections after the first 100 could be added without ever being reviewable.
 
-The interrupted holistic review raised possible loss of a second numeric table
-column through `cost`. An attempted fix copied that value into visible blurb
-text. That uncommitted fix was withdrawn: T019 explicitly excludes supplier
-costs from published pages. Review the parsing ambiguity before choosing a fix;
-do not bypass that exclusion by publishing the value under another field.
+The fix does not publish supplier costs under another field. A product-looking
+run with a second numeric value and no unit now stays Text by default, so the
+seller's public words remain visible and editable. The paste button is available
+from an existing Build page and from Your pages, the panel remains visible when
+the page already has content, long proposals page through 100 sections at a
+time, and the page paste panel now has its own phone-safe styling.
+
+`npm run verify` passed after the review fixes: 86 test files, 1680 tests, a11y
+62, secret scan 488, dash scan 349, contrast clean in light and dark with 414
+storefront elements plus the page paste panel at 3 sections, 3 checkboxes and 16
+measured nodes, menu-file clean at 21.2 KB, and PWA update clean. The signed
+build installed on the handset before these review fixes, without uninstalling
+the old app. This is not yet merged or released. The browser and handset
+paste-flow checks remain open.
 
 **Specified, planned and tasked on 2026-09-12.**
 64 tasks in eight phases. A holistic review is required, because five chunks is
@@ -133,10 +140,7 @@ path order:
 
 1. Chunks 3 to 5 are complete. Store confirmation, panel lifecycle fixes and
    accessibility/security gates are committed through `e5a030c`.
-4. **The holistic review, T055. Required, not optional.** On 028 it found three
-   ways the feature corrupted a seller's text that four per-chunk reviews had
-   each passed.
-5. The browser pass and the handset pass, T056 to T058, then ship, T059 to T064.
+4. The browser pass and the handset pass, T056 to T058, then ship, T059 to T064.
 
 Each chunk gets a fresh implementer, then a fresh spec-compliance reviewer, then
 a fresh code-quality reviewer. That is the constitution's Development Workflow,

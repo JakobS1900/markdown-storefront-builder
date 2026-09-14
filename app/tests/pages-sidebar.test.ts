@@ -156,6 +156,21 @@ describe("where the list is drawn", () => {
       expect(host.querySelector('.bar [aria-controls="pages-panel"]')).not.toBeNull();
     }
   });
+
+  it("starts a page paste from Your pages and shows it on Build", () => {
+    atWidth(false);
+    setSurface("preview");
+    openSidebar();
+    const host = shell();
+    const paste = [...host.querySelectorAll(".pages-panel button")]
+      .find((node) => node.textContent === "Paste a page you already have");
+    expect(paste).toBeInstanceOf(HTMLButtonElement);
+    (paste as HTMLButtonElement).click();
+    expect(getState().surface).toBe("build");
+    expect(getState().pastingPage).toEqual({ text: "", dropped: [], swapped: [] });
+    const next = shell();
+    expect(next.querySelector(".page-paste")).not.toBeNull();
+  });
 });
 
 describe("what the drawer does to everything behind it", () => {
