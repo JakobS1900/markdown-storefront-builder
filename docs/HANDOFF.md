@@ -10,7 +10,7 @@ happening right now and what to do next.
 the whole text of a page off rentry, pastebin or text.is. This was 028's slot
 until Jakob chose the formatting buttons on 2026-09-11.
 
-**Updated 2026-09-13: T055, the holistic review, is complete and fixed.**
+**Updated 2026-09-13: T055 to T058 are complete.**
 The review found three real issues after the five chunks landed: a pasted page
 could silently lose a public second numeric column by treating it as private
 `cost`, the paste entry point was hidden once a seller already had sections, and
@@ -26,10 +26,25 @@ time, and the page paste panel now has its own phone-safe styling.
 `npm run verify` passed after the review fixes: 86 test files, 1680 tests, a11y
 62, secret scan 488, dash scan 349, contrast clean in light and dark with 414
 storefront elements plus the page paste panel at 3 sections, 3 checkboxes and 16
-measured nodes, menu-file clean at 21.2 KB, and PWA update clean. The signed
-build installed on the handset before these review fixes, without uninstalling
-the old app. This is not yet merged or released. The browser and handset
-paste-flow checks remain open.
+measured nodes, menu-file clean at 21.2 KB, and PWA update clean.
+
+The browser pass is complete. In the in-app browser at 390 by 844 against
+`http://localhost:5177/`, a messy page with title text, prose, a heading, two
+price tables, a divider and a final note proposed six sections. Build showed
+the same six sections, Preview rendered them, Copy produced the expected
+Markdown, and console logs stayed empty.
+
+The handset pass is complete on Moto G7 `ZY2262PFGQ`. `npm run android:sync`
+finished, the release APK built with JDK 21 after stopping a stale Java 8 Gradle
+daemon, `BUILD SUCCESSFUL in 39s`, and `adb install -r` returned `Success`
+without uninstalling the old app. `mWakefulness=Awake` was checked immediately
+before each screencap, the paste entry appeared on a Build page that already had
+sections, the Android keyboard path reported `mInputShown=true`, and the phone
+paste turned `Willow Prints`, `Sketch - 30`, and `Full colour - 80` into Text
+plus a two item Prices section. Copy output included both rows with prices.
+`adb -s ZY2262PFGQ shell svc power stayon false` was run at the end.
+
+This is not yet merged or released. Next is shipping, T059 to T064.
 
 **Specified, planned and tasked on 2026-09-12.**
 64 tasks in eight phases. A holistic review is required, because five chunks is
@@ -140,7 +155,7 @@ path order:
 
 1. Chunks 3 to 5 are complete. Store confirmation, panel lifecycle fixes and
    accessibility/security gates are committed through `e5a030c`.
-4. The browser pass and the handset pass, T056 to T058, then ship, T059 to T064.
+4. T056 to T058 are complete. Ship, T059 to T064.
 
 Each chunk gets a fresh implementer, then a fresh spec-compliance reviewer, then
 a fresh code-quality reviewer. That is the constitution's Development Workflow,

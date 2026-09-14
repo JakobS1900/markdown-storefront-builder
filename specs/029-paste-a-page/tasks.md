@@ -248,9 +248,72 @@ panel, untick one section, swap another, confirm, and read the Build screen.
   contrast passed in light and dark with the page paste panel measured at 3
   sections, 3 checkboxes and 16 contrast nodes, menu-file stayed clean at 21.2
   KB, and PWA update stayed clean.
-- [ ] T056 Drive it in a real browser: paste an actual page copied out of rentry, confirm, and read the Build screen, the Preview and the Copy tab. Quote what came out.
-- [ ] T057 Prove it on the handset. Check `dumpsys power` for `mWakefulness` **immediately before each `screencap`**, not once at the start: a screenshot under about 20 kB is a sleeping screen until proven otherwise, which cost real time on 2026-09-01. `adb shell svc power stayon usb` holds it awake, and set it back to `false` afterwards because it is the owner's device setting.
-- [ ] T058 Paste on the handset with the keyboard up, which is the only way to prove T034's fix rather than assume it. A phone is where that trap lives and jsdom cannot see it.
+- [x] T056 Drive it in a real browser: paste an actual page copied out of rentry, confirm, and read the Build screen, the Preview and the Copy tab. Quote what came out.
+
+  Browser evidence, 2026-09-13: in the in-app browser at 390 by 844 against
+  `http://localhost:5177/`, the console logs stayed empty. Pasting a messy
+  page with a title, prose, a `## Commissions` price run, a divider, a table
+  and a final note proposed six sections. Build showed page title
+  `Willow's Prints` plus Heading, Text, Prices with 3 items, Divider, Prices
+  with 2 items and Text. Preview rendered the heading, prose, both tables and
+  the final note. Copy produced the expected Markdown, including:
+
+  ```markdown
+  # Willow's Prints
+
+  | Item | Price |
+  | --- | --- |
+  | Sketch | 30 |
+  | Full colour | 80 |
+  | Custom piece | DM me |
+
+  ***
+
+  | Item | Price |
+  | --- | --- |
+  | Sticker | 5 |
+  | Badge | 7 |
+  ```
+
+- [x] T057 Prove it on the handset. Check `dumpsys power` for `mWakefulness` **immediately before each `screencap`**, not once at the start: a screenshot under about 20 kB is a sleeping screen until proven otherwise, which cost real time on 2026-09-01. `adb shell svc power stayon usb` holds it awake, and set it back to `false` afterwards because it is the owner's device setting.
+
+  Handset evidence, 2026-09-13: Moto G7 `ZY2262PFGQ` stayed awake, with
+  `mWakefulness=Awake` checked immediately before each screencap. `npm run
+  android:sync` produced service worker stamp `e6ffca8a09ac`. The release APK
+  built with `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"` after stopping the
+  stale Java 8 Gradle daemon, `BUILD SUCCESSFUL in 39s`, APK size 3,236,720
+  bytes. `adb -s ZY2262PFGQ install -r
+  android\app\build\outputs\apk\release\app-release.apk` returned `Success`,
+  preserving the existing install. The launched app showed the paste entry on
+  a Build page that already had sections. `adb -s ZY2262PFGQ shell svc power
+  stayon false` was run at the end.
+
+- [x] T058 Paste on the handset with the keyboard up, which is the only way to prove T034's fix rather than assume it. A phone is where that trap lives and jsdom cannot see it.
+
+  Keyboard evidence, 2026-09-13: focusing the page paste textarea reported
+  `mInputShown=true` and `mIsInputViewShown=true`. Text entered through the
+  handset path:
+
+  ```text
+  Willow Prints
+
+  Sketch - 30
+  Full colour - 80
+  ```
+
+  The live proposal showed Text `Willow Prints` and Prices `Sketch - 30`, both
+  checked. Pressing `Add 2 sections as a new page` returned Build to
+  `Open Text: Willow Prints` and `Open Prices: 2 items`. Preview rendered the
+  imported rows, and Copy produced:
+
+  ```markdown
+  Willow Prints
+
+  | Item | Price |
+  | --- | --- |
+  | Sketch | 30 |
+  | Full colour | 80 |
+  ```
 
 ---
 
