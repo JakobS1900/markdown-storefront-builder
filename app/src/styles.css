@@ -1659,6 +1659,47 @@ fieldset.item > .btn.icon.danger {
   font-size: var(--t-sm);
 }
 
+/* Pasting a whole page, feature 029. */
+.page-paste {
+  padding: 0.85rem;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--sunken);
+}
+
+.page-paste > * + * {
+  margin-top: 0.85rem;
+}
+
+.page-paste-sections {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+}
+
+.page-paste-sections li {
+  padding: 0.55rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.page-paste-sections li:last-child {
+  border-bottom: 0;
+}
+
+.page-paste-preview {
+  margin: 0.35rem 0 0 var(--tap);
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--t-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /*
  * Respect a stated preference for less motion.
  *

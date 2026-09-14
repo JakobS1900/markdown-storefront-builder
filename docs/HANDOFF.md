@@ -4,6 +4,174 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## FEATURE 029 IS IN PROGRESS. Read this before anything else in this file.
+
+**Branch `029-paste-a-page`. Bringing in a page you already have**, by pasting
+the whole text of a page off rentry, pastebin or text.is. This was 028's slot
+until Jakob chose the formatting buttons on 2026-09-11.
+
+**Updated 2026-09-13: T055 to T058 are complete.**
+The review found three real issues after the five chunks landed: a pasted page
+could silently lose a public second numeric column by treating it as private
+`cost`, the paste entry point was hidden once a seller already had sections, and
+sections after the first 100 could be added without ever being reviewable.
+
+The fix does not publish supplier costs under another field. A product-looking
+run with a second numeric value and no unit now stays Text by default, so the
+seller's public words remain visible and editable. The paste button is
+available from the Copy tab, from an existing Build page and from Your pages,
+the panel remains visible when the page already has content, long proposals
+page through 100 sections at a time, and the page paste panel now has its own
+phone-safe styling.
+
+`npm run verify` passed after the review fixes: 86 test files, 1680 tests, a11y
+62, secret scan 488, dash scan 349, contrast clean in light and dark with 414
+storefront elements plus the page paste panel at 3 sections, 3 checkboxes and 16
+measured nodes, menu-file clean at 21.2 KB, and PWA update clean.
+
+`npm run verify` passed again on 2026-09-14 after adding the same paste-page
+entry point to the Copy tab, because that is where a seller already thinking
+about clipboard text looks for it: 86 test files, 1681 tests, a11y 62, secret
+scan 488, dash scan 349, contrast clean in light and dark, menu-file clean at
+21.2 KB, and PWA update clean.
+
+The browser pass is complete. In the in-app browser at 390 by 844 against
+`http://localhost:5177/`, a messy page with title text, prose, a heading, two
+price tables, a divider and a final note proposed six sections. Build showed
+the same six sections, Preview rendered them, Copy produced the expected
+Markdown, and console logs stayed empty. A follow-up test on 2026-09-14 saw the
+Copy tab route fail before the change, then pass after the Copy tab rendered
+the paste panel in place.
+
+The handset pass is complete on Moto G7 `ZY2262PFGQ`. `npm run android:sync`
+finished, the release APK built with JDK 21 after stopping a stale Java 8 Gradle
+daemon, `BUILD SUCCESSFUL in 39s`, and `adb install -r` returned `Success`
+without uninstalling the old app. `mWakefulness=Awake` was checked immediately
+before each screencap, the paste entry appeared on a Build page that already had
+sections, the Android keyboard path reported `mInputShown=true`, and the phone
+paste turned `Willow Prints`, `Sketch - 30`, and `Full colour - 80` into Text
+plus a two item Prices section. Copy output included both rows with prices.
+`adb -s ZY2262PFGQ shell svc power stayon false` was run at the end.
+
+This is not yet merged or released. Next is shipping, T059 to T064.
+
+**Specified, planned and tasked on 2026-09-12.**
+64 tasks in eight phases. A holistic review is required, because five chunks is
+more than roughly three.
+
+| Commit | What |
+|---|---|
+| `09eaca3` | The spec, and Jakob's two scope answers |
+| `a65331d` | The plan, the research and the data model |
+| `6ef423d` | 64 tasks in eight phases |
+| `2a6f22b` | The coverage walk, and the two gaps it found |
+| `ac1e5f1` | Phase 1, the baselines this feature is measured against |
+| `6b03cd3` | Chunk 1: a pasted page becomes runs of lines, and loses none of them |
+| `58d0dfc` | What chunk 1 found wrong with its own phase 0 documents |
+| `8f69314` | Chunk 2: proposed sections, the Prices bar, title copying and block builders |
+
+### Jakob answered both open scope questions on 2026-09-12
+
+In the session that wrote them down. **Do not re-ask these.**
+
+1. **The reader recognises four kinds, not six.** Heading, Divider, Text and
+   Prices. Gallery and About you are OUT, and arrive as Text, which keeps every
+   word and leaves both available to a later feature that will have real pastes
+   to learn from rather than guesses about them. FR-029-15 and FR-029-15a.
+2. **A proposed section can be swapped between Text and Prices, and nothing
+   else.** Not ticks alone, and not a picker across all six kinds. FR-029-18 says
+   why that one pair is the exception: a price list misread as prose is the one
+   wrong guess the editor cannot fix afterwards, because there is no way to turn
+   a Text section into a Prices section.
+
+### THE TRAP, and it would have been found by a seller rather than by a review
+
+**The delimiter must be inferred PER RUN of product lines, never over the whole
+paste.** `inferDelimiter` in `price-list-text.ts` judges the separator over the
+paste as a whole, deliberately, and its bar is a quarter of meaningful lines
+containing the character. English prose is full of commas. A page with two
+paragraphs and twelve tab separated product lines therefore infers `comma`, and
+every product name is cut at its first comma. `research.md` R2 and task T014.
+
+### What chunk 1 found wrong with the plan it was given
+
+All four are corrected in the documents, and they are worth reading before
+writing chunk 2, because three of them constrain it.
+
+- **R3 was one kind and one lookbehind short.** A setext underline has to reach
+  BACK and turn the line above it into a heading, and the underline itself is not
+  blank, not a heading, not a rule and not text. It needed a seventh kind,
+  `headingUnderline`. Without one it lands in no run and "every line is accounted
+  for" becomes a claim rather than a property.
+- **SC-002 said zero exceptions and could not be met literally.** Splitting on
+  `\r?\n` drops the carriage return, so a Windows paste cannot come back byte for
+  byte. The exception is now named in the spec. **The fix NOT taken is the part
+  worth keeping**: normalizing both sides of the test would have made it pass
+  while asserting less than its name claims, which is this project's four-time
+  failure mode with gates that measured nothing.
+- **`isTableRule` accepts a bare `---`** and is right to over a price list. Over
+  a whole page that is a divider or a setext underline, so `page-text.ts` adds a
+  condition of its own, a table rule must carry a pipe. 023 does not move. The
+  cost is stated: a single column table whose rule has no pipe is not recognised.
+- **Blank lines get runs of their own.** Chunk 2 must read the blanks from the
+  runs rather than remembering where the gaps were.
+
+### What chunk 2 added or corrected
+
+Chunk 2 is pure reader work. `readProposal` returns proposed Heading, Divider,
+Text and Prices sections with their original `source`, `swapProposalKind` flips
+only Text and Prices, and `buildProposedBlock` builds id-free blocks for the
+store chunk to finish later.
+
+- **R6 overrides R7 in one narrow case.** The first heading is copied to the
+  private title, but if it sits directly above prices it becomes the Prices
+  heading rather than a separate Heading section. It is still not consumed,
+  because the heading line stays inside that menu section's `source`.
+- **Contact blocks with numbers stay Text.** Handles such as `willow1234` and
+  times such as `5pm` trip the price fallback, so `textRunIsMenu` guards
+  contact-looking blocks before applying the Prices ratio. Image-only runs have
+  the same kind of guard for `A3` and `A4` in alt text.
+- **Mostly Prices sections keep note lines.** A section such as `Sticker - 5`,
+  `Badge - 7`, `Message me first` still proposes Prices, but the note line is
+  carried as an empty-price row rather than disappearing at build time.
+- **The stale jsdom repaint was a test lifecycle bug, not a renderer contract.**
+  `resetStoreForTests` clears deferred repaint timers and subscribers after
+  each Vitest test through `app/tests/setup.ts`. Do not add a no-DOM guard to
+  `renderShell`; the app renderer requires a document.
+- **Dash scan now excludes `.agents/skills/` as vendored tooling.** Those files
+  are generated local skill docs, the same class as `.claude/skills/` and
+  `.specify/`, and are not authored project files.
+
+### Baselines, and two hashes that must not move
+
+`npm run verify` green on `6ad878e`, exit 0: **80 test files, 1572 tests, a11y
+61, contrast 411 elements plus the wizard at 7 screens in both palettes, secret
+scan 457, dash scan 332, menu file 21.2 KB, pwa gate clean.** After chunk 1: 82
+test files, 1628 tests. After chunk 2: 84 test files, 1654 tests, and dash scan
+clean over 345 authored files.
+
+**The handoff paragraph under 028 expects 1480 tests and a11y 60. That is stale
+rather than wrong**: 028's own later commits added tests after it was written.
+
+Parity snapshot:
+`F9F1A45BCD6151A5629C6355EDB249FCFC1D75750F61F1819CAD884317F85DA7`.
+The 55 golden fixtures, SHA256 of their concatenated per-file SHA256s in sorted
+path order:
+`1f238e21168390f3011b1890d2aedef4ce1aa16783df14e43ca8b7b55ec9eb52`.
+**A diff to either anywhere in this feature is a defect, not a step.**
+
+### Next up, in order
+
+1. Chunks 3 to 5 are complete. Store confirmation, panel lifecycle fixes and
+   accessibility/security gates are committed through `e5a030c`.
+4. T056 to T058 are complete. Ship, T059 to T064.
+
+Each chunk gets a fresh implementer, then a fresh spec-compliance reviewer, then
+a fresh code-quality reviewer. That is the constitution's Development Workflow,
+not a preference.
+
+---
+
 ## FEATURE 028 IS DONE AND SHIPPED as `v0.11.0`. Read this before anything below.
 
 **Released 2026-09-11.** Merged to master with `--no-ff` as `f4d1b2f`, pushed,

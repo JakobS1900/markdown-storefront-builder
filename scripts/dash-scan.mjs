@@ -17,7 +17,7 @@ const EM_DASH = String.fromCharCode(0x2014);
 const EN_DASH = String.fromCharCode(0x2013);
 
 // Vendored by tooling, not authored here.
-const VENDORED = [/^\.claude\/skills\//, /^\.specify\//, /^package-lock\.json$/];
+const VENDORED = [/^\.agents\/skills\//, /^\.claude\/skills\//, /^\.specify\//, /^package-lock\.json$/];
 
 const TEXT_EXT = /\.(md|ts|tsx|js|mjs|cjs|json|html|css|yml|yaml)$/;
 

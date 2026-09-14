@@ -47,6 +47,14 @@ const DELIMITERS: readonly { id: Delimiter; pattern: string }[] = [
 
 // Leading list decoration from a Markdown or plain text list. It is how the
 // seller wrote a list, not part of what they are selling.
+//
+// Feature 029's chunk 1 exported this and said Phase 3's builders would read
+// it. Reverted on 2026-09-12, because they do not: 029 reaches a price list
+// through `readCandidates`, which strips the decoration itself, so the pattern
+// had no consumer and a comment claiming one. CLAUDE.md's minimalism ladder
+// says do not build for a hypothetical future, and re-exporting it is one word
+// on the day something actually needs it. `isTableRule` below stays exported,
+// because that one has a real caller.
 const DECORATION = /^\s*(?:[-*+]\s+|\d+[.)]\s+)/;
 
 // A Markdown table's rule, such as "| --- | :-- |". Pipes, dashes, colons and
@@ -63,7 +71,28 @@ function isBlank(line: string): boolean {
   return line.trim() === "";
 }
 
-function isTableRule(line: string): boolean {
+/**
+ * Whether this line is the rule under a Markdown table's header row.
+ *
+ * Exported for feature 029's page reader (T004): one definition of this shape,
+ * in the module that already had to have one. The alternative was a second copy
+ * in `page-text.ts`, which is two definitions of "is this a table's rule" that
+ * can drift apart without either side failing a test.
+ * `specs/029-paste-a-page/research.md` R13. `page-text.ts` adds a condition of
+ * its own on top, requiring a pipe as well, rather than changing anything here.
+ *
+ * **What that condition buys is not what 029 first wrote down.** It claimed the
+ * pipe is what lets a bare row of dashes read as a divider or as a setext
+ * underline over a whole page. It is not: `page-text.ts` settles both of those
+ * before it ever asks this question, and a reviewer disproved the claim on
+ * 2026-09-12 by deleting the pipe condition and watching every one of those
+ * readings stay exactly where it was. The pipe earns its place further down, on
+ * the short and colon bearing rows, "--", ":--:", ":-:" and "- -": those are a
+ * table's rule in a pasted price list and are somebody's punctuation in the
+ * middle of a page. Both readings are right where they are. The reason recorded
+ * for one of them was not.
+ */
+export function isTableRule(line: string): boolean {
   const trimmed = line.trim();
   return trimmed !== "" && TABLE_RULE.test(trimmed) && trimmed.includes("-");
 }
