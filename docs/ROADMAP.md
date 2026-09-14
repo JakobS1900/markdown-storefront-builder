@@ -257,36 +257,31 @@ pending whether F1 is used, both for the reasons recorded in
 
 ## Known gaps, named so they are not rediscovered
 
-**There is no way to open a Markdown or plain text file as a whole page.**
-Raised by Jakob on 2026-09-09 as "why can't I import text". What exists today,
-and why it is not the same thing:
+**Whole-page paste exists as feature 029.** It shipped in `v0.12.0`, reachable
+from Build, Your pages, and the Copy tab. It starts from a paste box, with
+`.txt` and `.md` file reading as the secondary path, and opens the result as a
+new editable page rather than overwriting the current one.
 
-| Control | Takes | Where |
+The reader recognises four section kinds: Heading, Divider, Text and Prices.
+Gallery and About you are deliberately not guessed yet. Image runs, contact
+lines, social links, and biographies arrive as Text with the seller's words
+preserved. That is the correct fallback for 029, because a bad Gallery or
+profile guess is harder to fix than a Text section the seller can edit.
+
+What real pastes still do not become automatically:
+
+| Shape in a pasted page | What 029 does now | Why it stays open |
 |---|---|---|
-| Open a price list from this device | `.csv .tsv .txt .md` | inside a Prices section, behind "Paste a price list" |
-| Open a backup from this device | `.json` only | the Copy tab |
+| Image galleries or Markdown image lists | Text | A pasted image address can be published, but it cannot name a picture stored on this device. |
+| About me, bio, social link groups, payment notes | Text | Contact-looking blocks often carry numbers and handles that resemble prices. The conservative read keeps them intact. |
+| A single-column table with no pipe in the rule | Heading or Text, depending on Markdown shape | The setext-heading rule and divider rule are more common in shop pages than one-column tables. |
+| Remote pictures that should become device pictures | Text or URL text only | Pulling remote media into local storage is a separate consent, storage and failure problem. |
 
-So a `.md` file can already be opened, but only into a price section, and only
-as price rows. The Copy tab's import is JSON only on purpose: `openBackup` runs
-`parseDocument`, which validates against the schema and refuses anything that is
-not a saved page.
-
-**Widening that file picker to accept `.md` would be worse than the gap.** Every
-such file would be refused by the validator and the seller would see "That file
-is not a saved page", so the feature would look broken rather than absent.
-
-**The real shape of the work is a parser, not a file input.** The engine
-compiles a document to Markdown and never the other way, so importing means
-Markdown to blocks, plus a policy for text that maps to no block kind. It is
-feature 028, to be specified properly after 027 ships.
-
-**Start it from pasting, not from a file.** Jakob's words: "a lot of users will
-just copy the entire thing from their pastebin/text host and send that clear
-text anyway." The primary case is somebody selecting their whole page on rentry
-or text.is and pasting it, the way `price-list-paste.ts` is built around a paste
-box with the file picker as the secondary path. A parser also has to survive
-text that has been round tripped through a paste host, which may not be byte
-identical to what this app emitted.
+The next improvement here should be evidence-led. Gather actual failed pastes
+first, then decide whether Gallery, About you, or a remote-picture path has
+enough examples to specify. Do not widen the backup picker as a shortcut:
+`.json` there still means a saved page backup, and making that control accept
+Markdown would blur two different recovery paths again.
 
 ## Explicitly deferred
 

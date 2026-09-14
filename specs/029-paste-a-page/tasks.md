@@ -327,12 +327,46 @@ panel, untick one section, swap another, confirm, and read the Build screen.
 
 ## Phase 8: Ship
 
-- [ ] T059 Merge to master with `--no-ff`. Five features in a row have gone that way and it is settled practice.
-- [ ] T060 Bump the version. **Never `Set-Content` it**: it writes a UTF-8 BOM into `build.gradle` and Gradle dies in about a second with no useful message. Use Edit, and check the first three bytes are `97,112,112` and not `239,187,191` if a build dies instantly.
-- [ ] T061 Build the signed APK with `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"` set for the build only. The machine's `JAVA_HOME` points at JDK 8 and the build fails with "Dependency requires at least JVM runtime version 11".
-- [ ] T062 Push, tag, and publish the GitHub Release **with the APK attached**. Verify with `gh release view` and `git ls-remote --tags origin`. `CLAUDE.md`: pushing commits is not shipping, and 024 was pushed and never released, so Jakob reasonably concluded nothing had shipped.
-- [ ] T063 Update `docs/HANDOFF.md`, `specs/README.md`'s status table, `docs/ROADMAP.md`'s known gaps section, and `CLAUDE.md`'s status block. **The block does not update itself. Whoever finishes a feature updates it.**
-- [ ] T064 Record in `docs/ROADMAP.md` what the reader could not recognise in real pastes, so the Gallery and About you question Jakob deferred on 2026-09-12 gets decided on evidence rather than on a second guess.
+- [x] T059 Merge to master with `--no-ff`. Five features in a row have gone that way and it is settled practice.
+
+  Done on 2026-09-14 as merge commit `d7c0890`, `Merge feature 029 paste a
+  page`.
+
+- [x] T060 Bump the version. **Never `Set-Content` it**: it writes a UTF-8 BOM into `build.gradle` and Gradle dies in about a second with no useful message. Use Edit, and check the first three bytes are `97,112,112` and not `239,187,191` if a build dies instantly.
+
+  Done in `android/app/build.gradle`: versionCode 17, versionName 0.12.0. The
+  first three bytes were checked as `97,112,112`, not a BOM.
+
+- [x] T061 Build the signed APK with `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"` set for the build only. The machine's `JAVA_HOME` points at JDK 8 and the build fails with "Dependency requires at least JVM runtime version 11".
+
+  `npm run android:sync` stamped service worker build id `4c93eaf1cfdc`.
+  `.\gradlew.bat assembleRelease bundleRelease` with JDK 21 exited 0:
+  `BUILD SUCCESSFUL in 44s`, 133 actionable tasks. APK:
+  `android/app/build/outputs/apk/release/app-release.apk`, 3,236,740 bytes,
+  SHA256 `ed94888a9b3d68d6d19ee3dcd977d8bcec2be4b785af3130933b0db5509436b1`.
+  `apksigner verify --verbose --print-certs` exited 0, v2 true, v3 true,
+  certificate digest
+  `c952b39cfd7b335efe5269fb25b8a17e4c6aaeb757aa1d1e5453e45b123018e0`.
+  Installed over the existing Moto G7 app with `adb install -r`; `dumpsys
+  package` reported `versionCode=17` and `versionName=0.12.0`.
+
+- [x] T062 Push, tag, and publish the GitHub Release **with the APK attached**. Verify with `gh release view` and `git ls-remote --tags origin`. `CLAUDE.md`: pushing commits is not shipping, and 024 was pushed and never released, so Jakob reasonably concluded nothing had shipped.
+
+  Pushed `master` to `origin` through `e3f552a`, pushed tag `v0.12.0`, and
+  published [v0.12.0: paste a page](https://github.com/JakobS1900/markdown-storefront-builder/releases/tag/v0.12.0).
+  `gh release view v0.12.0` reported `isDraft: false`, `isPrerelease: false`,
+  and asset `markdown-storefront-builder-0.12.0.apk`, 3,236,740 bytes, digest
+  `sha256:ed94888a9b3d68d6d19ee3dcd977d8bcec2be4b785af3130933b0db5509436b1`.
+  `git ls-remote --tags origin v0.12.0` returned the remote tag.
+
+- [x] T063 Update `docs/HANDOFF.md`, `specs/README.md`'s status table, `docs/ROADMAP.md`'s known gaps section, and `CLAUDE.md`'s status block. **The block does not update itself. Whoever finishes a feature updates it.**
+
+  Done in the post-release documentation commit.
+
+- [x] T064 Record in `docs/ROADMAP.md` what the reader could not recognise in real pastes, so the Gallery and About you question Jakob deferred on 2026-09-12 gets decided on evidence rather than on a second guess.
+
+  Done in `docs/ROADMAP.md`: the remaining known gap is not whole-page paste,
+  but richer recognition for Gallery, About you, and remote image addresses.
 
 ---
 

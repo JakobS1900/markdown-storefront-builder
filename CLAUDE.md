@@ -10,19 +10,21 @@ by whoever last did the work.
 
 **Nothing is in progress right now.** The next feature has not been started.
 
-Most recently finished: `specs/028-text-formatting/`, formatting buttons over a
-Text section plus strikethrough and highlight, released as `v0.11.0` on
-2026-09-11 and verified on the handset. Five chunks, a holistic review, 56 of
-its 58 tasks. 024 through 027 before it are also done and released.
+Most recently finished: `specs/029-paste-a-page/`, bringing in a page you
+already have from rentry, pastebin, text.is, Markdown or plain text. Released
+as `v0.12.0` on 2026-09-14 and verified on the handset. Five chunks, a
+holistic review, 63 of its 64 tasks. 024 through 028 before it are also done
+and released.
 
 **028 was NOT the paste import.** It was earmarked for that and Jakob chose the
 formatting buttons instead on 2026-09-11, after a tester reported bold, italics
 and highlighting as missing. Two of those three had worked since feature 008 and
 had no control, only a hint telling the seller to type asterisks.
 
-**The next feature is 029, pasting a whole messy existing page** from rentry or
-pastebin. Not specified yet. `docs/ROADMAP.md:259-290` has the standing
-thinking.
+**The next feature has not been started.** The old 029 idea, pasting a whole
+messy existing page from rentry or pastebin, is done and released. The remaining
+reader gaps are narrower: Gallery, About you, one-column tables, and remote
+picture handling. `docs/ROADMAP.md` has the current standing thinking.
 
 **That is a claim with an expiry date**, true only while `docs/HANDOFF.md` still
 says so. Believe the handoff over this block, always.
@@ -34,9 +36,10 @@ the most recent work and nothing was in progress, and stayed that way through
 three releases and two whole features. Then it said 027 was specified with no
 implementation code, and stayed that way through all seven of its phases and its
 release. **The block does not update itself. Whoever finishes a feature updates
-it.** It was updated on 2026-09-11 by the session that finished 027, and again
-the same day by the session that finished 028, which is the rule working rather
-than the rule being needed again.
+it.** It was updated on 2026-09-11 by the session that finished 027, again the
+same day by the session that finished 028, and on 2026-09-14 by the session
+that finished 029, which is the rule working rather than the rule being needed
+again.
 This block used to name
 `specs/002-compile-skeleton/plan.md` as "the current plan". It had been finished
 for a month, so every session began by reading a description of work already

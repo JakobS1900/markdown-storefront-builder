@@ -4,7 +4,19 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## FEATURE 029 IS IN PROGRESS. Read this before anything else in this file.
+## FEATURE 029 IS DONE AND SHIPPED as `v0.12.0`. Read this before anything else in this file.
+
+**Released 2026-09-14.** Merged to master with `--no-ff` as `d7c0890`, version
+commit `e3f552a`, pushed, tagged, and the GitHub Release carries the signed APK:
+3,236,740 bytes,
+`sha256:ed94888a9b3d68d6d19ee3dcd977d8bcec2be4b785af3130933b0db5509436b1`,
+`isDraft: false`, `isPrerelease: false`, checked with `gh release view
+v0.12.0`. The tag is on `origin`, confirmed with `git ls-remote --tags origin
+v0.12.0`. The APK verifies with v2 and v3 signatures and the expected
+certificate digest
+`c952b39cfd7b335efe5269fb25b8a17e4c6aaeb757aa1d1e5453e45b123018e0`. The Moto
+G7 installed it over the existing app with `adb install -r`, and `dumpsys
+package` reported `versionCode=17` and `versionName=0.12.0`.
 
 **Branch `029-paste-a-page`. Bringing in a page you already have**, by pasting
 the whole text of a page off rentry, pastebin or text.is. This was 028's slot
@@ -53,7 +65,7 @@ paste turned `Willow Prints`, `Sketch - 30`, and `Full colour - 80` into Text
 plus a two item Prices section. Copy output included both rows with prices.
 `adb -s ZY2262PFGQ shell svc power stayon false` was run at the end.
 
-This is not yet merged or released. Next is shipping, T059 to T064.
+This is merged and released. Nothing is in progress right now.
 
 **Specified, planned and tasked on 2026-09-12.**
 64 tasks in eight phases. A holistic review is required, because five chunks is
@@ -164,7 +176,7 @@ path order:
 
 1. Chunks 3 to 5 are complete. Store confirmation, panel lifecycle fixes and
    accessibility/security gates are committed through `e5a030c`.
-4. T056 to T058 are complete. Ship, T059 to T064.
+4. T056 to T064 are complete. Nothing is in progress right now.
 
 Each chunk gets a fresh implementer, then a fresh spec-compliance reviewer, then
 a fresh code-quality reviewer. That is the constitution's Development Workflow,
@@ -183,15 +195,9 @@ the fifth feature in a row merged `--no-ff`, which is settled practice here.
 **56 of 58 tasks ticked.** The two left are T056's bookkeeping and T057, which
 is this edit. Nothing on 028 is outstanding.
 
-**THE NEXT FEATURE IS 029, pasting a whole messy existing page** from rentry or
-pastebin. It was 028's slot until Jakob chose the formatting buttons on
-2026-09-11. `docs/ROADMAP.md:259-290` carries the standing thinking and two
-conclusions worth not rediscovering: widening the backup file picker to accept
-`.md` would be WORSE than the gap, because every such file is refused by the
-validator and the seller reads "That file is not a saved page", so the feature
-looks broken rather than absent; and the real work is a parser, not a file
-input, because the engine compiles a document to Markdown and has no path in the
-other direction at all. Start it from a paste box, not a file picker.
+**The next feature was 029, pasting a whole messy existing page** from rentry or
+pastebin, and it is now shipped as `v0.12.0`. It was 028's slot until Jakob
+chose the formatting buttons on 2026-09-11.
 
 The other standing candidate is the share sheet preview under T058, roughly two
 lines in `MainActivity.java`, now carried past five releases without being
@@ -209,8 +215,8 @@ requested feature already existed.** The previous four were fixed by a rename;
 this one needed buttons, because there was no control at all.
 
 **Not the paste import.** 028 was earmarked for that; Jakob chose the buttons
-instead on 2026-09-11. **Pasting a whole messy existing page is now 029**, to be
-specified once this ships. `docs/ROADMAP.md:259-290` has the standing thinking.
+instead on 2026-09-11. **Pasting a whole messy existing page shipped as 029** in
+`v0.12.0`.
 
 **Three decisions from Jakob on 2026-09-11**, in the session that wrote them
 down: everything in one release rather than phased; a mark a host cannot render

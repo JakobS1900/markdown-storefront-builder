@@ -51,6 +51,7 @@ answerable without reading fifty commit messages.
 | [026 selling modes](026-selling-modes/) | 2026-09-08 | **before** | yes | yes | no | no |
 | [027 the setup wizard](027-setup-wizard/) | 2026-09-08 | **before** | yes | yes | yes | **yes** |
 | [028 formatting buttons](028-text-formatting/) | 2026-09-11 | **before** | yes | yes | no | **yes** |
+| [029 paste a page](029-paste-a-page/) | 2026-09-14 | **before** | yes | 63/64 | no | **yes** |
 
 **028's holistic review column said `owed` for part of 2026-09-11**, because two
 attempts at it died on the account session limit, and a required step that has
@@ -91,6 +92,15 @@ and links have compiled since feature 008. The previous four cases were fixed by
 renaming a control; this one could not be, because there was no control at all,
 only a hint telling the seller to type asterisks. That is the sharpest statement
 of what this project is for that the repository contains.
+
+**029 is the whole-page paste feature 028 deliberately did not take.** It reads
+messy existing rentry, pastebin, text.is, Markdown or plain text pages into
+editable Heading, Text, Divider and Prices sections, with a review step before
+anything is saved. It is reachable from Build, Your pages, and the Copy tab,
+because the Copy tab is where somebody already thinking about clipboard text
+looks for it. Its remaining review gap is per-chunk review bookkeeping, which is
+why the task count is 63/64 even though the required whole-diff holistic review
+ran and found real issues.
 
 024 is the fullest set in the repository: spec, plan, tasks, research, data
 model, contracts, a quickstart, an analysis and a holistic review. It is also
