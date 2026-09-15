@@ -1268,6 +1268,16 @@ fieldset.item > .btn.icon.danger {
   letter-spacing: 0.005em;
 }
 
+/* Simple price tables fit the phone; descriptive tables keep their width. */
+.rendered table:not(:has(img, tr > :nth-child(3))) {
+  min-width: 0;
+  width: 100%;
+}
+
+.rendered table:not(:has(img, tr > :nth-child(3))) tr > :last-child {
+  text-align: right;
+}
+
 .rendered hr {
   border: 0;
   border-top: 1px solid var(--line);

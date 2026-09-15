@@ -140,6 +140,7 @@ interface DraftSection {
 // `engine/src/document/descriptor.ts`. Decide what that section should be
 // deliberately. Do not discover it from a seller.
 const ATX_HEADING = /^(#{1,6})(?:\s|$)/;
+const QUOTED_CATEGORY = /^>\s+\*\*([^*]+)\*\*$/;
 
 // A setext underline: a row of `=` or a row of `-`, and nothing else on the
 // line. Strict on purpose. "- - -" is a thematic break and never an underline,
@@ -236,6 +237,11 @@ export function readLines(text: string): readonly Line[] {
       continue;
     }
 
+    if (QUOTED_CATEGORY.test(trimmed)) {
+      lines.push({ text: line, kind: "heading", level: 2 });
+      continue;
+    }
+
     // The one piece of lookbehind, and the one classification that reaches back
     // and changes the line before it. A row of `=` or `-` under a paragraph
     // line turns that line into a heading: `=` gives level 1 and `-` gives
@@ -287,9 +293,20 @@ export function readLines(text: string): readonly Line[] {
   // A second pass rather than a peek inside the loop above, because the line
   // below has to be classified before this question can be asked, and the
   // setext rule can change what that line below turns out to be.
-  return lines.map((line, i) =>
+  const classified = lines.map((line, i) =>
     line.kind === "text" && lines[i + 1]?.kind === "tableRule" ? { ...line, kind: "tableHeader" as const } : line,
   );
+  // Bold blockquotes name categories only when followed by a quantity table.
+  // Otherwise restore ordinary Text, including the seller's quote markers.
+  return classified.map((line, i) => {
+    if (line.kind !== "heading" || !QUOTED_CATEGORY.test(line.text.trim())) return line;
+    let from = i + 1;
+    while (classified[from]?.kind === "blank") from += 1;
+    let end = from;
+    while (classified[end] !== undefined && RUN_OF[classified[end]?.kind ?? "blank"] === "text") end += 1;
+    const tables: Run = { kind: "text", from, to: end - 1, lines: classified.slice(from, end) };
+    return quantityTables(tables) === undefined ? { text: line.text, kind: "text" as const } : line;
+  });
 }
 
 /** Whether the run that is open can swallow the line after it. */
@@ -366,7 +383,8 @@ export function runText(run: Run): string {
 }
 
 function headingTextFromLine(line: Line): string {
-  return line.text.trim().replace(/^#{1,6}(?:\s|$)/, "").trim();
+  const text = line.text.trim();
+  return (QUOTED_CATEGORY.exec(text)?.[1] ?? text.replace(/^#{1,6}(?:\s|$)/, "")).trim();
 }
 
 function headingTextFromRun(run: Run): string {
@@ -415,7 +433,10 @@ function textRunIsMenu(run: Run): boolean {
   const candidates = candidatesForRun(run);
   if (candidates.some(hasAmbiguousPublicNumber)) return false;
 
-  if (run.lines.some((line) => line.kind === "tableRule")) return true;
+  if (run.lines.some((line) => line.kind === "tableRule")) {
+    const hasQuantities = run.lines.some((line) => line.kind === "text" && QUANTITY_LABEL.test(tableCells(line.text)[0] ?? ""));
+    return !hasQuantities || quantityTables(run) !== undefined;
+  }
 
   const suggested = candidates.filter((candidate) => candidate.suggested).length;
   const nonBlank = nonBlankLines.length;
@@ -432,6 +453,40 @@ function sourceFromRuns(runs: readonly Run[], startRun: number, endRun: number):
     .slice(startRun, endRun + 1)
     .flatMap((run) => run.lines.map((line) => line.text))
     .join("\n");
+}
+
+function tableCells(text: string): readonly string[] {
+  return text.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
+
+const QUANTITY_LABEL = /^\d+(?:\.\d+)?\s*(?:qty|g|kg|mg|oz|lb|lbs|pcs|pieces?)$/i;
+
+// A product-named table has quantity labels in every row. Ordinary Item/Price
+// lists still use the existing reader. Reject partial matches rather than lose
+// a note, an extra column, or a row we cannot confidently attach to the product.
+function quantityTables(run: Run): readonly ProposedMenuTier[] | undefined {
+  const tiers: ProposedMenuTier[] = [];
+  let i = 0;
+  while (i < run.lines.length) {
+    const header = run.lines[i];
+    if (header?.kind !== "tableHeader" || run.lines[i + 1]?.kind !== "tableRule") return undefined;
+    const cells = tableCells(header.text);
+    const name = cells[0];
+    if (cells.length !== 2 || !name || !/^price$/i.test(cells[1] ?? "")) return undefined;
+    const quantities: { amount: string; price: string }[] = [];
+    i += 2;
+    while (i < run.lines.length && run.lines[i]?.kind !== "tableHeader") {
+      const row = tableCells(run.lines[i]?.text ?? "");
+      const amount = row[0];
+      const price = row[1];
+      if (row.length !== 2 || !amount || !price || !QUANTITY_LABEL.test(amount)) return undefined;
+      quantities.push({ amount, price });
+      i += 1;
+    }
+    if (quantities.length === 0) return undefined;
+    tiers.push({ name, price: "", quantities });
+  }
+  return tiers.length === 0 ? undefined : tiers;
 }
 
 function sectionFromDraft(runs: readonly Run[], draft: DraftSection): ProposedSection | undefined {
@@ -464,6 +519,23 @@ export function readProposal(text: string): Proposal {
 
     const startRun = pendingBlankStart ?? i;
     pendingBlankStart = undefined;
+
+    if (run.kind === "heading") {
+      let endRun = i;
+      let cursor = i + 1;
+      while (cursor < runs.length) {
+        const candidate = runs[cursor];
+        if (candidate?.kind === "blank") { cursor += 1; continue; }
+        if (candidate?.kind !== "text" || quantityTables(candidate) === undefined) break;
+        endRun = cursor;
+        cursor += 1;
+      }
+      if (endRun > i) {
+        drafts.push({ kind: "menu", startRun, endRun });
+        i = endRun;
+        continue;
+      }
+    }
 
     const next = runs[i + 1];
     if (run.kind === "heading" && next?.kind === "text" && textRunIsMenu(next)) {
@@ -534,6 +606,16 @@ function tierFrom(product: NewProduct): ProposedMenuTier {
 }
 
 function buildMenuBlock(section: ProposedSection): MenuBlockWithoutIds {
+  const runs = readRuns(section.source).filter((run) => run.kind !== "blank");
+  const first = runs[0];
+  const tableRuns = first?.kind === "heading" ? runs.slice(1) : runs;
+  const quantityTiers = tableRuns.map(quantityTables);
+  if (quantityTiers.length > 0 && quantityTiers.every((tiers) => tiers !== undefined)) {
+    const tiers = quantityTiers.flat();
+    return first?.kind === "heading"
+      ? { kind: "menu", heading: headingTextFromRun(first), tiers }
+      : { kind: "menu", tiers };
+  }
   const parts = textRunForMenu(section.source);
   const productText = parts === undefined ? section.source : runText(parts.run);
   const candidates = readCandidates(productText);

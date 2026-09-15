@@ -4,7 +4,49 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## FEATURE 029 IS DONE AND SHIPPED as `v0.12.0`. Read this before anything else in this file.
+## QUANTITY IMPORT BUGFIX: v0.12.1 VERIFIED FOR RELEASE
+
+The supplied menu example now imports as two named Prices categories containing
+five named products and all 16 quantity-price pairs. Product names come from
+the table headers; the amount rows become the existing quantity prices. Quoted
+bold category markers are recognized only before supported quantity tables.
+Simple two-column price tables fit the available width in preview and menu
+files. Image grids and wider tables retain their previous layout.
+
+Fresh spec and code reviews found two issues, now fixed: ordinary bold quotes
+must remain Text without quantity tables, and compact price styling must not
+affect gallery grids. Parser tests cover both the reported structure and
+malformed source preservation. The exact supplied fixture also runs through
+confirmation, document validation, compilation and preview rendering.
+
+The earlier added synthetic layout probe was removed after a failed assertion
+compared an outer width with the padded content width. Its failure did not prove
+overflow. Do not repeat the earlier unsupported claim that clientWidth was zero.
+The full `npm run verify` passed on 2026-09-15, exit 0: 88 test files,
+1691 tests, 62 a11y tests, light/dark contrast, menu-file and PWA update gates.
+The supplied menu was also checked in the browser Preview: all five tables
+fit in 226px of content at a 320px viewport and 296px at 390px, with scrollWidth
+equal to clientWidth. Category and product headings and all 16 rows were present.
+
+Android `assembleRelease` succeeded in 1m 18s with JDK 21. Version 0.12.1,
+versionCode 18, uses the existing certificate and verifies with v2/v3 signatures.
+APK SHA256: `cbbfb45b8f3864aa8e7c10e3f6ebb03312552a49d6f0f6b9d8aa937f560d51fa`.
+
+## FEATURE 030 CORRECTION UI REMAINS SCOPED, NOT IMPLEMENTED
+
+On 2026-09-14 Jakob requested a section to adjust import price discrepancies
+without sharing the private source menu. The scope is in
+`specs/030-adjust-imported-prices/spec.md`, with its requirements checklist.
+Branch: `codex/030-adjust-imported-prices`. The narrower importer bugfix above
+is implemented; the larger correction UI is still only a specification.
+
+The proposed Adjust imported prices section lets sellers correct item names,
+quantities or weights, prices, column assignments and categories before saving.
+Use fictional acceptance examples. Do not ask for the private menu again.
+Planning and implementation of the correction UI are next. General image
+rendering, highlighting and other arrow syntax remain open follow-ups.
+
+## FEATURE 029 IS DONE AND SHIPPED as `v0.12.0`. Historical release status follows.
 
 **Released 2026-09-14.** Merged to master with `--no-ff` as `d7c0890`, version
 commit `e3f552a`, pushed, tagged, and the GitHub Release carries the signed APK:
