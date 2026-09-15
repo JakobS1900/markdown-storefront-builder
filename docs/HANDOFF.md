@@ -4,7 +4,14 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## QUANTITY IMPORT BUGFIX: v0.12.1 VERIFIED FOR RELEASE
+## QUANTITY IMPORT BUGFIX: v0.12.1 SHIPPED
+
+Released 2026-09-15. Fix commit `424f0e8`, merged to master as `b5a893f`,
+pushed with tag `v0.12.1`. The published GitHub Release has the signed APK
+attached (3,237,424 bytes); its reported SHA256 matches the build hash below.
+`adb install -r` returned Success on Moto G7 `ZY2262PFGQ`, and dumpsys confirmed
+versionName 0.12.1 and versionCode 18. Existing saved pages were retained.
+Reimport the original source as a new page to use the corrected interpretation.
 
 The supplied menu example now imports as two named Prices categories containing
 five named products and all 16 quantity-price pairs. Product names come from
