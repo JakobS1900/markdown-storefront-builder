@@ -52,6 +52,7 @@ answerable without reading fifty commit messages.
 | [027 the setup wizard](027-setup-wizard/) | 2026-09-08 | **before** | yes | yes | yes | **yes** |
 | [028 formatting buttons](028-text-formatting/) | 2026-09-11 | **before** | yes | yes | no | **yes** |
 | [029 paste a page](029-paste-a-page/) | 2026-09-14 | **before** | yes | 63/64 | no | **yes** |
+| [030 adjust imported prices](030-adjust-imported-prices/) | Not shipped | **before** | no | no | no | no |
 
 **028's holistic review column said `owed` for part of 2026-09-11**, because two
 attempts at it died on the account session limit, and a required step that has
