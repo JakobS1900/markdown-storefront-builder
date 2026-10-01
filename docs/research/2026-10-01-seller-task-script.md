@@ -2,7 +2,7 @@
 
 Use this with at least five people who make or maintain a shop menu. Give each
 person both the current app and the prototype. Alternate which version they
-start with. Use fictional products only. Ask them to think aloud, but do not
+start with when the test setup permits it. Use fictional products only. Ask them to think aloud, but do not
 teach the controls while a task is underway. Record any help you give.
 
 ## Before the session
@@ -11,6 +11,15 @@ Give the seller the two app links or builds, labeled A and B, without saying
 which is newer. Make sure each starts with a blank page. Use a timer. Record
 which version was first, the device, and whether the seller normally makes or
 imports menus.
+
+The current Android baseline is `v0.12.1`. The local signed prototype build is
+`0.13.0-test.1` at `android/app/build/outputs/apk/release/app-release.apk` in
+the feature checkout. Both use the same Android app ID. On one test device,
+complete baseline tasks first, then install the prototype as an update with
+`adb install -r`. Do not uninstall an existing app to switch versions, because
+uninstalling removes saved pages. To alternate version order, use separate test
+devices or independent browser sessions. Record which setup was used. The
+prototype has not yet had a handset check or public test release.
 
 ## Task 1: make a menu
 

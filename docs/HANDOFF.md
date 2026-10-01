@@ -27,11 +27,17 @@ no horizontal document overflow, and matching Build, Preview, and Copy values.
 See `docs/research/2026-10-01-menu-prototype-check.md` for exact evidence and
 screenshots. `docs/research/2026-10-01-seller-task-script.md` is ready to share.
 
+After a desktop restart, a local signed test APK was built as versionCode 19,
+versionName `0.13.0-test.1`. Gradle reported `BUILD SUCCESSFUL in 5m 56s`;
+`apksigner` confirmed v2/v3 signatures and the expected certificate, and the
+bundled JavaScript hash matched `app/dist`. Exact hashes are in the prototype
+check. No Android device was connected, so installation and interaction remain
+unverified. The APK has not been published.
+
 Five real seller task sessions remain. Record time, help, corrections, and wrong
 or missing values against the current release before claiming usability success
-or publishing a normal feature release. There has been no prototype handset
-check or feature 032 release. Feature 030's broader correction panel remains
-separately scoped and has not been implemented.
+or publishing a normal feature release. Feature 030's broader correction panel
+remains separately scoped and has not been implemented.
 
 ## QUANTITY IMPORT BUGFIX: v0.12.1 SHIPPED
 

@@ -19,6 +19,20 @@ The [390px direct editor screenshot](media/2026-10-01-direct-menu-390.png) shows
 
 The existing quantity fixture still produces two categories, five product names, and 16 amount-price pairs in integration tests. This check did not use a private source menu.
 
+## Local Android test build
+
+After the desktop restarted, `npm run android:sync` completed and Gradle
+`assembleRelease` reported `BUILD SUCCESSFUL in 5m 56s`. The local signed APK is
+`android/app/build/outputs/apk/release/app-release.apk`, versionCode 19 and
+versionName `0.13.0-test.1`, 3,240,080 bytes. Its SHA-256 is
+`DA0B49013AA3C5A24D4FE0DACEBFAF92F62A3FEFA3A682653A531D7E03506480`.
+`apksigner` verified v2 and v3 signatures and the expected certificate digest
+`c952b39cfd7b335efe5269fb25b8a17e4c6aaeb757aa1d1e5453e45b123018e0`.
+The `index-Ct9sx3yD.js` asset inside the APK and the built web asset had the
+same SHA-256, `3231BFE06F8486B996E2BDAAC34315EDBDF0524857D00A38A48C90A435D79C5B`.
+There was no connected Android device for an installation or interaction check.
+This build remains local and is not a feature release.
+
 ## Decision still pending
 
 Five real sellers need to attempt both menu creation and table import on the current release and prototype. Record completion, elapsed time, help, backtracks, and missing or wrong values with the task script. Review those observations before claiming the workflow is easier or publishing feature 032 as a normal release. No seller sessions or handset check have been completed for this prototype.
