@@ -19,7 +19,7 @@ import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
 import { openBackup } from "./import.js";
-import { buildProposedBlock, readProposal, swapProposalKind } from "./page-text.js";
+import { buildMappedPagePasteBlock, buildProposedBlock, pagePasteConversionIssue, readPagePasteTable, readProposal, swapProposalKind, type PagePasteTableMapping } from "./page-text.js";
 import { canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 // A type, and only a type. The answer set is defined beside the pure function
 // that turns it into a page, because that is what gives it its shape; the store
@@ -202,6 +202,8 @@ export interface State {
     readonly text: string;
     readonly dropped: readonly number[];
     readonly swapped: readonly number[];
+    readonly mappings?: Readonly<Record<number, PagePasteTableMapping>>;
+    readonly confirming?: boolean;
   };
   readonly status: Status;
   readonly storageOk: boolean;
@@ -779,25 +781,47 @@ export function startPastingPage(): void {
 }
 
 export function setPagePasteText(text: string): void {
-  if (state.pastingPage === undefined) return;
+  if (state.pastingPage === undefined || confirmingPagePaste) return;
   set({ pastingPage: { text, dropped: [], swapped: [] } });
+}
+
+export function setPagePasteTableMapping(index: number, mapping: PagePasteTableMapping): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste) return;
+  const section = readProposal(current.text).sections[index];
+  const table = section === undefined ? undefined : readPagePasteTable(section);
+  if (table === undefined) return;
+  const roles = [mapping.product, mapping.price, ...(mapping.size === undefined ? [] : [mapping.size])];
+  if (roles.some((role) => !Number.isInteger(role) || role < 0 || role >= table.headers.length) || new Set(roles).size !== roles.length) return;
+  set({ pastingPage: { ...current, mappings: { ...current.mappings, [index]: mapping } } });
+}
+
+export function clearPagePasteTableMapping(index: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.mappings?.[index] === undefined) return;
+  const mappings = { ...current.mappings };
+  delete mappings[index];
+  const rest = { text: current.text, dropped: current.dropped, swapped: current.swapped };
+  set({ pastingPage: Object.keys(mappings).length === 0 ? rest : { ...rest, mappings } });
 }
 
 export function dropPagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || readProposal(current.text).sections[index] === undefined || current.dropped.includes(index)) return;
+  if (current === undefined || confirmingPagePaste || readProposal(current.text).sections[index] === undefined || current.dropped.includes(index)) return;
   set({ pastingPage: { ...current, dropped: [...current.dropped, index] } });
 }
 
 export function restorePagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined) return;
+  if (current === undefined || confirmingPagePaste) return;
   set({ pastingPage: { ...current, dropped: current.dropped.filter((i) => i !== index) } });
 }
 
 export function swapPagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || !readProposal(current.text).sections[index]?.swappable) return;
+  if (current === undefined || confirmingPagePaste) return;
+  const section = readProposal(current.text).sections[index];
+  if (section === undefined || !section.swappable || pagePasteConversionIssue(section) !== undefined) return;
   const swapped = current.swapped.includes(index)
     ? current.swapped.filter((i) => i !== index)
     : [...current.swapped, index];
@@ -805,6 +829,7 @@ export function swapPagePasteSection(index: number): void {
 }
 
 export function stopPastingPage(): void {
+  if (confirmingPagePaste) return;
   set({ pastingPage: undefined });
 }
 
@@ -816,11 +841,15 @@ export async function confirmPagePaste(): Promise<void> {
   const current = state.pastingPage;
   if (current === undefined || confirmingPagePaste) return;
   confirmingPagePaste = true;
+  const frozen = { ...current, confirming: true };
+  set({ pastingPage: frozen });
   try {
     const proposal = readProposal(current.text);
     const blocks = proposal.sections.flatMap((section, index): Block[] => {
       if (current.dropped.includes(index)) return [];
-      const block = buildProposedBlock(current.swapped.includes(index) ? swapProposalKind(section) : section);
+      const reviewed = current.swapped.includes(index) ? swapProposalKind(section) : section;
+      const mapping = current.mappings?.[index];
+      const block = mapping === undefined ? buildProposedBlock(reviewed) : buildMappedPagePasteBlock(reviewed, mapping);
       if (block.kind === "menu") return [{ id: newId(), ...block, tiers: block.tiers.map((tier) => ({ id: newId(), ...tier })) }];
       return [{ id: newId(), ...block }];
     });
@@ -829,19 +858,18 @@ export async function confirmPagePaste(): Promise<void> {
     // openBackup owns validation and persistence. JSON.stringify lets its
     // parser refuse a faulty builder result before any stored page changes.
     const result = await openBackup(JSON.stringify(doc));
-    // A seller may close this draft and begin another while the storage and
-    // page-list work finishes. The old result must not clear the new draft.
-    if (state.pastingPage !== current) return;
+    if (state.pastingPage !== frozen) return;
     if (!result.ok) {
       set({ status: { kind: "error", message: "This paste could not be made into a page. Nothing has been changed. Your pasted text is still here." } });
       return;
     }
     set({ pastingPage: undefined, status: { kind: "saved", message: "Opened the paste as a new page. Your previous page is still saved under Your pages on the Build screen." } });
   } catch {
-    if (state.pastingPage !== current) return;
+    if (state.pastingPage !== frozen) return;
     set({ status: { kind: "error", message: "This paste could not be saved as a new page. Your previous pages are still saved and your pasted text is still here. Try again." } });
   } finally {
     confirmingPagePaste = false;
+    if (state.pastingPage === frozen) set({ pastingPage: current });
   }
 }
 
@@ -1021,6 +1049,15 @@ export function updateBlock(id: string, next: Block): void {
 export function addBlock(block: Block): void {
   replaceBlocks([...state.doc.blocks, block]);
   selectBlock(block.id);
+}
+
+export function insertBlockAfter(anchorId: string, block: Block): boolean {
+  const blocks = state.doc.blocks;
+  const index = blocks.findIndex((candidate) => candidate.id === anchorId);
+  if (index < 0 || blocks.some((candidate) => candidate.id === block.id)) return false;
+  replaceBlocks([...blocks.slice(0, index + 1), block, ...blocks.slice(index + 1)]);
+  selectBlock(block.id);
+  return true;
 }
 
 /**

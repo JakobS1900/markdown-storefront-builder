@@ -2,7 +2,7 @@
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
-import { emptyDocument, parseDocument, serializeDocument } from "@mdsb/engine";
+import { compile, emptyDocument, parseDocument, serializeDocument } from "@mdsb/engine";
 import * as db from "../src/db.js";
 import * as reader from "../src/page-text.js";
 import * as store from "../src/store.js";
@@ -70,6 +70,83 @@ it("keeps a public second numeric column in the confirmed page", async () => {
       text: "Sketch, 30, 10 slots\nIcon, 12, 2 slots",
     }),
   ]);
+});
+
+it("holds a mapping only for its source and saves the reviewed values", async () => {
+  const source = "| Price | Product | Size | Notes |\n| --- | --- | --- | --- |\n| from $28 | Mug | 12 oz | Blue |";
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  store.setPagePasteTableMapping(0, { product: 1, price: 0, size: 2 });
+  expect(store.getState().pastingPage?.mappings?.[0]).toEqual({ product: 1, price: 0, size: 2 });
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Mug", price: "from $28", unit: "12 oz", blurb: "Notes: Blue" }] });
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  store.setPagePasteTableMapping(0, { product: 1, price: 0, size: 2 });
+  store.setPagePasteText("replacement");
+  expect(store.getState().pastingPage?.mappings).toBeUndefined();
+  store.stopPastingPage();
+  expect(store.getState().pastingPage).toBeUndefined();
+});
+
+it("freezes source and cancel while confirmation is writing", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Hello");
+  let release: () => void = () => {};
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  const write = db.writePage;
+  vi.spyOn(db, "writePage").mockImplementation(async (page) => { await pending; await write(page); });
+  const confirmation = store.confirmPagePaste();
+  expect(store.getState().pastingPage?.confirming).toBe(true);
+  store.setPagePasteText("New words");
+  store.stopPastingPage();
+  expect(store.getState().pastingPage?.text).toBe("Hello");
+  release();
+  await confirmation;
+  expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "prose", text: "Hello" });
+});
+
+it("keeps a wide public price table intact in the saved page and Copy result", async () => {
+  const source = "| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |\n| Bowl | 16 oz | $32 |";
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  store.swapPagePasteSection(0);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toEqual([expect.objectContaining({ kind: "prose", text: source })]);
+  const copied = compile(store.getState().doc, "pastebin").markdown;
+  expect(copied).toContain("Mug \\| 12 oz \\| &#36;28");
+  expect(copied).toContain("Bowl \\| 16 oz \\| &#36;32");
+});
+
+it.each([
+  { source: "Product|Size|Price\nMug|12 oz|$28\nBowl|16 oz|$32", swap: true },
+  { source: "Product,Size,Price,Notes\nMug,12 oz,$28,Blue\nBowl,16 oz,$32,Red", swap: false },
+])("keeps every cell in a nonstandard public table on confirmation: $source", async ({ source, swap }) => {
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  if (swap) store.swapPagePasteSection(0);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toEqual([expect.objectContaining({ kind: "prose", text: source })]);
+  const copied = compile(store.getState().doc, "pastebin").markdown;
+  expect(copied).toContain("Mug");
+  expect(copied).toContain("Bowl");
+  expect(copied).toContain("28");
+  expect(copied).toContain("32");
+  expect(copied).toContain("12 oz");
+  expect(copied).toContain("16 oz");
+});
+
+it.each([
+  "| Product | Size |\n| --- | --- |\n| Mug | 12 oz |\n| Bowl | 16 oz |",
+  "Product,Notes\nMug,Blue\nBowl,Red",
+  "Product|Price\nMug|$28\nBowl|$32",
+])("keeps a two column header and its rows intact on confirmation: %s", async (source) => {
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  store.swapPagePasteSection(0);
+  expect(store.getState().pastingPage?.swapped).toEqual([]);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toEqual([expect.objectContaining({ kind: "prose", text: source })]);
 });
 
 it("refuses an invalid builder result without writing or replacing the open page", async () => {
@@ -168,7 +245,7 @@ it("finishes a committed paste even if refreshing the page list fails", async ()
   expect(await db.listPages()).toHaveLength(3);
 });
 
-it("does not clear a newer paste session when an earlier confirm finishes", async () => {
+it("does not replace a paste session while its confirmation is finishing", async () => {
   store.startPastingPage();
   store.setPagePasteText("First page");
   let release: () => void = () => {};
@@ -186,8 +263,12 @@ it("does not clear a newer paste session when an earlier confirm finishes", asyn
   store.stopPastingPage();
   store.startPastingPage();
   store.setPagePasteText("Second paste");
+  expect(store.getState().pastingPage?.text).toBe("First page");
+  expect(store.getState().pastingPage?.confirming).toBe(true);
   release();
   await first;
   read.mockRestore();
+  store.startPastingPage();
+  store.setPagePasteText("Second paste");
   expect(store.getState().pastingPage?.text).toBe("Second paste");
 });

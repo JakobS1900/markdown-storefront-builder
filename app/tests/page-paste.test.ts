@@ -69,6 +69,169 @@ it("offers a new page from the empty state, then allows dropping and swapping", 
   });
 });
 
+it("explains why a wide price table stays Text in review", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |\n| Bowl | 16 oz | $32 |");
+  const review = document.querySelector(".page-paste");
+  expect(review?.textContent).toMatch(/three or more columns.*choose.*price.*Text/is);
+  expect(review?.textContent).toContain("| Bowl | 16 oz | $32 |");
+  expect([...document.querySelectorAll(".page-paste button")].some((node) => node.textContent === "Make Prices instead of Text")).toBe(false);
+});
+
+it("explains unsupported table syntax without offering unavailable mapping controls", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Product,Size,Price,Notes\nMug,12 oz,$28,Blue\nBowl,16 oz,$32,Red");
+  expect(document.querySelector(".page-paste")?.textContent).toMatch(/remains Text.*Markdown pipe table.*header.*separator.*consistent rows/is);
+  expect(document.querySelector(".page-paste-table")).toBeNull();
+});
+
+it("restores focus after changing a role and paging review rows", () => {
+  live();
+  click("Paste a page you already have");
+  const rows = Array.from({ length: 41 }, (_, i) => `| Item ${String(i + 1)} | ${String(i + 1)} oz | $${String(i + 1)} |`);
+  paste(["| Product | Size | Price |", "| --- | --- | --- |", ...rows].join("\n"));
+  click("Review these columns as Prices");
+  const price = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-table select")].find((control) => control.labels?.[0]?.textContent === "Price column");
+  if (price === undefined) throw new Error("missing Price column");
+  price.focus();
+  price.value = "1";
+  price.dispatchEvent(new Event("change", { bubbles: true }));
+  expect((document.activeElement as HTMLSelectElement).labels?.[0]?.textContent).toBe("Price column");
+  const next = [...document.querySelectorAll<HTMLButtonElement>(".page-paste-table button")].find((control) => control.textContent === "Show next 20 rows");
+  if (next === undefined) throw new Error("missing row page control");
+  next.focus();
+  next.click();
+  expect((document.activeElement as HTMLButtonElement).textContent).toBe("Show next 20 rows");
+});
+
+it("moves focus to the next mapping control after Review and Keep as Text", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |");
+  const review = [...document.querySelectorAll<HTMLButtonElement>(".page-paste-table button")]
+    .find((control) => control.textContent === "Review these columns as Prices");
+  if (review === undefined) throw new Error("missing Review button");
+  review.focus();
+  review.click();
+  expect((document.activeElement as HTMLSelectElement).labels?.[0]?.textContent).toBe("Product column");
+  const keep = [...document.querySelectorAll<HTMLButtonElement>(".page-paste-table button")]
+    .find((control) => control.textContent === "Keep this table as Text");
+  if (keep === undefined) throw new Error("missing Keep as Text button");
+  keep.focus();
+  keep.click();
+  expect((document.activeElement as HTMLButtonElement).textContent).toBe("Review these columns as Prices");
+});
+
+it("shows labelled table roles and the final source row in bounded review", () => {
+  live();
+  click("Paste a page you already have");
+  const rows = Array.from({ length: 100 }, (_, i) => `| Item ${String(i + 1)} | ${String(i + 1)} oz | $${String(i + 1)} | Note ${String(i + 1)} |`);
+  paste(["| Product | Size | Price | Notes |", "| --- | --- | --- | --- |", ...rows].join("\n"));
+  const labels = [...document.querySelectorAll<HTMLLabelElement>(".page-paste label")].map((label) => label.textContent);
+  expect(labels).toEqual(expect.arrayContaining(["Product column", "Price column", "Size column"]));
+  click("Review these columns as Prices");
+  expect(document.querySelector<HTMLInputElement>(".page-paste input[type=checkbox]")?.labels?.[0]?.textContent).toMatch(/^Prices:/);
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Source row 3");
+  for (let i = 0; i < 4; i += 1) click("Show next 20 rows");
+  const review = document.querySelector(".page-paste")?.textContent;
+  expect(review).toContain("Source row 102");
+  expect(review).toContain("Note 100");
+  expect(review).toContain("$100");
+});
+
+it("updates reviewed values when the seller corrects a column", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| A | B | C |\n| --- | --- | --- |\n| Mug | $28 | 12 oz |");
+  click("Review these columns as Prices");
+  expect(document.querySelector(".page-paste-rows")?.textContent).toContain("Price: 12 oz");
+  const price = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-table select")].find((control) => control.labels?.[0]?.textContent === "Price column");
+  if (price === undefined) throw new Error("missing Price column");
+  price.value = "1";
+  price.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(document.querySelector(".page-paste-rows")?.textContent).toContain("Price: $28");
+  expect(getState().doc.blocks).toHaveLength(0);
+});
+
+it("swaps occupied Price and Size roles when correcting a three-column table", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Product | Size | Price |\n| --- | --- | --- |\n| Mug | $28 | 12 oz |");
+  click("Review these columns as Prices");
+  const price = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-table select")].find((control) => control.labels?.[0]?.textContent === "Price column");
+  if (price === undefined) throw new Error("missing Price column");
+  price.value = "1";
+  price.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(getState().pastingPage?.mappings?.[0]).toEqual({ product: 0, price: 1, size: 2 });
+  expect(document.querySelector(".page-paste-rows")?.textContent).toContain("Price: $28. Size: 12 oz");
+});
+
+it("labels the saved result exactly and lets a mapped table return to Text", async () => {
+  live();
+  click("Paste a page you already have");
+  const source = "# Ceramics\n\n| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |";
+  paste(source);
+  const label = () => document.querySelector<HTMLInputElement>(".page-paste input[type=checkbox]")?.labels?.[0]?.textContent;
+  expect(label()).toMatch(/^Text:/);
+  click("Review these columns as Prices");
+  expect(label()).toMatch(/^Prices:/);
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste button")].some((node) => node.textContent === "Make Text instead of Prices")).toBe(false);
+  click("Keep this table as Text");
+  expect(label()).toMatch(/^Text:/);
+  click("Add 1 section as a new page");
+  for (let i = 0; i < 50 && getState().pastingPage !== undefined; i += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(getState().doc.blocks).toEqual([expect.objectContaining({ kind: "prose", text: source })]);
+});
+
+it("shows an imported category in its closed Build summary", async () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Ceramics\n\n| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |");
+  click("Review these columns as Prices");
+  click("Add 1 section as a new page");
+  for (let i = 0; i < 50 && getState().pastingPage !== undefined; i += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(getState().selectedBlockId).toBeUndefined();
+  expect(document.querySelector("#surface")?.textContent).toContain("Open Prices: Ceramics, 1 item");
+});
+
+it("names the invalid late row and keeps all source rows reachable", () => {
+  live();
+  click("Paste a page you already have");
+  const rows = Array.from({ length: 99 }, (_, i) => `| Item ${String(i + 1)} | 12 oz | $28 | Blue |`);
+  paste(["| Product | Size | Price | Notes |", "| --- | --- | --- | --- |", ...rows, "| | 16 oz | | Red |"].join("\n"));
+  click("Review these columns as Prices");
+  expect(document.querySelector<HTMLInputElement>(".page-paste input[type=checkbox]")?.labels?.[0]?.textContent).toMatch(/^Text:/);
+  expect(document.querySelector(".page-paste-table")?.textContent).toContain("Source row 102");
+  expect(document.querySelector(".page-paste-rows")?.textContent).toContain("Source row 3");
+  for (let i = 0; i < 4; i += 1) click("Show next 20 rows");
+  expect(document.querySelector(".page-paste-rows")?.textContent).toContain("Source row 102");
+  expect(document.querySelector(".page-paste-rows")?.textContent).toContain("Red");
+});
+
+it("keeps a blank Price with Size as Text through review, Preview, and Copy", async () => {
+  const root = live();
+  click("Paste a page you already have");
+  const source = "| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | |";
+  paste(source);
+  click("Review these columns as Prices");
+  expect(document.querySelector<HTMLInputElement>(".page-paste input[type=checkbox]")?.labels?.[0]?.textContent).toMatch(/^Text:/);
+  expect(document.querySelector(".page-paste-table")?.textContent).toMatch(/Source row 3.*Size.*no Price/s);
+  expect(document.querySelector(".page-paste-rows")?.textContent).toContain("Mug");
+  click("Add 1 section as a new page");
+  for (let i = 0; i < 50 && getState().pastingPage !== undefined; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  expect(getState().doc.blocks[0]).toMatchObject({ kind: "prose", text: source });
+  setSurface("preview");
+  renderShell(root);
+  expect(document.querySelector("#surface .rendered")?.textContent).toContain("12 oz");
+  setSurface("export");
+  renderShell(root);
+  expect(document.querySelector<HTMLTextAreaElement>("#output")?.value).toContain("12 oz");
+});
+
 it("offers page paste after a seller already has sections and keeps the panel open", () => {
   live();
   click("Text");

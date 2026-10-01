@@ -4,6 +4,35 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## FEATURE 032 MENU WORKFLOW PROTOTYPE VERIFIED
+
+On 2026-10-01, a seller workflow audit reproduced a public three-column menu
+table losing its selling prices after Text was converted to Prices. The same
+audit found that starting a short menu requires too much navigation and the
+wizard creates unrelated material to clean up. See
+`docs/research/2026-10-01-seller-workflow-audit.md` and
+`specs/032-menu-first-workflow/`.
+
+Branch `032-menu-first-workflow` has the three prototype chunks: guard unsafe
+public Text-to-Prices conversion, make direct menu editing easier, and map
+pasted Markdown table columns with visible row review. Per-chunk and holistic
+reviews are complete; their findings were fixed and regression tested. The
+holistic review found a blank Price plus nonempty Size case that could publish
+the Size as a price. It now remains Text.
+
+`npm run verify` passed on 2026-10-01 with exit 0: 89 test files, 1,736 tests,
+63 accessibility tests, clean light and dark contrast, menu file and PWA update
+gates. Chrome checks at 320 and 390 CSS pixels showed both reviewed table rows,
+no horizontal document overflow, and matching Build, Preview, and Copy values.
+See `docs/research/2026-10-01-menu-prototype-check.md` for exact evidence and
+screenshots. `docs/research/2026-10-01-seller-task-script.md` is ready to share.
+
+Five real seller task sessions remain. Record time, help, corrections, and wrong
+or missing values against the current release before claiming usability success
+or publishing a normal feature release. There has been no prototype handset
+check or feature 032 release. Feature 030's broader correction panel remains
+separately scoped and has not been implemented.
+
 ## QUANTITY IMPORT BUGFIX: v0.12.1 SHIPPED
 
 Released 2026-09-15. Fix commit `424f0e8`, merged to master as `b5a893f`,
@@ -50,7 +79,7 @@ is implemented; the larger correction UI is still only a specification.
 The proposed Adjust imported prices section lets sellers correct item names,
 quantities or weights, prices, column assignments and categories before saving.
 Use fictional acceptance examples. Do not ask for the private menu again.
-Planning and implementation of the correction UI are next. General image
+Planning and implementation of the correction UI remain pending. General image
 rendering, highlighting and other arrow syntax remain open follow-ups.
 
 ## FEATURE 029 IS DONE AND SHIPPED as `v0.12.0`. Historical release status follows.

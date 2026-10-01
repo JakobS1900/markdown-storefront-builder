@@ -643,6 +643,23 @@ main {
   margin-top: 1.1rem;
 }
 
+.block-editor > .menu-form > * + * {
+  margin-top: 0.7rem;
+}
+
+.menu-form fieldset.item {
+  margin-top: 0.45rem;
+  padding: 0.7rem;
+}
+
+.menu-form fieldset.item > * + * {
+  margin-top: 0.55rem;
+}
+
+.block-editor > .menu-form + .btn {
+  margin-top: 0.85rem;
+}
+
 /*
  * A group of fields inside a section, and not a box.
  *
@@ -1682,8 +1699,6 @@ fieldset.item > .btn.icon.danger {
 }
 
 .page-paste-sections {
-  max-height: 60vh;
-  overflow-y: auto;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1707,6 +1722,26 @@ fieldset.item > .btn.icon.danger {
   font: inherit;
   font-size: var(--t-sm);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.page-paste-table {
+  margin-top: 0.75rem;
+  min-width: 0;
+}
+
+.page-paste-table .field,
+.page-paste-table select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.page-paste-rows {
+  padding-left: 1.5rem;
+}
+
+.page-paste-rows li {
   overflow-wrap: anywhere;
 }
 

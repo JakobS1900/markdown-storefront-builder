@@ -12,6 +12,7 @@ import {
   addBlock,
   clearBusy,
   getState,
+  insertBlockAfter,
   moveBlock,
   openWizard,
   startPastingPage,
@@ -74,7 +75,7 @@ function summarise(block: Block): string {
       // "item", matching the form. The section used to call these options in
       // one place and items in another, which is one word too many for a
       // person who is only trying to list what they sell.
-      return `${block.tiers.length} item${block.tiers.length === 1 ? "" : "s"}`;
+      return `${block.heading ? `${shorten(block.heading, 36)}, ` : ""}${block.tiers.length} item${block.tiers.length === 1 ? "" : "s"}`;
     case "gallery":
       return `${block.items.length} image${block.items.length === 1 ? "" : "s"}`;
     case "profile":
@@ -103,6 +104,11 @@ function revealSection(blockId: string): void {
   if (row instanceof HTMLElement && typeof row.scrollIntoView === "function") {
     row.scrollIntoView({ block: "start", behavior: "smooth" });
   }
+}
+
+function focusCategory(blockId: string): void {
+  document.getElementById(`editor-${blockId}`)
+    ?.querySelector<HTMLInputElement>(".menu-form > .field input")?.focus();
 }
 
 // `showsEmptyState`, `lastEdited` and `starterPicker` moved to
@@ -179,10 +185,6 @@ function emptyState(state: State): HTMLElement[] {
   // dismissed by closing the app, which is not dismissing it. FR-133.
   const wizard = button({
     label: "Answer a few questions",
-    // THE ONE PRIMARY ON THIS SCREEN. Jakob's call on 2026-09-11, after the
-    // question was researched rather than argued from taste. See the note on
-    // the row below for the evidence, and `6b8bc45` for why it is exactly one.
-    variant: "primary",
     // From the state this render was given, not read back out of the store.
     // `buildSurface` already holds it and passes it to `showsEmptyState`, so
     // reaching past that for one field is a second way of doing what the
@@ -198,45 +200,20 @@ function emptyState(state: State): HTMLElement[] {
 
   return [
     el("p", { class: "empty" }, [
-      "Your page is empty. Answer a few questions and I will make one, paste a page you already have, add a section below, or begin from a template.",
+      "Start with a menu, paste a page you already have, or choose a starting point.",
     ]),
-    // SETTLED 2026-09-11 BY JAKOB: the wizard takes the accent, the example
-    // steps back to a plain button. It was raised by the holistic review at
-    // T048, researched rather than argued from taste, and decided by him.
-    //
-    // Still exactly ONE solid accent in this row, which is the whole of the
-    // rule `6b8bc45` established. That commit is about the COUNT, "seven
-    // primaries is no primary", not about which control wins, so a swap never
-    // conflicted with it. What the commit also said is the part that went
-    // stale: it called the example "the thing a new person should press",
-    // written on 2026-09-05, three days before this wizard was specified. It
-    // was true when there was nothing better to press.
-    //
-    // The three things that decided it, none of them a matter of opinion:
-    //
-    //   - The empty state's own sentence, right above, names answering
-    //     questions, adding a section and beginning from a template. "See an
-    //     example page" is not in that list, so the loudest control on the
-    //     screen was the one the screen never mentions.
-    //   - The example is not a preview. It calls `openBackup`, so it hands a
-    //     brand new seller a page of somebody else's products and then tells
-    //     them to go and start their own somewhere else. It is also the only
-    //     one of the three that crosses the network, so it is the slowest and
-    //     the only one that can fail.
-    //   - The one piece of first hand evidence this feature has is a person who
-    //     opened a starting point and could not work out what to type. A
-    //     pre-filled page of someone else's shop is that same thing again.
-    //
-    // The argument the other way is real and was put to him with this: a
-    // finished page teaches what the product IS in one tap, where six questions
-    // ask somebody to commit before they know why. He chose the swap anyway.
-    //
-    // `variant` is set in the CALLER rather than forced from CSS, for the
-    // reason `6b8bc45` gives at length: `.adders .btn` scores the same as
-    // `.btn.primary` and sits later in the file, so beating it from the
-    // stylesheet once shipped this row as unreadable white on white, green in
-    // every gate, because no gate reads a colour a browser computed.
     el("div", { class: "adders" }, [
+      button({
+        label: "Create a menu",
+        variant: "primary",
+        onClick: () => {
+          const block = blankBlock("menu");
+          addBlock(block);
+          announce("Menu ready. Add your category and first item.");
+          revealSection(block.id);
+          focusCategory(block.id);
+        },
+      }),
       wizard,
       button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
       load,
@@ -335,6 +312,18 @@ export function buildSurface(container: HTMLElement): void {
           ? [
               el("div", { class: "block-editor", id: editorId }, [
                 blockForm(block, (next) => updateBlock(block.id, next)),
+                ...(block.kind === "menu"
+                  ? [button({
+                      label: "Add category",
+                      onClick: () => {
+                        const next = blankBlock("menu");
+                        if (!insertBlockAfter(block.id, next)) return;
+                        announce("Added a category. Name it and add its first item.");
+                        revealSection(next.id);
+                        focusCategory(next.id);
+                      },
+                    })]
+                  : []),
               ]),
             ]
           : []),

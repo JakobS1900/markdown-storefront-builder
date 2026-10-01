@@ -17,7 +17,128 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { buildProposedBlock, readLines, readProposal, readRuns, runText } from "../src/page-text.js";
+import { buildMappedPagePasteBlock, buildProposedBlock, mapPagePasteTable, readLines, readPagePasteTable, readProposal, readRuns, runText, swapProposalKind } from "../src/page-text.js";
+
+it("maps a public pipe table with exact prices, extra notes, and a preceding category", () => {
+  const source = "Intro text\n\n# Ceramics\n\n| Product | Size | Price | Notes |\n| --- | --- | ---: | --- |\n| Mug | 12 oz | from $28 | Blue |\n| Bowl | 16 oz | Ask me | Red |";
+  const sections = readProposal(source).sections;
+  expect(sections[0]?.kind).toBe("prose");
+  const section = sections[1];
+  if (section === undefined) throw new Error("missing table");
+  const table = readPagePasteTable(section);
+  expect(table?.headers).toEqual(["Product", "Size", "Price", "Notes"]);
+  expect(table?.rows.map((row) => row.line)).toEqual([7, 8]);
+  expect(mapPagePasteTable(section, { product: 0, size: 1, price: 2 })).toMatchObject({
+    kind: "menu", heading: "Ceramics", tiers: [
+      { name: "Mug", unit: "12 oz", price: "from $28", blurb: "Notes: Blue" },
+      { name: "Bowl", unit: "16 oz", price: "Ask me", blurb: "Notes: Red" },
+    ],
+  });
+});
+
+it("blocks a mapped row that would vanish and ignores repeated headers", () => {
+  const source = "| Product | Size | Price | Notes |\n| --- | --- | --- | --- |\n| Mug | 12 oz | $28 | Blue |\n| Product | Size | Price | Notes |\n| --- | --- | --- | --- |\n| | 16 oz | | Red |";
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing table");
+  expect(readPagePasteTable(section)?.rows).toHaveLength(2);
+  expect(mapPagePasteTable(section, { product: 0, size: 1, price: 2 })).toBeUndefined();
+  expect(buildMappedPagePasteBlock(section, { product: 0, size: 1, price: 2 })).toEqual({ kind: "prose", text: source });
+});
+
+it("keeps a named row with Size but no Price as Text while allowing a blank Price without Size", () => {
+  const withSize = readProposal("| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | |").sections[0];
+  const withoutSize = readProposal("| Product | Price | Notes |\n| --- | --- | --- |\n| Mug | | Blue |").sections[0];
+  if (withSize === undefined || withoutSize === undefined) throw new Error("missing table proposal");
+  expect(mapPagePasteTable(withSize, { product: 0, size: 1, price: 2 })).toBeUndefined();
+  expect(buildMappedPagePasteBlock(withSize, { product: 0, size: 1, price: 2 })).toEqual({ kind: "prose", text: withSize.source });
+  expect(mapPagePasteTable(withoutSize, { product: 0, price: 1 })).toMatchObject({
+    kind: "menu", tiers: [{ name: "Mug", price: "", blurb: "Notes: Blue" }],
+  });
+});
+
+it("leaves irregular tables as Text and accepts changed column order", () => {
+  const source = "| Price | Product | Size |\n| --- | --- | --- |\n| $0 | Mug | 12 oz |";
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing table");
+  expect(mapPagePasteTable(section, { product: 1, price: 0, size: 2 })).toMatchObject({ kind: "menu", tiers: [{ name: "Mug", price: "$0", unit: "12 oz" }] });
+  const irregular = readProposal(`${source}\n| $32 | Bowl |`).sections[0];
+  expect(irregular && readPagePasteTable(irregular)).toBeUndefined();
+});
+
+it("keeps every public cell when Prices is requested for a three column table", () => {
+  const source = "| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |\n| Bowl | 16 oz | $32 |";
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing table proposal");
+  expect(buildProposedBlock(swapProposalKind(section))).toEqual({ kind: "prose", text: source });
+});
+
+it("keeps a pipe table without a separator intact when Prices is requested", () => {
+  const source = "Product|Size|Price\nMug|12 oz|$28\nBowl|16 oz|$32";
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing table proposal");
+  expect(buildProposedBlock(swapProposalKind(section))).toEqual({ kind: "prose", text: source });
+});
+
+it("does not auto convert a comma table with public Notes into partial Prices", () => {
+  const source = "Product,Size,Price,Notes\nMug,12 oz,$28,Blue\nBowl,16 oz,$32,Red";
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing table proposal");
+  expect(buildProposedBlock(section)).toEqual({ kind: "prose", text: source });
+  expect(buildProposedBlock(swapProposalKind(section))).toEqual({ kind: "prose", text: source });
+});
+
+it("keeps a three column size and notes table as Text even without a cost-like cell", () => {
+  const source = "Product,Size,Notes\nMug,12 oz,Blue\nBowl,16 oz,Red";
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing table proposal");
+  expect(buildProposedBlock(section)).toEqual({ kind: "prose", text: source });
+  expect(buildProposedBlock(swapProposalKind(section))).toEqual({ kind: "prose", text: source });
+});
+
+it.each([
+  "| Product | Size |\n| --- | --- |\n| Mug | 12 oz |\n| Bowl | 16 oz |",
+  "Product,Notes\nMug,Blue\nBowl,Red",
+  "Product|Price\nMug|$28\nBowl|$32",
+])("keeps a semantic or unruled two column header as Text: %s", (source) => {
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing table proposal");
+  expect(buildProposedBlock(section)).toEqual({ kind: "prose", text: source });
+  expect(buildProposedBlock(swapProposalKind(section))).toEqual({ kind: "prose", text: source });
+});
+
+it("still reads an ordinary two column price list as Prices", () => {
+  const section = readProposal("Sticker|$5\nBadge|$7").sections[0];
+  if (section === undefined) throw new Error("missing price proposal");
+  expect(buildProposedBlock(section)).toEqual({ kind: "menu", tiers: [
+    { name: "Sticker", price: "$5" },
+    { name: "Badge", price: "$7" },
+  ] });
+});
+
+it.each([
+  "Mug|12 oz|\nBowl|16 oz|",
+  "Mug|12 oz\nBowl|16 oz",
+  "Mug,12 oz\nBowl,16 oz",
+  "| Mug | 12 oz |\n| Bowl | 16 oz |",
+  "Mug\t12 oz\nBowl\t16 oz",
+  "Mug - 12 oz\nBowl - 16 oz",
+])("keeps a headerless size list as Text, even when Prices is requested: %s", (source) => {
+  const section = readProposal(source).sections[0];
+  if (section === undefined) throw new Error("missing proposal");
+  expect(buildProposedBlock(section)).toEqual({ kind: "prose", text: source });
+  expect(buildProposedBlock(swapProposalKind(section))).toEqual({ kind: "prose", text: source });
+});
+
+it("offers a heading and two wide tables as separate mappable proposals", () => {
+  const source = "# Ceramics\n\n| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |\n\n| Product | Size | Price |\n| --- | --- | --- |\n| Bowl | 16 oz | $32 |";
+  const sections = readProposal(source).sections;
+  expect(sections).toHaveLength(2);
+  const first = sections[0];
+  const second = sections[1];
+  if (first === undefined || second === undefined) throw new Error("missing table proposal");
+  expect(mapPagePasteTable(first, { product: 0, size: 1, price: 2 })).toMatchObject({ kind: "menu", heading: "Ceramics", tiers: [{ name: "Mug" }] });
+  expect(mapPagePasteTable(second, { product: 0, size: 1, price: 2 })).toMatchObject({ kind: "menu", tiers: [{ name: "Bowl" }] });
+});
 
 /** Every line's kind, which is what most of the classification cases assert. */
 const kinds = (text: string): readonly string[] => readLines(text).map((line) => line.kind);
