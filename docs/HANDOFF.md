@@ -20,6 +20,10 @@ reviews are complete; their findings were fixed and regression tested. The
 holistic review found a blank Price plus nonempty Size case that could publish
 the Size as a price. It now remains Text.
 
+The branch is pushed to `origin/032-menu-first-workflow`. Draft GitHub PR #1
+tracks review and seller testing. Keep it in draft until the five seller
+sessions and a compatible Android device check have been reviewed.
+
 `npm run verify` passed on 2026-10-01 with exit 0: 89 test files, 1,739 tests,
 63 accessibility tests, clean light and dark contrast, menu file and PWA update
 gates. Chrome checks at 320 and 390 CSS pixels showed both reviewed table rows,
