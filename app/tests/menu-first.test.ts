@@ -32,7 +32,7 @@ function click(label: string): void {
 
 function button(label: string): HTMLButtonElement {
   const found = [...document.querySelectorAll<HTMLButtonElement>("#surface button")].find(
-    (candidate) => candidate.textContent?.trim() === label,
+    (candidate) => candidate.textContent?.trim() === label || candidate.getAttribute("aria-label") === label,
   );
   if (found === undefined) throw new Error(`missing button ${label}`);
   return found;
@@ -80,6 +80,29 @@ it("names a closed Prices section by its category", () => {
   expect(document.querySelector("#surface fieldset.item")).toBeNull();
 });
 
+it("puts the category first visually while naming the section action for assistive technology", () => {
+  live();
+  click("Create a menu");
+  const category = field("Category");
+  type(category, "Ceramics");
+  category.blur();
+  selectBlock(undefined);
+  const toggle = document.querySelector<HTMLButtonElement>("#surface .block-row > button");
+  expect(toggle?.textContent).toBe("Ceramics, 1 item");
+  expect(toggle?.getAttribute("aria-label")).toBe("Open Prices: Ceramics, 1 item");
+});
+
+it("keeps the Prices label when the category contains only spaces", () => {
+  live();
+  click("Create a menu");
+  const category = field("Category");
+  type(category, "   ");
+  category.blur();
+  selectBlock(undefined);
+  const toggle = document.querySelector<HTMLButtonElement>("#surface .block-row > button");
+  expect(toggle?.textContent).toBe("Open Prices: 1 item");
+});
+
 it("inserts a new category beside the selected one without moving other sections", () => {
   live();
   click("Create a menu");
@@ -119,6 +142,21 @@ it("focuses the new item after adding a row", () => {
   const last = rows[1];
   if (last === undefined) throw new Error("missing new item");
   expect(document.activeElement).toBe(field("Item", last));
+});
+
+it("keeps concrete examples on every item row", () => {
+  live();
+  click("Create a menu");
+  click("Add another item");
+  const rows = document.querySelectorAll("#surface fieldset.item");
+  expect(rows).toHaveLength(2);
+  expect(rows[0]?.querySelectorAll(":scope > .field .hint")).toHaveLength(2);
+  expect(rows[1]?.querySelectorAll(":scope > .field .hint")).toHaveLength(2);
+  for (const input of rows[1]?.querySelectorAll(":scope > .field:not(.checkbox) input") ?? []) {
+    const hintId = input.getAttribute("aria-describedby");
+    expect(hintId).toBeTruthy();
+    expect(document.getElementById(hintId ?? "")?.textContent).toMatch(/For example/);
+  }
 });
 
 it("keeps a four-item menu editable through Build, Preview, and Copy", () => {

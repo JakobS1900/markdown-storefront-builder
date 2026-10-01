@@ -648,12 +648,40 @@ main {
 }
 
 .menu-form fieldset.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  column-gap: 0.5rem;
+  align-items: start;
   margin-top: 0.45rem;
-  padding: 0.7rem;
+  padding: 0.55rem 0.65rem;
 }
 
 .menu-form fieldset.item > * + * {
-  margin-top: 0.55rem;
+  margin-top: 0.4rem;
+}
+
+.menu-form fieldset.item > :is(.field.checkbox, .more[open]) {
+  grid-column: 1 / -1;
+}
+
+.menu-form fieldset.item > .field:not(.checkbox) {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-form fieldset.item > .field:not(.checkbox) input {
+  order: 1;
+}
+
+.menu-form fieldset.item > .field:not(.checkbox) .hint {
+  order: 2;
+  margin: 0.3rem 0 0;
+}
+
+.menu-form fieldset.item > .row-tools {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  padding: 0;
 }
 
 .block-editor > .menu-form + .btn {

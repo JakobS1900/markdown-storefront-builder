@@ -512,13 +512,13 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
       field({
         label: "Item",
         value: tier.name,
-        hint: 'What you are selling: "Carved oak sign", "Logo design", "Sourdough loaf".',
+        hint: 'For example "Handmade mug".',
         onInput: (name) => editTier(i, (t) => ({ ...t, name })),
       }),
       field({
         label: "Price",
         value: tier.price,
-        hint: 'Anything you like: "45", "from 45", or "DM me".',
+        hint: 'For example "$28" or "Ask me".',
         onInput: (price) => editTier(i, (t) => ({ ...t, price })),
       }),
       disclosure({

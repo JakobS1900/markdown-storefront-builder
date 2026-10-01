@@ -75,7 +75,7 @@ function summarise(block: Block): string {
       // "item", matching the form. The section used to call these options in
       // one place and items in another, which is one word too many for a
       // person who is only trying to list what they sell.
-      return `${block.heading ? `${shorten(block.heading, 36)}, ` : ""}${block.tiers.length} item${block.tiers.length === 1 ? "" : "s"}`;
+      return `${block.heading?.trim() ? `${shorten(block.heading.trim(), 36)}, ` : ""}${block.tiers.length} item${block.tiers.length === 1 ? "" : "s"}`;
     case "gallery":
       return `${block.items.length} image${block.items.length === 1 ? "" : "s"}`;
     case "profile":
@@ -250,6 +250,7 @@ export function buildSurface(container: HTMLElement): void {
             // open was a border colour.
             button({
               label: `${selected ? "Close" : "Open"} ${kind}: ${summarise(block)}`,
+              ...(block.kind === "menu" && block.heading?.trim() ? { visibleLabel: summarise(block) } : {}),
               variant: "ghost",
               expanded: selected,
               // Only while the region is there to point at. The form is not

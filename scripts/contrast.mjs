@@ -226,12 +226,12 @@ async function loadRealContent() {
   // summary, because the shell's group restore only ever opens a group, so this
   // survives the repaints that follow.
   await waitFor(
-    `[...document.querySelectorAll('#surface button')].some(x => /^Open Prices/.test((x.textContent||'').trim()))
+    `[...document.querySelectorAll('#surface button')].some(x => /^Open Prices/.test((x.getAttribute('aria-label')||x.textContent||'').trim()))
       || document.querySelectorAll('#surface fieldset.item').length >= 1`,
     "the example to offer its Prices section",
   );
   await evaluate(`(() => {
-    const b = [...document.querySelectorAll('#surface button')].find(x => /^Open Prices/.test((x.textContent||'').trim()));
+    const b = [...document.querySelectorAll('#surface button')].find(x => /^Open Prices/.test((x.getAttribute('aria-label')||x.textContent||'').trim()));
     if (b) b.click();
   })()`);
   await waitFor(
@@ -262,7 +262,7 @@ async function loadRealContent() {
   const format = await auditFormatBar();
 
   await evaluate(`(() => {
-    const b = [...document.querySelectorAll('#surface button')].find(x => /^Open Prices/.test((x.textContent||'').trim()));
+    const b = [...document.querySelectorAll('#surface button')].find(x => /^Open Prices/.test((x.getAttribute('aria-label')||x.textContent||'').trim()));
     if (b) b.click();
   })()`);
   await waitFor(

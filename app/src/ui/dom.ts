@@ -50,6 +50,7 @@ export function el<K extends keyof HTMLElementTagNameMap>(
  */
 export function button(opts: {
   label: string;
+  visibleLabel?: string;
   onClick: () => void;
   glyph?: string;
   variant?: "primary" | "ghost" | "danger";
@@ -73,10 +74,10 @@ export function button(opts: {
       "aria-pressed": opts.pressed === undefined ? undefined : String(opts.pressed),
       "aria-expanded": opts.expanded === undefined ? undefined : String(opts.expanded),
       "aria-controls": opts.controls,
-      "aria-label": opts.glyph !== undefined ? opts.label : undefined,
+      "aria-label": opts.glyph !== undefined || opts.visibleLabel !== undefined ? opts.label : undefined,
       disabled: opts.disabled,
     },
-    [opts.glyph ?? opts.label],
+    [opts.glyph ?? opts.visibleLabel ?? opts.label],
   );
 
   node.addEventListener("click", opts.onClick);

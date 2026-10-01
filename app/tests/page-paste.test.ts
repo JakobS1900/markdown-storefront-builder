@@ -193,7 +193,7 @@ it("shows an imported category in its closed Build summary", async () => {
   click("Add 1 section as a new page");
   for (let i = 0; i < 50 && getState().pastingPage !== undefined; i += 1) await new Promise((resolve) => setTimeout(resolve, 10));
   expect(getState().selectedBlockId).toBeUndefined();
-  expect(document.querySelector("#surface")?.textContent).toContain("Open Prices: Ceramics, 1 item");
+  expect(document.querySelector("#surface .block-row > button")?.getAttribute("aria-label")).toBe("Open Prices: Ceramics, 1 item");
 });
 
 it("names the invalid late row and keeps all source rows reachable", () => {

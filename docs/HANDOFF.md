@@ -20,19 +20,39 @@ reviews are complete; their findings were fixed and regression tested. The
 holistic review found a blank Price plus nonempty Size case that could publish
 the Size as a price. It now remains Text.
 
-`npm run verify` passed on 2026-10-01 with exit 0: 89 test files, 1,736 tests,
+`npm run verify` passed on 2026-10-01 with exit 0: 89 test files, 1,739 tests,
 63 accessibility tests, clean light and dark contrast, menu file and PWA update
 gates. Chrome checks at 320 and 390 CSS pixels showed both reviewed table rows,
 no horizontal document overflow, and matching Build, Preview, and Copy values.
 See `docs/research/2026-10-01-menu-prototype-check.md` for exact evidence and
 screenshots. `docs/research/2026-10-01-seller-task-script.md` is ready to share.
 
-After a desktop restart, a local signed test APK was built as versionCode 19,
-versionName `0.13.0-test.1`. Gradle reported `BUILD SUCCESSFUL in 5m 56s`;
+Desktop work continued while Jakob's device was busy. A fresh full-diff code
+review found no new actionable issue. The
+menu editor was made denser with side-by-side Item and Price fields and shorter
+examples. Fresh spec and code reviews caught missing later-row guidance and
+item tools squeezed into the Price column; both were fixed and closure checked.
+Chrome at 320 CSS pixels now shows three item cards with their tools inside the
+cards and no document overflow. The four-item creation and two-row table import
+still preserve their Preview and Copy values. A final diff review kept compact
+labels only on named Prices categories, so blank sections retain their type.
+A whitespace-only category review finding was fixed and regression tested. The
+final `npm run verify` passed with exit 0, including 1,739 tests, 63
+accessibility tests, light and dark contrast, menu file and PWA update gates.
+
+Jakob connected tablet `3404d221b89fc1f1` on 2026-10-01. It is an SM_T700
+running Android 6.0.1, API 23; the app requires API 24, so this tablet cannot
+install the APK. Chrome 101 is present. Automatic approval review rejected the
+ADB command to open the local site in Chrome, so there is no on-tablet browser
+result either. The temporary ADB port reverse was removed. No tablet data or
+settings were changed.
+
+The signed test APK was rebuilt from the final code as versionCode 19,
+versionName `0.13.0-test.1`. Gradle reported `BUILD SUCCESSFUL in 27s`;
 `apksigner` confirmed v2/v3 signatures and the expected certificate, and the
 bundled JavaScript hash matched `app/dist`. Exact hashes are in the prototype
-check. No Android device was connected, so installation and interaction remain
-unverified. The APK has not been published.
+check. Installation and Android interaction remain unverified. The APK has not
+been published.
 
 Five real seller task sessions remain. Record time, help, corrections, and wrong
 or missing values against the current release before claiming usability success
