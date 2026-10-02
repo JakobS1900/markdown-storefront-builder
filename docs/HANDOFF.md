@@ -15,12 +15,17 @@ the pushed `032-menu-first-workflow` prototype at `95a8396`. The
 [quickstart](../specs/030-adjust-imported-prices/quickstart.md) and
 [tasks](../specs/030-adjust-imported-prices/tasks.md) describe the broader
 correction panel. A plan review closed source-order, page-binding, manual Text
-recovery, source-replacement and old-tablet rendering gaps. Phase 1
-implementation is in progress; no feature 030 code is verified yet. Next:
-finish the pure reviewed-output foundation with tests and fresh reviews, then
-implement field correction, category/grouping, and recovery in separate
-reviewed chunks. Keep feature 032's draft PR #1 and the later stacked feature
-030 PR in draft until five real seller sessions exercise the combined build.
+recovery, source-replacement and old-tablet rendering gaps. Phase 1's pure
+reviewed-output foundation shipped to the feature branch as `ee61132`. Fresh
+spec and quality reviews found source-loss, page-switch, row-identity and
+source-order cases; regressions and fixes closed them. The full `npm run verify`
+passed with exit 0 on 2026-10-01: 90 test files, 1,779 tests, 63 accessibility
+tests, clean light and dark contrast, menu file and PWA update gates. Phase 2
+field correction is now in progress. Next: implement field correction, then
+category/grouping and recovery in separate reviewed chunks.
+[Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
+tracks this branch against feature 032. Keep it and feature 032's draft PR #1
+in draft until five real seller sessions exercise the combined build.
 
 ## FEATURE 032 USABILITY ITERATION VERIFIED, SELLER SESSIONS PENDING
 

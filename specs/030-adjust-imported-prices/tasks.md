@@ -13,10 +13,10 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 **Independent Test**: A mapped three-column table exposes source line and field values; building it twice yields the same ordered blocks and issues. The existing `Document` name, type and order parity test remains unchanged.
 
-- [ ] T001 Add failing source-key, exact line-coverage, block-order and review-to-confirm parity tests in `app/tests/page-paste-review.test.ts`, including a retained note between offers, a line beyond row 20 and a section beyond 100.
-- [ ] T002 Implement the minimal draft-only row and result types plus pure builder and consumed/retained source partition in `app/src/page-paste-review.ts`; use current parser and block builders without changing `engine/src/document/descriptor.ts`.
-- [ ] T003 Route the current review count and `confirmPagePaste` through the shared result in `app/src/ui/page-paste.ts` and `app/src/store.ts`; bind the draft to its starting page ID and target, check before write, lock competing page switches during confirmation, and preserve the existing `openBackup` validation path.
-- [ ] T004 Run focused parser, store, quantity integration and document parity tests; get fresh spec and quality reviews of the foundation, fix findings, then commit it alone.
+- [x] T001 Add failing source-key, exact line-coverage, block-order and review-to-confirm parity tests in `app/tests/page-paste-review.test.ts`, including a retained note between offers, a line beyond row 20 and a section beyond 100.
+- [x] T002 Implement the minimal draft-only row and result types plus pure builder and consumed/retained source partition in `app/src/page-paste-review.ts`; use current parser and block builders without changing `engine/src/document/descriptor.ts`.
+- [x] T003 Route the current review count and `confirmPagePaste` through the shared result in `app/src/ui/page-paste.ts` and `app/src/store.ts`; bind the draft to its starting page ID and target, check before write, lock competing page switches during confirmation, and preserve the existing `openBackup` validation path.
+- [x] T004 Run focused parser, store, quantity integration and document parity tests; get fresh spec and quality reviews of the foundation, fix findings, then commit it alone.
 
 ## Phase 2: User Story 1, correct imported fields
 
