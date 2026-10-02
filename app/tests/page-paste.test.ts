@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { emptyDocument } from "@mdsb/engine";
 import { beforeEach, expect, it } from "vitest";
-import { adopt, correctPagePasteRow, createPagePasteCategoryForSelected, getPagePasteReview, getState, init,
+import { addBlock, adopt, correctPagePasteRow, createPagePasteCategoryForSelected, getPagePasteReview, getState, init,
   setPagePasteTableMapping, setSurface, startManualPagePasteSection, subscribe, togglePagePasteRowSelection } from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
 
@@ -576,9 +576,23 @@ it("offers page paste on the Copy tab where clipboard work happens", () => {
   expect(document.querySelector("main")?.textContent).toContain("Paste a page you already have");
   click("Paste a page you already have");
   expect(getState().surface).toBe("export");
+  expect([...document.querySelectorAll("#surface button")].some((button) => button.textContent === "Paste a page you already have")).toBe(false);
   paste("Clipboard menu\n\nSketch - 30");
   expect(document.querySelector(".page-paste")?.textContent).toContain("Clipboard menu");
   expect(document.querySelector(".page-paste")?.textContent).toContain("Sketch - 30");
+});
+
+it("removes the inactive Copy paste start while reviewing a populated page", () => {
+  live();
+  addBlock({ id: "copy-note", kind: "prose", text: "A saved note" });
+  setSurface("export");
+  click("Paste a page you already have");
+
+  expect(document.querySelector(".page-paste")).not.toBeNull();
+  expect([...document.querySelectorAll("#surface button")].some((button) => button.textContent === "Paste a page you already have")).toBe(false);
+  click("Done pasting");
+  expect([...document.querySelectorAll("#surface button")].some((button) => button.textContent === "Paste a page you already have")).toBe(true);
+  expect(getState().doc.blocks[0]).toMatchObject({ kind: "prose", text: "A saved note" });
 });
 
 it("replaces the proposal on a second paste and loses only the draft on close", () => {

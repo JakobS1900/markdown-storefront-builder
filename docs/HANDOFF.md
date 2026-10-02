@@ -99,6 +99,14 @@ compact Build and active paste states, and Done pasting restored the start actio
 The media scanner indexed two fictional files, but Android 6 DocumentsUI still
 showed an empty Downloads list, so file content selection is still unverified.
 USB stay-awake was restored to setting `0`.
+
+A 2026-10-02 [Copy action check](research/2026-10-02-copy-paste-tablet-check.md)
+removed the inactive paste start button while Copy's paste panel is open, for
+empty and populated pages. Full `npm run verify` passed with 90 files, 1,890
+tests and 65 accessibility tests. Signed `0.13.0-test.5`, versionCode 23,
+installed in place on the SM_T700. The saved section and Copy output remained;
+the start action disappeared while the panel was active and returned after Done.
+USB stay-awake was restored to setting `0`.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build. The
