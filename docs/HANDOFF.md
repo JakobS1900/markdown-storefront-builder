@@ -76,6 +76,19 @@ on the Android 6.0.1 tablet. A direct Text-to-Prices correction saved, previewed
 and survived cold launch while pre-existing pages remained. The [device check](research/2026-10-02-android6-import-correction-check.md) records the commands,
 APK hash, screenshots and the local file picker limitation. This verifies API
 23 with WebView 106, not the tablet's former WebView 49.
+
+On 2026-10-02, an Android 6 file picker follow-up fixed the text import button
+opening Dropbox's sign-in screen. The app now opens Android DocumentsUI for text
+and backup files, while retaining Capacitor's media picker. Web import controls
+reject unrelated files before reading them and show a visible explanation. The full `npm run verify` gate and
+both Android builds passed. Signed `0.13.0-test.3`, versionCode 21, installed
+over the existing app with saved pages intact. On the tablet, the real file
+button opened DocumentsUI, a PNG selection left the draft empty with an explanation, and cancelling
+and reopening worked twice. The [picker check](research/2026-10-02-android6-document-picker-check.md)
+records the APK hash and screenshots. ADB-copied files were not indexed by the
+tablet's Downloads provider, so a complete downloaded `.md` read is still
+unverified. Capacitor 7 still needs WebView 60 or newer; WebView 49 is outside
+its supported runtime.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build. The

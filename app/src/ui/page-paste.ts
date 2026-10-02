@@ -566,14 +566,19 @@ function fileControl(refresh: () => void, box: HTMLTextAreaElement): Node[] {
     class: "sr-only", "aria-hidden": "true", tabindex: "-1",
   }) as HTMLInputElement;
   const open = button({ label: "Read a text file from this device", onClick: () => picker.click() });
+  const error = el("p", { class: "paste-file-error" }) as HTMLParagraphElement;
+  error.hidden = true;
   picker.addEventListener("change", () => {
     const file = picker.files?.[0];
     if (file === undefined) return;
-    if (file.name.toLowerCase().endsWith(".json")) {
-      announce("Choose a text or Markdown file. A saved page can be opened from Your pages.");
+    if (file.name && !/\.(txt|md)$/i.test(file.name) && !file.type.startsWith("text/")) {
+      error.textContent = "Choose a text or Markdown file. A saved page can be opened from Your pages.";
+      error.hidden = false;
+      announce(error.textContent);
       picker.value = "";
       return;
     }
+    error.hidden = true;
     const draft = getState().pastingPage;
     open.disabled = true;
     void file.text().then((text) => {
@@ -587,12 +592,14 @@ function fileControl(refresh: () => void, box: HTMLTextAreaElement): Node[] {
       announce(lockedSource() ? "Read the file into Edit source. Apply it to replace the current review." : "Read the file. Review the sections below.");
     }).catch(() => {
       if (draft !== undefined && getState().pastingPage?.sourceRevision === draft.sourceRevision) {
-        announce("That file could not be read. Nothing has been changed.");
+        error.textContent = "That file could not be read. Nothing has been changed.";
+        error.hidden = false;
+        announce(error.textContent);
       }
     })
       .finally(() => { open.disabled = getState().pastingPage?.confirming === true; picker.value = ""; });
   });
-  return [open, picker];
+  return [open, picker, error];
 }
 
 function sourceEditor(refresh: () => void, box: HTMLTextAreaElement, page: SectionPage): Node[] {

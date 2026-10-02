@@ -667,6 +667,20 @@ function deferredFile(): { resolve: (text: string) => void } {
   return { resolve };
 }
 
+it("rejects a non-text file chosen from an unrestricted Android document picker", () => {
+  live();
+  click("Paste a page you already have");
+  const picker = document.querySelector<HTMLInputElement>(".page-paste input[type=file]");
+  if (picker === null) throw new Error("missing file picker");
+  const file = new File(["binary"], "photo.png", { type: "image/png" });
+  Object.defineProperty(picker, "files", { configurable: true, value: [file] });
+  picker.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(getState().pastingPage?.text).toBe("");
+  expect(document.getElementById("live-region")?.textContent).toContain("text or Markdown file");
+  expect(document.querySelector(".page-paste .paste-file-error")?.textContent).toContain("text or Markdown file");
+  expect(document.querySelector<HTMLParagraphElement>(".page-paste .paste-file-error")?.hidden).toBe(false);
+});
+
 it("does not replace text typed after a file read begins", async () => {
   live();
   click("Paste a page you already have");
