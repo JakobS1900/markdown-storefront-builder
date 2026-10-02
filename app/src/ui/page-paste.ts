@@ -1,4 +1,5 @@
-import { buildMappedPagePasteBlock, buildProposedBlock, mapPagePasteTable, pagePasteConversionIssue, readPagePasteTable, readProposal, swapProposalKind, type PagePasteTableMapping, type ProposedSection } from "../page-text.js";
+import { buildPagePasteReview, type PagePasteReviewSection } from "../page-paste-review.js";
+import { readPagePasteTable, type PagePasteTableMapping, type ProposedSection } from "../page-text.js";
 import {
   clearPagePasteTableMapping, confirmPagePaste, dropPagePasteSection, getState, restorePagePasteSection,
   setPagePasteReviewStart, setPagePasteTableMapping, setPagePasteText, stopPastingPage, swapPagePasteSection,
@@ -39,7 +40,8 @@ function suggestedMapping(headers: readonly string[]): PagePasteTableMapping {
   return { product, price, ...(size < 0 || size === product || size === price ? {} : { size }) };
 }
 
-function tableReview(section: ProposedSection, index: number, page: SectionPage, refresh: () => void): Node[] {
+function tableReview(reviewed: PagePasteReviewSection, page: SectionPage, refresh: () => void): Node[] {
+  const { proposed: section, index } = reviewed;
   const table = readPagePasteTable(section);
   if (table === undefined) return [];
   const draft = getState().pastingPage;
@@ -64,13 +66,12 @@ function tableReview(section: ProposedSection, index: number, page: SectionPage,
     refresh();
     focusTableControl(index, `${role === "size" ? "Size" : role === "price" ? "Price" : "Product"} column`);
   };
-  const mapped = mapping === undefined ? undefined : mapPagePasteTable(section, mapping);
+  const mapped = mapping !== undefined && reviewed.block.kind === "menu";
   const invalid = mapping === undefined ? undefined : table.rows.find((row) =>
     (row.cells[mapping.product] === "" && row.cells[mapping.price] === "" && row.cells.some((cell) => cell !== ""))
     || (mapping.size !== undefined && row.cells[mapping.price] === "" && row.cells[mapping.size] !== ""));
   const start = Math.min(page.rows[index] ?? 0, Math.max(0, Math.floor((table.rows.length - 1) / ROW_PAGE) * ROW_PAGE));
   const end = Math.min(start + ROW_PAGE, table.rows.length);
-  const tiers = mapped?.tiers ?? [];
   return [el("div", { class: "page-paste-table" }, [
     el("p", {}, ["Assign the columns, then review every proposed item before adding the page."]),
     select({ label: "Product column", value: String(selected.product), options, onChange: (value) => change("product", value) }),
@@ -84,13 +85,13 @@ function tableReview(section: ProposedSection, index: number, page: SectionPage,
     ...(mapping === undefined ? [] : [
       el("p", {}, [`Showing rows ${String(start + 1)} to ${String(end)} of ${String(table.rows.length)}.`]),
       el("ol", { class: "page-paste-rows", start: start + 1 }, table.rows.slice(start, end).map((row, offset) => {
-        const tier = tiers[start + offset];
+        const rowReview = reviewed.rows[start + offset];
         return el("li", {}, [
           el("strong", {}, [`Source row ${String(row.line)}`]),
-          ...(mapped === undefined
+          ...(!mapped
             ? [el("p", {}, [table.headers.map((header, cell) => `${header}: ${row.cells[cell] ?? ""}`).join(". ")])]
-            : [el("p", {}, [`Product: ${tier?.name ?? ""}. Price: ${tier?.price ?? ""}. Size: ${tier?.unit ?? ""}.`]),
-              ...(tier?.blurb === undefined ? [] : [el("p", {}, [tier.blurb])])]),
+            : [el("p", {}, [`Product: ${rowReview?.name ?? ""}. Price: ${rowReview?.price ?? ""}. Size: ${rowReview?.amount ?? ""}.`]),
+              ...(rowReview?.details === "" || rowReview === undefined ? [] : [el("p", {}, [rowReview.details])])]),
         ]);
       })),
       el("div", { class: "paste-tools" }, [
@@ -129,15 +130,10 @@ function preview(section: ProposedSection): Node[] {
 function panelBody(refresh: () => void, pending: boolean, confirm: () => void, page: SectionPage): Node[] {
   const draft = getState().pastingPage;
   if (draft === undefined || draft.text.trim() === "") return [];
-  const proposal = readProposal(draft.text);
-  if (proposal.sections.length === 0) return [];
-  const sections = proposal.sections.map((section, index) => ({
-    section: draft.swapped.includes(index) ? swapProposalKind(section) : section,
-    index,
-  }));
-  // The builder and confirm path both make one block per retained proposal.
-  // Counting the blocks here keeps the button's promise tied to conversion.
-  const count = sections.filter(({ section, index }) => !draft.dropped.includes(index) && (draft.mappings?.[index] === undefined ? buildProposedBlock(section) : buildMappedPagePasteBlock(section, draft.mappings[index])) !== undefined).length;
+  const review = buildPagePasteReview(draft);
+  const sections = review.sections;
+  if (sections.length === 0) return [];
+  const count = review.blocks.length;
   const lastStart = Math.max(0, Math.floor((sections.length - 1) / DRAWN_SECTIONS) * DRAWN_SECTIONS);
   const start = Math.min(page.start, lastStart);
   const end = Math.min(sections.length, start + DRAWN_SECTIONS);
@@ -166,19 +162,17 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
   }
 
   return [
-    el("p", {}, [proposal.sections.length === 1 ? "This text can make one editable section." : "Review the sections this text can make."]),
+    el("p", {}, [count === 1 ? "This text can make one editable section." : "Review the sections this text can make."]),
     ...(sections.length > DRAWN_SECTIONS
       ? [
           el("p", { class: "paste-capped" }, [`Showing sections ${String(start + 1)} to ${String(end)} of ${String(sections.length)}.`]),
           el("div", { class: "paste-tools", role: "group", "aria-label": "Review proposed sections" }, paging),
         ]
       : []),
-    el("ul", { class: "page-paste-sections" }, sections.slice(start, end).map(({ section, index }) => {
-      const mapping = draft.mappings?.[index];
-      const built = mapping === undefined ? buildProposedBlock(section) : buildMappedPagePasteBlock(section, mapping);
-      const name = kindName(built.kind);
+    el("ul", { class: "page-paste-sections" }, sections.slice(start, end).map((reviewed) => {
+      const { proposed: section, index, issue } = reviewed;
+      const name = reviewed.blocks.map((output) => kindName(output.kind)).join(", then ");
       const content = shortContent(section.source);
-      const issue = draft.mappings?.[index] === undefined ? pagePasteConversionIssue(section) : undefined;
       return el("li", { "data-section-index": index }, [
         checkbox({
           label: `${name}: ${content}`,
@@ -191,7 +185,7 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
           },
         }),
         ...preview(section),
-        ...tableReview(section, index, page, refresh),
+        ...tableReview(reviewed, page, refresh),
         ...(issue === undefined ? [] : [el("p", {}, [issue])]),
         ...(section.swappable && issue === undefined && readPagePasteTable(section) === undefined
           ? [button({
@@ -201,10 +195,13 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
           : []),
       ]);
     })),
+    ...(getState().pageId === draft.originPageId && getState().doc.target === draft.target ? [] : [
+      el("p", { role: "status" }, ["Return to the page where you started this paste to add it. Your review stays here."]),
+    ]),
     button({
       label: `Add ${String(count)} section${count === 1 ? "" : "s"} as a new page`,
       variant: "primary",
-      disabled: count === 0 || pending || draft.confirming === true,
+      disabled: count === 0 || pending || draft.confirming === true || getState().pageId !== draft.originPageId || getState().doc.target !== draft.target,
       onClick: confirm,
     }),
   ];

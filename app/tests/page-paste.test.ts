@@ -1,8 +1,9 @@
 /** @vitest-environment jsdom */
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
+import { emptyDocument } from "@mdsb/engine";
 import { beforeEach, expect, it } from "vitest";
-import { getState, init, setSurface, subscribe } from "../src/store.js";
+import { adopt, getState, init, setSurface, subscribe } from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
 
 let stop: (() => void) | undefined;
@@ -349,6 +350,29 @@ it("does not replace text typed after a file read begins", async () => {
   await Promise.resolve();
   expect(getState().pastingPage?.text).toBe("New typed text");
   expect(document.querySelector<HTMLTextAreaElement>(".page-paste textarea")?.value).toBe("New typed text");
+});
+
+it("pauses Add with an explanation after switching away from the starting page", () => {
+  live();
+  const original = getState();
+  click("Paste a page you already have");
+  paste("Mug $28");
+  adopt("another", emptyDocument("pastebin"));
+  const add = [...document.querySelectorAll<HTMLButtonElement>(".page-paste button")]
+    .find((control) => control.textContent === "Add 1 section as a new page");
+  expect(add?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste")?.textContent).toMatch(/Return to the page where you started this paste/);
+  adopt(original.pageId, original.doc);
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste button")]
+    .find((control) => control.textContent === "Add 1 section as a new page")?.disabled).toBe(false);
+});
+
+it("names the actual Prices and Text output when one source section splits", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Mug - $28\n* \nBowl - $32");
+  expect(document.querySelector(".page-paste input[type=checkbox]")?.nextElementSibling?.textContent).toMatch(/^Prices, then Text, then Prices:/);
+  expect(document.querySelector(".page-paste button.primary")?.textContent).toBe("Add 3 sections as a new page");
 });
 
 it("reads the chosen file after a review choice changes", async () => {

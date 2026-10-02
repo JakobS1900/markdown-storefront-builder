@@ -4,6 +4,8 @@ import { IDBFactory } from "fake-indexeddb";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { compile, emptyDocument, parseDocument, serializeDocument } from "@mdsb/engine";
 import * as db from "../src/db.js";
+import { openBackup } from "../src/import.js";
+import { buildPagePasteReview } from "../src/page-paste-review.js";
 import * as reader from "../src/page-text.js";
 import * as store from "../src/store.js";
 
@@ -89,6 +91,39 @@ it("holds a mapping only for its source and saves the reviewed values", async ()
   expect(store.getState().pastingPage).toBeUndefined();
 });
 
+it("saves the same ordered blocks and title shown by the pure review", async () => {
+  const source = "# Ceramics\n\n| Product | Size | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $28 |\n\nA note between offers\n\n| Product | Size | Price |\n| --- | --- | --- |\n| Bowl | 16 oz | $32 |";
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.setPagePasteTableMapping(2, { product: 0, size: 1, price: 2 });
+  const review = buildPagePasteReview(store.getState().pastingPage ?? { text: "", dropped: [], swapped: [] });
+  await store.confirmPagePaste();
+  const saved = store.getState().doc;
+  expect(saved.title).toBe(review.title);
+  expect(saved.blocks).toHaveLength(review.blocks.length);
+  expect(saved.blocks.map((block) => block.kind)).toEqual(review.blocks.map((block) => block.kind));
+  review.blocks.forEach((block, index) => expect(saved.blocks[index]).toMatchObject(block));
+});
+
+it("saves an unparsed line between offers as Text rather than losing it", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Mug - $28\n* \nBowl - $32");
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks.map((block) => block.kind)).toEqual(["menu", "prose", "menu"]);
+  expect(store.getState().doc.blocks[1]).toMatchObject({ kind: "prose", text: "* " });
+});
+
+it("saves a category heading before retained Text and its later offers", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Ceramics\n* \nMug - $28\nBowl - $32");
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks.map((block) => block.kind)).toEqual(["heading", "prose", "menu"]);
+  expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "heading", text: "Ceramics" });
+  expect(store.getState().doc.blocks[1]).toMatchObject({ kind: "prose", text: "* " });
+  expect(store.getState().doc.blocks[2]).toMatchObject({ kind: "menu", heading: "Ceramics" });
+});
+
 it("freezes source and cancel while confirmation is writing", async () => {
   store.startPastingPage();
   store.setPagePasteText("Hello");
@@ -104,6 +139,94 @@ it("freezes source and cancel while confirmation is writing", async () => {
   release();
   await confirmation;
   expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "prose", text: "Hello" });
+});
+
+it("binds the draft to its starting page and pauses Add after a page switch", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Original page offer");
+  expect(store.getState().pastingPage).toMatchObject({ originPageId: "original", target: "pastebin" });
+  await store.openPage("another");
+  const writes = vi.spyOn(db, "writePage");
+  await store.confirmPagePaste();
+  expect(writes).not.toHaveBeenCalled();
+  expect(store.getState().pastingPage?.text).toBe("Original page offer");
+  expect(store.getState().pageId).toBe("another");
+  await store.openPage("original");
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "prose", text: "Original page offer" });
+});
+
+it("holds a page switch already in flight until confirmation has adopted its page", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Confirmed page offer");
+  let releaseRead: () => void = () => {};
+  const pendingRead = new Promise<void>((resolve) => { releaseRead = resolve; });
+  const read = db.readPage;
+  const reading = vi.spyOn(db, "readPage").mockImplementation(async (id) => { await pendingRead; return read(id); });
+  const switchPage = store.openPage("another");
+  for (let i = 0; i < 50 && reading.mock.calls.length === 0; i += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(reading).toHaveBeenCalled();
+  const confirmation = store.confirmPagePaste();
+  releaseRead();
+  await Promise.all([switchPage, confirmation]);
+  expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "prose", text: "Confirmed page offer" });
+  expect(store.getState().pageId).not.toBe("another");
+});
+
+it("rejects other page switches while the confirmed page is being written", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Confirmed offer");
+  let releaseWrite: () => void = () => {};
+  const pendingWrite = new Promise<void>((resolve) => { releaseWrite = resolve; });
+  const write = db.writePage;
+  vi.spyOn(db, "writePage").mockImplementation(async (page) => { await pendingWrite; await write(page); });
+  const confirmation = store.confirmPagePaste();
+  await store.openPage("another");
+  await store.newPage("rentry");
+  store.adopt("another", emptyDocument("rentry"));
+  expect(store.getState().pageId).toBe("original");
+  releaseWrite();
+  await confirmation;
+  expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "prose", text: "Confirmed offer" });
+  expect(store.getState().doc.target).toBe("pastebin");
+});
+
+it("refuses a competing backup before it writes during paste confirmation", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Confirmed offer");
+  let releaseWrite: () => void = () => {};
+  const pendingWrite = new Promise<void>((resolve) => { releaseWrite = resolve; });
+  const write = db.writePage;
+  const writes = vi.spyOn(db, "writePage").mockImplementation(async (page) => { await pendingWrite; await write(page); });
+  const confirmation = store.confirmPagePaste();
+  const competing = openBackup(serializeDocument(emptyDocument("pastebin")));
+  const attemptedWrites = writes.mock.calls.length;
+  releaseWrite();
+  const result = await competing;
+  await confirmation;
+  expect(attemptedWrites).toBe(1);
+  expect(result.ok).toBe(false);
+  expect(await db.listPages()).toHaveLength(3);
+});
+
+it("lets a backup already being written finish before paste confirmation starts", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Still in the draft");
+  let releaseWrite: () => void = () => {};
+  const pendingWrite = new Promise<void>((resolve) => { releaseWrite = resolve; });
+  const write = db.writePage;
+  const writes = vi.spyOn(db, "writePage").mockImplementation(async (page) => { await pendingWrite; await write(page); });
+  const opening = openBackup(serializeDocument(emptyDocument("pastebin")));
+  const confirmation = store.confirmPagePaste();
+  const writesBeforeRelease = writes.mock.calls.length;
+  releaseWrite();
+  const result = await opening;
+  await confirmation;
+  expect(writesBeforeRelease).toBe(1);
+  expect(result.ok).toBe(true);
+  expect(store.getState().pageId).not.toBe("original");
+  expect(store.getState().pastingPage?.text).toBe("Still in the draft");
+  expect(await db.listPages()).toHaveLength(3);
 });
 
 it("keeps a wide public price table intact in the saved page and Copy result", async () => {

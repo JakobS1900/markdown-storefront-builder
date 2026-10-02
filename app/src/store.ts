@@ -18,8 +18,9 @@ import {
 import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
-import { openBackup } from "./import.js";
-import { buildMappedPagePasteBlock, buildProposedBlock, pagePasteConversionIssue, readPagePasteTable, readProposal, swapProposalKind, type PagePasteTableMapping } from "./page-text.js";
+import { backupOpening, openBackup, waitForOpenBackups } from "./import.js";
+import { buildPagePasteReview } from "./page-paste-review.js";
+import { pagePasteConversionIssue, readPagePasteTable, readProposal, type PagePasteTableMapping } from "./page-text.js";
 import { canAddReviewedProduct, canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 // A type, and only a type. The answer set is defined beside the pure function
 // that turns it into a page, because that is what gives it its shape; the store
@@ -202,6 +203,8 @@ export interface State {
   // Separate from `pasting`: its blockId and seven actions edit an existing
   // price list. A page paste has no destination block and writes a new page.
   readonly pastingPage?: {
+    readonly originPageId: string;
+    readonly target: Document["target"];
     readonly text: string;
     readonly sourceRevision: number;
     readonly reviewStart: number;
@@ -802,12 +805,13 @@ export function stopPasting(): void {
 
 export function startPastingPage(): void {
   if (state.pastingPage !== undefined) return;
-  set({ pastingPage: { text: "", sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+  set({ pastingPage: { originPageId: state.pageId, target: state.doc.target, text: "", sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
 }
 
 export function setPagePasteText(text: string): void {
-  if (state.pastingPage === undefined || confirmingPagePaste) return;
-  set({ pastingPage: { text, sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste) return;
+  set({ pastingPage: { originPageId: current.originPageId, target: current.target, text, sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
 }
 
 let pasteSourceRevision = 0;
@@ -871,28 +875,44 @@ export function stopPastingPage(): void {
 // Covers callers outside the UI too: a second submit cannot create another
 // page while the first storage transaction is still pending.
 let confirmingPagePaste = false;
+let preparingPagePaste = false;
+let adoptingConfirmedPage = false;
+
+export function pagePasteConfirmationActive(): boolean {
+  return confirmingPagePaste;
+}
 
 export async function confirmPagePaste(): Promise<void> {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste) return;
+  if (current === undefined || confirmingPagePaste || preparingPagePaste) return;
+  preparingPagePaste = true;
+  try {
+    while (backupOpening()) await waitForOpenBackups();
+  } finally {
+    preparingPagePaste = false;
+  }
+  if (state.pastingPage !== current || confirmingPagePaste) return;
+  if (state.pageId !== current.originPageId || state.doc.target !== current.target) {
+    set({ status: { kind: "error", message: "Return to the page where you started this paste before adding it. Your pasted text is still here." } });
+    return;
+  }
   confirmingPagePaste = true;
   const frozen = { ...current, confirming: true };
   set({ pastingPage: frozen });
   try {
-    const proposal = readProposal(current.text);
-    const blocks = proposal.sections.flatMap((section, index): Block[] => {
-      if (current.dropped.includes(index)) return [];
-      const reviewed = current.swapped.includes(index) ? swapProposalKind(section) : section;
-      const mapping = current.mappings?.[index];
-      const block = mapping === undefined ? buildProposedBlock(reviewed) : buildMappedPagePasteBlock(reviewed, mapping);
+    const review = buildPagePasteReview(current);
+    const blocks = review.blocks.flatMap((block): Block[] => {
       if (block.kind === "menu") return [{ id: newId(), ...block, tiers: block.tiers.map((tier) => ({ id: newId(), ...tier })) }];
       return [{ id: newId(), ...block }];
     });
     if (blocks.length === 0) return;
-    const doc: Document = { ...emptyDocument(state.doc.target), blocks, ...(proposal.title === undefined ? {} : { title: proposal.title }) };
+    const doc: Document = { ...emptyDocument(current.target), blocks, ...(review.title === undefined ? {} : { title: review.title }) };
     // openBackup owns validation and persistence. JSON.stringify lets its
     // parser refuse a faulty builder result before any stored page changes.
-    const result = await openBackup(JSON.stringify(doc));
+    const result = await openBackup(JSON.stringify(doc), (pageId, opened) => {
+      adoptingConfirmedPage = true;
+      try { adopt(pageId, opened); } finally { adoptingConfirmedPage = false; }
+    });
     if (state.pastingPage !== frozen) return;
     if (!result.ok) {
       set({ status: { kind: "error", message: "This paste could not be made into a page. Nothing has been changed. Your pasted text is still here." } });
@@ -1297,6 +1317,7 @@ function isStorageFull(error: unknown): boolean {
  * losing it.
  */
 export async function openPage(id: string): Promise<void> {
+  if (confirmingPagePaste) return;
   // Before anything else, and on every path out of here including the two
   // failures. Switching away from a page is the moment its stored title stops
   // being the one on screen, so it is the moment the list has to catch up.
@@ -1309,6 +1330,7 @@ export async function openPage(id: string): Promise<void> {
   }
 
   const result = parseDocument(stored.json);
+  if (confirmingPagePaste) return;
   if (!result.ok) {
     set({
       status: {
@@ -1353,6 +1375,7 @@ export async function openPage(id: string): Promise<void> {
  * mean a page could be written before anyone had checked it parses.
  */
 export function adopt(pageId: string, doc: Document): void {
+  if (confirmingPagePaste && !adoptingConfirmedPage) return;
   // The selection and the pricing inputs go too. See `openPage`'s comment:
   // block and tier ids survive a reopen, so a stale selection can go on
   // matching rows in a document the seller never touched.
@@ -1381,6 +1404,7 @@ export function adopt(pageId: string, doc: Document): void {
  * look like the button had not worked.
  */
 export async function newPage(target: string): Promise<void> {
+  if (confirmingPagePaste) return;
   // The selection and the pricing inputs go too, for the reason `openPage`'s
   // comment gives: a fresh document starts from a starter template whose
   // block and tier ids can match the ones a stale selection was still naming.
