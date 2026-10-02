@@ -3,8 +3,8 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { emptyDocument } from "@mdsb/engine";
 import { beforeEach, expect, it } from "vitest";
-import { adopt, createPagePasteCategoryForSelected, getPagePasteReview, getState, init,
-  setPagePasteTableMapping, setSurface, subscribe, togglePagePasteRowSelection } from "../src/store.js";
+import { adopt, correctPagePasteRow, createPagePasteCategoryForSelected, getPagePasteReview, getState, init,
+  setPagePasteTableMapping, setSurface, startManualPagePasteSection, subscribe, togglePagePasteRowSelection } from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
 
 let stop: (() => void) | undefined;
@@ -39,6 +39,12 @@ function editReviewedField(label: string, value: string): void {
   input.focus();
   input.value = value;
   input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function openDetachedTable(): void {
+  const table = getPagePasteReview()?.sections.find((section) => section.proposed.source.includes("| Item | Amount | Price |"));
+  if (table === undefined) throw new Error("missing detached table");
+  click(`Review section ${String(table.index + 1)}`);
 }
 
 beforeEach(() => {
@@ -854,6 +860,145 @@ it("does not call a malformed table with a data row empty", () => {
   expect(document.querySelector(".page-paste-empty-table")).toBeNull();
   expect(document.querySelector(".page-paste-sections")?.textContent).toContain("This table remains Text");
   expect(getPagePasteReview()?.blocks.map((block) => block.kind)).toEqual(["prose"]);
+});
+
+it("shows exact detached source choices for an included table and uses all its rows", () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |");
+  openDetachedTable();
+  click("Review these columns as Prices");
+  const choices = document.querySelector(".page-paste-source-choices");
+  expect(choices?.textContent).toContain("Source row 3: Arrow Orb");
+  expect(choices?.textContent).toContain("Source row 1: Figures");
+  expect(choices?.textContent).toContain("2 included price rows");
+  expect(choices?.textContent).toContain("Keep source row 3 as Text");
+  expect(choices?.textContent).toContain("Keep source row 1 as Heading");
+  click("Keep source row 3 as Text");
+  expect(getPagePasteReview()?.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("text");
+  click("Use source row 3 as item name for 2 rows");
+  click("Use source row 1 as category for 2 rows");
+  expect(document.querySelector(".page-paste-source-choices")?.textContent).toContain("all linked rows");
+  expect(document.querySelector(".page-paste-destination")?.textContent).toContain("Figures (source row 1)");
+  expect(getPagePasteReview()?.sections.at(-1)?.rows.map((row) => [row.name, row.destinationId]))
+    .toEqual([["Arrow Orb", "source:1"], ["Arrow Orb", "source:1"]]);
+  expect(getPagePasteReview()?.coverage.filter((line) => line.kind === "usedName" || line.kind === "usedCategory"))
+    .toMatchObject([{ sourceLine: 1, kind: "usedCategory" }, { sourceLine: 3, kind: "usedName" }]);
+  expect(document.querySelector(".page-paste-source-choices")?.textContent).toContain("Used once in the page");
+  click("Undo source row 3 item name");
+  expect(getPagePasteReview()?.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("text");
+  expect(document.activeElement?.textContent).toBe("Use source row 3 as item name for 2 rows");
+});
+
+it("uses only selected rows in the current table when choosing a detached source", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Arrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |");
+  openDetachedTable();
+  click("Review these columns as Prices");
+  const first = getPagePasteReview()?.sections.at(-1)?.rows[0];
+  if (first === undefined) throw new Error("missing mapped row");
+  togglePagePasteRowSelection(first.key, true);
+  expect(document.querySelector(".page-paste-source-choices")?.textContent).toContain("1 selected price row");
+  click("Use source row 1 as item name for 1 row");
+  expect(getPagePasteReview()?.sections.at(-1)?.rows.map((row) => row.name)).toEqual(["Arrow Orb", ""]);
+});
+
+it("keeps exact source controls reachable when the heading is on an earlier review page", () => {
+  live();
+  click("Paste a page you already have");
+  paste([...Array.from({ length: 99 }, (_, index) => `Section ${String(index + 1)}`),
+    "# Figures", "Arrow Orb", "| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |"].join("\n\n"));
+  click("Show next 2 sections");
+  openDetachedTable();
+  click("Review these columns as Prices");
+  expect(document.querySelector(".page-paste-source-choices")?.textContent).toContain("Figures");
+  click("Use source row 199 as category for 1 row");
+  expect(getPagePasteReview()?.coverage.find((line) => line.sourceLine === 199)?.kind).toBe("usedCategory");
+  expect(document.activeElement?.textContent).toBe("Undo source row 199 category for all linked rows");
+});
+
+it("offers detached source choices for a native two-column quantity table", () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Figures\n\nHandmade\n\n| Arrow Orb | Price |\n| --- | --- |\n| 12 oz | $25 |");
+  const table = getPagePasteReview()?.sections.find((section) => section.proposed.source.includes("| Arrow Orb | Price |"));
+  if (table === undefined) throw new Error("missing quantity table");
+  click(`Review section ${String(table.index + 1)}`);
+  expect(document.querySelector(".page-paste-source-choices")?.textContent).toContain("Source row 3: Handmade");
+  click("Use source row 3 as item name for 1 row");
+  expect(getPagePasteReview()?.sections[table.index]?.rows[0]?.name).toBe("Handmade");
+});
+
+it("keeps an explicitly retained name as Text after a later matching edit", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Arrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |");
+  openDetachedTable();
+  click("Review these columns as Prices");
+  click("Use source row 1 as item name for 1 row");
+  editReviewedField("Item, source row 5", "Comet");
+  expect(getPagePasteReview()?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("text");
+  click("Keep source row 1 as Text");
+  editReviewedField("Item, source row 5", "Arrow Orb");
+  expect(getState().pastingPage?.sourceUses?.[1]).toBeUndefined();
+  expect(getPagePasteReview()?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("text");
+});
+
+it("disables detached source actions during source replacement and mapping decisions", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Arrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |");
+  openDetachedTable();
+  click("Review these columns as Prices");
+  click("Use source row 1 as item name for 1 row");
+  click("Edit source");
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste-source-choices button")]
+    .every((control) => control.disabled)).toBe(true);
+  click("Cancel source edit");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste-source-choices button")?.disabled).toBe(false);
+  editReviewedField("Price, source row 5", "Ask me");
+  const product = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-table select")]
+    .find((control) => control.labels?.[0]?.textContent === "Product column");
+  if (product === undefined) throw new Error("missing Product column");
+  product.value = "2";
+  product.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(getState().pastingPage?.pendingMapping).toBeDefined();
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste-source-choices button")]
+    .every((control) => control.disabled)).toBe(true);
+});
+
+it("does not offer a detached name already converted to a price item", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Arrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |");
+  openDetachedTable();
+  click("Review these columns as Prices");
+  startManualPagePasteSection(0);
+  correctPagePasteRow("0:1:0", { included: true, name: "Separate item", price: "$9" });
+  expect(document.querySelector(".page-paste-source-choices")?.textContent).toContain("already makes Prices");
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste-source-choices button")]
+    .find((control) => control.textContent === "Use source row 1 as item name for 1 row")?.disabled).toBe(true);
+  editReviewedField("Price, source row 5", "$28");
+  expect(document.querySelector(".page-paste-source-choices")?.textContent).toContain("already makes Prices");
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste-source-choices button")]
+    .find((control) => control.textContent === "Use source row 1 as item name for 1 row")?.disabled).toBe(true);
+});
+
+it("states that undoing a heading restores every linked table", () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Figures\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Bowl | 16 oz | $32 |");
+  click("Review these columns as Prices");
+  click("Use source row 1 as category for 1 row");
+  click("Review section 2");
+  click("Review these columns as Prices");
+  click("Use source row 1 as category for 1 row");
+  const before = getPagePasteReview()?.rows.map((row) => row.destinationId);
+  expect(before).toEqual(["source:1", "source:1"]);
+  click("Undo source row 1 category for all linked rows");
+  expect(getPagePasteReview()?.rows.map((row) => row.destinationId)).not.toContain("source:1");
+  expect(document.activeElement?.textContent).toBe("Use source row 1 as category for 1 row");
 });
 
 it("updates the live section proposal while composing a new item name", () => {

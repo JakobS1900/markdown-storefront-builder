@@ -43,6 +43,7 @@ import {
   addBlock,
   closeWizard,
   correctPagePasteRow,
+  getPagePasteReview,
   getState,
   init,
   openSidebar,
@@ -51,6 +52,7 @@ import {
   selectTiers,
   setPasteText,
   setPagePasteText,
+  setPagePasteAdjustingSection,
   setPagePasteTableMapping,
   startPagePasteSourceEdit,
   setSurface,
@@ -283,6 +285,23 @@ describe("the shell is accessible", () => {
       expect(control.tabIndex).toBeGreaterThanOrEqual(0);
     }
     expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("labels detached source choices and gives them phone-sized targets", async () => {
+    const root = mount();
+    startPastingPage();
+    setPagePasteText("# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |");
+    const tableIndex = getPagePasteReview()?.sections.find((section) => section.proposed.source.includes("| Item |"))?.index;
+    if (tableIndex === undefined) throw new Error("missing source table");
+    setPagePasteTableMapping(tableIndex, { product: 0, size: 1, price: 2 });
+    setPagePasteAdjustingSection(tableIndex);
+    renderShell(root);
+    const choices = [...document.querySelectorAll<HTMLButtonElement>(".page-paste-source-choices button")];
+    expect(choices).toHaveLength(4);
+    expect(choices.every((control) => nameOf(control).length > 0 && control.tabIndex >= 0)).toBe(true);
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+    const css = await stylesheet();
+    expect(css).toMatch(/\.page-paste-source-choice button\s*\{[^}]*min-height:\s*var\(--tap\)/s);
   });
 
   it("labels correction recovery controls and gives them phone-sized targets", async () => {

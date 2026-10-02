@@ -1,4 +1,4 @@
-import { type PagePasteReview, type PagePasteReviewRow, type PagePasteReviewSection } from "../page-paste-review.js";
+import { findPagePasteSourceCandidates, type PagePasteReview, type PagePasteReviewRow, type PagePasteReviewSection } from "../page-paste-review.js";
 import { readLines, readPagePasteTable, type PagePasteTableMapping, type ProposedSection } from "../page-text.js";
 import {
   applyPagePasteSharedName, applyPagePasteSourceEdit, cancelPagePasteSourceEdit,
@@ -10,7 +10,7 @@ import {
   resolvePagePasteMapping, setPagePasteSourceBuffer, setPagePasteTableMapping, setPagePasteText,
   setPagePasteAddedItem, setPagePasteEmptyHeadingChoice,
   startPagePasteSourceEdit, stopPastingPage, swapPagePasteSection, undoPagePasteTableMapping,
-  togglePagePasteRowSelection,
+  togglePagePasteRowSelection, undoPagePasteSourceLine, usePagePasteSourceLine,
 } from "../store.js";
 import { announce, button, checkbox, el, field, select } from "./dom.js";
 
@@ -55,6 +55,7 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
     if (category === undefined) return "Choose a destination";
     return category.id.startsWith("section:")
       ? `${category.name} (source section ${String(Number(category.id.slice(8)) + 1)})`
+      : category.id.startsWith("source:") ? `${category.name} (source row ${category.id.slice(7)})`
       : `${category.name} (new category ${String(review.categories.filter((item) => item.id.startsWith("new:")).findIndex((item) => item.id === id) + 1)})`;
   };
   const sourceRevision = getState().pastingPage?.sourceRevision ?? -1;
@@ -106,6 +107,16 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
       const sync = (): void => {
         const updated = getPagePasteReview();
         if (updated === undefined) return;
+        for (const choice of document.querySelectorAll<HTMLElement>(`.page-paste-sections li[data-section-index="${String(index)}"] .page-paste-source-choice[data-source-line]`)) {
+          const sourceLine = Number(choice.dataset.sourceLine);
+          const role = choice.dataset.sourceRole;
+          const status = choice.querySelector<HTMLElement>("[role=status]");
+          const kind = updated.coverage.find((line) => line.sourceLine === sourceLine)?.kind;
+          if (status !== null) status.textContent = kind === "item"
+            ? `Source row ${String(sourceLine)} already makes Prices. Change that row before using it elsewhere.`
+            : kind === (role === "name" ? "usedName" : "usedCategory") ? "Used once in the page."
+              : `Source row ${String(sourceLine)} stays ${role === "name" ? "Text" : "Heading"} unless you use it.`;
+        }
         const latest = updated.rows.find((candidate) => candidate.key === row.key);
         if (latest !== undefined) {
           result.textContent = proposedRow(latest, manual);
@@ -208,6 +219,57 @@ function suggestedMapping(headers: readonly string[]): PagePasteTableMapping {
   return { product, price, ...(size < 0 || size === product || size === price ? {} : { size }) };
 }
 
+function tableSourceChoices(reviewed: PagePasteReviewSection, refresh: () => void): Node[] {
+  const draft = getState().pastingPage;
+  const review = getPagePasteReview();
+  if (draft === undefined || review === undefined || !reviewed.included) return [];
+  const candidates = findPagePasteSourceCandidates(draft.text, reviewed.index);
+  const included = reviewed.rows.filter((row) => row.included === true);
+  const selected = included.filter((row) => row.selected === true);
+  const affected = selected.length > 0 ? selected.length : included.length;
+  if (affected === 0) return [];
+  const choices = (["name", "category"] as const).flatMap((role): Node[] => {
+    const candidate = candidates[role];
+    const source = candidate === undefined ? undefined : review.sections[candidate.sectionIndex];
+    if (candidate === undefined || source === undefined || !source.included) return [];
+    const sourceIsItem = source.rows.some((row) => row.sourceLine === candidate.sourceLine && row.included === true);
+    const unavailable = draft.sourceBuffer !== undefined || draft.pendingMapping !== undefined || draft.confirming === true;
+    const used = review.coverage.some((line) => line.sourceLine === candidate.sourceLine &&
+      line.kind === (role === "name" ? "usedName" : "usedCategory"));
+    const sourceRole = role === "name" ? "item name" : "category";
+    const originalRole = role === "name" ? "Text" : "Heading";
+    const useLabel = `Use source row ${String(candidate.sourceLine)} as ${sourceRole} for ${String(affected)} row${affected === 1 ? "" : "s"}`;
+    const undoLabel = `Undo source row ${String(candidate.sourceLine)} ${sourceRole}${role === "category" ? " for all linked rows" : ""}`;
+    const keepLabel = `Keep source row ${String(candidate.sourceLine)} as ${originalRole}`;
+    return [el("div", { class: "page-paste-source-choice", role: "group",
+      "aria-label": `Source row ${String(candidate.sourceLine)} ${sourceRole}`,
+      "data-source-line": String(candidate.sourceLine), "data-source-role": role }, [
+      el("strong", {}, [`Source row ${String(candidate.sourceLine)}: ${candidate.value}`]),
+      el("p", {}, [role === "name"
+        ? `Result: ${candidate.value} as item name for ${String(affected)} ${selected.length > 0 ? "selected" : "included"} price row${affected === 1 ? "" : "s"}.`
+        : `Result: ${candidate.value} as Prices category for ${String(affected)} ${selected.length > 0 ? "selected" : "included"} price row${affected === 1 ? "" : "s"}.`]),
+      el("p", { role: "status" }, [sourceIsItem ? `Source row ${String(candidate.sourceLine)} already makes Prices. Change that row before using it elsewhere.`
+        : used ? "Used once in the page." : `Source row ${String(candidate.sourceLine)} stays ${originalRole} unless you use it.`]),
+      ...(role === "category" && draft.sourceUses?.[candidate.sourceLine]?.role === role
+        ? [el("p", {}, ["Keeping or undoing this heading restores it for all linked rows."])] : []),
+      button({ label: useLabel, disabled: unavailable || sourceIsItem || role === "name" && source.block.kind !== "prose",
+        onClick: () => { if (usePagePasteSourceLine(candidate.sourceLine, reviewed.index, role) === 0) {
+          announce("This source row cannot be used now. Finish the other review choice first."); return;
+        }
+        refresh(); focusSectionButton(reviewed.index, undoLabel); } }),
+      ...(sourceIsItem ? [] : [button({ label: keepLabel, disabled: unavailable, onClick: () => {
+        undoPagePasteSourceLine(candidate.sourceLine); refresh(); focusSectionButton(reviewed.index, keepLabel);
+        announce(`Source row ${String(candidate.sourceLine)} stays ${originalRole} in the page.`);
+      } })]),
+      ...(draft.sourceUses?.[candidate.sourceLine]?.role === role ? [button({ label: undoLabel, disabled: unavailable, onClick: () => {
+        undoPagePasteSourceLine(candidate.sourceLine); refresh(); focusSectionButton(reviewed.index, useLabel);
+      } })] : []),
+    ])];
+  });
+  return choices.length === 0 ? [] : [el("div", { class: "page-paste-source-choices", role: "group",
+    "aria-label": `Use original lines for table in section ${String(reviewed.index + 1)}` }, choices)];
+}
+
 function tableReview(reviewed: PagePasteReviewSection, page: SectionPage, refresh: () => void): Node[] {
   const { proposed: section, index } = reviewed;
   const table = readPagePasteTable(section);
@@ -248,6 +310,7 @@ function tableReview(reviewed: PagePasteReviewSection, page: SectionPage, refres
     select({ label: "Size column", value: selected.size === undefined ? "" : String(selected.size), options: [{ value: "", label: "No size column" }, ...options], onChange: (value) => change("size", value) }),
     ...(mapping === undefined ? [button({ label: "Review these columns as Prices", onClick: () => { setPagePasteTableMapping(index, selected); refresh(); focusTableControl(index, "Product column"); } })] : []),
     ...(mapping === undefined ? [] : [button({ label: "Keep this table as Text", disabled: pagePasteMappingLocked(index), onClick: () => { clearPagePasteTableMapping(index); refresh(); focusSection(index, ".page-paste-table button"); } })]),
+    ...(mapping === undefined ? [] : tableSourceChoices(reviewed, refresh)),
     ...(draft?.pendingMapping?.index !== index ? [] : [el("div", { class: "page-paste-mapping-choice", role: "group", "aria-label": "Choose how to change table columns" }, [
       el("p", {}, ["Changing this table's columns can replace row edits. Keep those edits, discard them, or cancel the change."]),
       button({ label: "Keep row edits", onClick: () => { resolvePagePasteMapping("keep"); refresh(); focusTableControl(index, "Product column"); } }),
@@ -441,6 +504,7 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
         ...(active ? [...preview(section), ...tableReview(reviewed, page, refresh)]
           : [button({ label: `Review section ${String(index + 1)}`,
               onClick: () => { setPagePasteAdjustingSection(index); refresh(); focusSection(index, ".page-paste-preview"); } })]),
+        ...(active && table === undefined && reviewed.block.kind === "menu" ? tableSourceChoices(reviewed, refresh) : []),
         ...(headerOnly ? emptyTableRecovery(index, refresh) : []),
         ...(reviewed.headingRecovery !== true ? [] : [el("div", { class: "page-paste-empty-heading", role: "group", "aria-label": `Choose original heading in section ${String(index + 1)}` }, [
           el("p", {}, ["No offers remain in this category. Keep or remove its heading before Add."]),

@@ -118,36 +118,52 @@ it("saves four detached item names under two chosen categories with every amount
   expect(tables).toHaveLength(4);
   for (const index of tables) store.setPagePasteTableMapping(index, { product: 0, size: 1, price: 2 });
   items.forEach((item, index) => {
-    const section = store.getPagePasteReview()?.sections[tables[index] ?? -1];
+    const tableIndex = tables[index] ?? -1;
+    const section = store.getPagePasteReview()?.sections[tableIndex];
     expect(section?.rows).toHaveLength(2);
-    for (const row of section?.rows ?? []) store.togglePagePasteRowSelection(row.key, true);
-    store.applyPagePasteSharedName(item.name);
-    if (index === 0 || index === 2) store.createPagePasteCategoryForSelected(item.category);
-    else store.moveSelectedPagePasteRows(index === 1 ? "new:0" : "new:1");
-    store.clearPagePasteRowSelection();
+    const nameLine = source.split("\n").findIndex((line) => line === item.name) + 1;
+    expect(store.usePagePasteSourceLine(nameLine, tableIndex, "name")).toBe(2);
+    const categoryLine = source.split("\n").findIndex((line) => line === `# ${item.category}`) + 1;
+    expect(store.usePagePasteSourceLine(categoryLine, tableIndex, "category")).toBe(2);
   });
   const reviewed = store.getPagePasteReview();
   expect(reviewed?.canConfirm).toBe(true);
   expect(reviewed?.coverage.filter((line) => line.kind === "item")).toHaveLength(8);
-  expect(reviewed?.coverage.filter((line) => line.kind === "text")).toHaveLength(4);
+  expect(reviewed?.coverage.filter((line) => line.kind === "usedName")).toHaveLength(4);
+  expect(reviewed?.coverage.filter((line) => line.kind === "usedCategory")).toHaveLength(2);
   await store.confirmPagePaste();
   const doc = store.getState().doc;
   const menus = doc.blocks.filter((block) => block.kind === "menu");
-  expect(menus.map((menu) => menu.heading)).toEqual(["Figures", "Figures", "Prints", "Prints"]);
-  expect(menus.map((menu) => menu.tiers[0]?.name)).toEqual(items.map((item) => item.name));
-  expect(menus.map((menu) => menu.tiers[0]?.quantities)).toEqual(items.map((item) =>
+  expect(menus.map((menu) => menu.heading)).toEqual(["Figures", "Prints"]);
+  expect(menus.flatMap((menu) => menu.tiers.map((tier) => tier.name))).toEqual(items.map((item) => item.name));
+  expect(menus.flatMap((menu) => menu.tiers.map((tier) => tier.quantities))).toEqual(items.map((item) =>
     item.amounts.map((amount, index) => ({ amount, price: item.prices[index] }))));
+  expect(doc.blocks.some((block) => block.kind === "prose" && items.some((item) => block.text.trim() === item.name))).toBe(false);
+  expect(doc.blocks.some((block) => block.kind === "heading" && ["Figures", "Prints"].includes(block.text))).toBe(false);
   const build = document.createElement("div");
+  const buildCategories: string[] = [];
   const buildNames: string[] = [];
+  const buildAmounts: string[] = [];
   for (const menu of menus) {
     store.selectBlock(menu.id);
     buildSurface(build);
-    buildNames.push(...[...build.querySelectorAll<HTMLInputElement>(".block-editor input")].map((input) => input.value));
+    const fields = [...build.querySelectorAll<HTMLInputElement>(".block-editor .menu-form input")];
+    buildCategories.push(...fields.filter((input) => input.labels?.[0]?.textContent === "Category").map((input) => input.value));
+    buildNames.push(...fields.filter((input) => input.labels?.[0]?.textContent === "Item").map((input) => input.value));
+    buildAmounts.push(...[...build.querySelectorAll<HTMLTextAreaElement>(".block-editor .menu-form textarea")]
+      .filter((input) => input.labels?.[0]?.textContent === "Prices for different amounts (optional)")
+      .map((input) => input.value));
   }
-  for (const item of items) expect(buildNames).toContain(item.name);
+  expect(buildCategories).toEqual(["Figures", "Prints"]);
+  expect(buildNames).toEqual(items.map((item) => item.name));
+  expect(buildAmounts).toEqual(items.map((item) => item.amounts.map((amount, index) =>
+    `${amount} = ${item.prices[index]}`).join("\n")));
   const preview = document.createElement("div");
   previewSurface(preview);
   const rendered = preview.querySelector(".rendered")?.textContent ?? "";
+  const previewHeadings = preview.querySelector(".rendered")?.querySelectorAll("h3, h4") ?? [];
+  expect([...previewHeadings].map((node) => node.textContent))
+    .toEqual(["Figures", "Arrow Orb", "Arrow Vase", "Prints", "Arrow Kite", "Arrow Wing"]);
   for (const item of items) {
     expect(rendered).toContain(item.name);
     for (const amount of item.amounts) expect(rendered).toContain(amount);
@@ -159,6 +175,8 @@ it("saves four detached item names under two chosen categories with every amount
   expect(markdown).toBe(compile(doc, "rentry").markdown);
   const copied = document.createElement("div");
   copied.append(renderMarkdown(markdown));
+  expect([...copied.querySelectorAll("h3, h4")].map((node) => node.textContent))
+    .toEqual(["Figures", "Arrow Orb", "Arrow Vase", "Prints", "Arrow Kite", "Arrow Wing"]);
   for (const item of items) {
     expect(copied.textContent).toContain(item.name);
     for (const amount of item.amounts) expect(copied.textContent).toContain(amount);

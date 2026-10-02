@@ -1752,6 +1752,31 @@ fieldset.item > .btn.icon.danger {
   max-width: 100%;
 }
 
+.page-paste-source-choices,
+.page-paste-source-choice {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.page-paste-source-choice {
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.page-paste-source-choice p {
+  margin: 0;
+}
+
+.page-paste-source-choice button {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  width: 100%;
+}
+
 .page-paste-source-buffer,
 .page-paste-mapping-choice,
 .page-paste-empty-table,
