@@ -1,8 +1,8 @@
 # Feature Specification: Adjust imported prices
 
-**Feature Branch**: `codex/030-adjust-imported-prices`
+**Feature Branch**: `030-adjust-imported-prices` (based on `032-menu-first-workflow`)
 **Created**: 2026-09-14
-**Status**: Scoped, not implemented
+**Status**: Implementation started on 2026-10-01. The earlier quantity-table fix shipped separately.
 **Input**: The seller cannot share their private source menu and requests a section to adjust discrepancies in imported prices. Earlier feedback described quantities becoming item names, item names detached from their price rows, incorrect categories, wide tables, and misleading empty Prices warnings.
 
 ## User Scenarios & Testing
@@ -100,7 +100,7 @@ A seller reviews the result on a phone, sees which rows still need attention, an
 
 ## Assumptions
 
-- The present request is to scope the correction section. Implementation, planning and release remain subsequent work.
+- The original request scoped the correction section. Jakob subsequently asked to keep improving usability, so planning and implementation are now in progress. A release still requires verified behavior and the seller evaluation gate.
 - No private menu or sanitized sample is required. Fictional examples exercise structural variations without claiming to reproduce the exact private source.
 - This extends feature 029's existing review step. It does not introduce a second import entry point or change existing saved pages automatically.
 - Existing item editing remains the recovery path for pages already imported. Reconstructing missing relationships in saved documents without their original source is outside this scope.

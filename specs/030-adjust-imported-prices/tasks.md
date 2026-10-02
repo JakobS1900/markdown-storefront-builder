@@ -1,0 +1,74 @@
+# Tasks: Adjust imported prices
+
+**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/review.md](contracts/review.md), [quickstart.md](quickstart.md)
+**Tests**: Mandatory failing test before each behavior change. Existing `Document` JSON schema is unchanged.
+
+## Order and review rule
+
+Complete the foundation first as its own commit. Each later phase is one implementation chunk. Use one fresh implementer, then fresh spec and code-quality reviewers per chunk. Fix findings before the next chunk. After all chunks, run one holistic review of the combined diff. Keep review carry-forwards in `CHUNK N:` code comments until resolved.
+
+## Phase 1: Foundation, shared source-to-result contract
+
+**Goal**: One pure reviewed result is the source of both the visible review and confirmation, with stable source-row identities.
+
+**Independent Test**: A mapped three-column table exposes source line and field values; building it twice yields the same ordered blocks and issues. The existing `Document` name, type and order parity test remains unchanged.
+
+- [ ] T001 Add failing source-key, exact line-coverage, block-order and review-to-confirm parity tests in `app/tests/page-paste-review.test.ts`, including a retained note between offers, a line beyond row 20 and a section beyond 100.
+- [ ] T002 Implement the minimal draft-only row and result types plus pure builder and consumed/retained source partition in `app/src/page-paste-review.ts`; use current parser and block builders without changing `engine/src/document/descriptor.ts`.
+- [ ] T003 Route the current review count and `confirmPagePaste` through the shared result in `app/src/ui/page-paste.ts` and `app/src/store.ts`; bind the draft to its starting page ID and target, check before write, lock competing page switches during confirmation, and preserve the existing `openBackup` validation path.
+- [ ] T004 Run focused parser, store, quantity integration and document parity tests; get fresh spec and quality reviews of the foundation, fix findings, then commit it alone.
+
+## Phase 2: User Story 1, correct imported fields
+
+**Goal**: Correct the reviewed item name, amount, price and details before adding a page.
+
+**Independent Test**: Map a fictional Amount, Price, Item table, edit one row, and see the exact corrected values in review, saved Build, Preview and Copy.
+
+- [ ] T005 [US1] Add failing tests for all six Item, Amount and Price column orders, extra columns, repeated headers, `$0`, `from $25`, `Ask me`, blank name, blank price, and numeric name in `app/tests/page-paste-review.test.ts`.
+- [ ] T006 [US1] Add failing draft lifecycle and frozen confirmation tests for row edits, exclusion and exact price text in `app/tests/page-paste-store.test.ts`.
+- [ ] T007 [US1] Implement row edits keyed by source identity, inclusion, field validation and accepted numeric names in `app/src/page-paste-review.ts` and `app/src/store.ts`; once a correction exists, disable direct source editing until buffered replacement arrives in T021.
+- [ ] T008 [US1] Add failing UI tests for `Adjust imported prices`, visible source, labelled Item, Amount, Price and Details fields, per-row exclusion, issue messages and focus in `app/tests/page-paste.test.ts`.
+- [ ] T009 [US1] Render bounded correction cards and a separate `Adjust as prices` manual path from ambiguous Text lines in `app/src/ui/page-paste.ts` and `app/src/styles.css`; limit total visible cards across all sections to 20, collapse inactive sections, and keep header furniture and unassigned source as Text until explicitly handled.
+- [ ] T010 [US1] Verify Task A in `specs/030-adjust-imported-prices/quickstart.md`, then get fresh spec and quality reviews of the phase and fix findings.
+
+## Phase 3: User Story 2, shared names and categories
+
+**Goal**: Reconnect amount-price rows to a name and a Prices category while keeping source order and unassigned text.
+
+**Independent Test**: Two fictional categories and four items retain every chosen name, amount and price after moving one row to a new category and adding the page.
+
+- [ ] T011 [US2] Add failing pure tests for detached names, shared names on selected rows, duplicate visible category names, notes between offers, a move across a retained note and another heading, and quantity grouping in `app/tests/page-paste-review.test.ts`.
+- [ ] T012 [US2] Implement draft destination IDs, category names, row moves and stable source ordering in `app/src/page-paste-review.ts` and `app/src/store.ts`.
+- [ ] T013 [US2] Group compatible same-name amount-price offers into existing `quantities`; use `unit` on standalone offers and separate tiers when row details differ in `app/src/page-paste-review.ts`.
+- [ ] T014 [US2] Add failing UI tests for assigning a shared item name and moving selected rows to existing or new categories in `app/tests/page-paste.test.ts`.
+- [ ] T015 [US2] Add category and multi-row controls to the correction panel in `app/src/ui/page-paste.ts` and `app/src/styles.css`, keeping source text and destination visible at 320 CSS pixels.
+- [ ] T016 [US2] Add a saved Build, Preview and Copy acceptance test for Task B in `app/tests/page-paste-store.test.ts` and `app/tests/import-quantity-integration.test.ts`.
+- [ ] T017 [US2] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings.
+
+## Phase 4: User Story 3, recover safely
+
+**Goal**: Corrections remain reachable, reversible and local to the draft.
+
+**Independent Test**: Correct a late row, cancel a source replacement, undo a mapping change, then cancel import; the saved page remains unchanged and the draft retains its exact values until cancelled.
+
+- [ ] T018 [US3] Add failing store tests for remap warning, one-step undo, buffered source replacement cancel, page-switch pause and return, competing switch during confirmation, and failed save in `app/tests/page-paste-store.test.ts`.
+- [ ] T019 [US3] Implement a deliberate discard choice, mapping snapshot and undo in `app/src/store.ts`; keep corrected row identity across mapping and both pagers, and regression-check the foundation's page-switch lock.
+- [ ] T020 [US3] Add failing UI tests for section 101, table row 21, a many-table fixture with at most 20 visible correction cards, Edit source cancel, pasted/file/IME replacement, missing-name block, numeric-name acceptance and empty-section recovery in `app/tests/page-paste.test.ts`.
+- [ ] T021 [US3] Implement buffered Edit source and file replacement, recovery controls and focus restoration in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`.
+- [ ] T022 [US3] Extend `app/tests/a11y.test.ts` for visible names, keyboard operation and touch targets on the correction panel; test the failure path before fixing it.
+- [ ] T023 [US3] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings.
+
+## Phase 5: Whole-feature verification and delivery
+
+- [ ] T024 Run one holistic review of the full `030-adjust-imported-prices` diff for source loss, category placement, grouping, review-to-confirm parity and preservation of existing pages. Fix findings with regressions.
+- [ ] T025 Run `npm run verify` in PowerShell and read its full exit status. Check the quantity fixture, all six column permutations, real Chrome Task A and Task B at 320 and 390 CSS pixels, and the Android 6 tablet with an updated signed APK. Record exact evidence in `docs/research/`.
+- [ ] T026 Update `docs/HANDOFF.md`, `specs/README.md` and this task list with actual status. Commit without AI attribution, push the branch and open a draft PR against `032-menu-first-workflow`.
+- [ ] T027 Keep the stacked PR draft until feature 032's five real seller sessions and this panel's seller observation have been reviewed. Do not publish a normal release from a solo test.
+
+## Dependencies and parallel work
+
+T001 through T004 precede every user story because all consumers need the same reviewed-output contract. User Story 1 provides editable fields for User Story 2. User Story 3 relies on both. Independent test fixtures for the six column orders and two-category menu can be written in parallel before their implementation chunks. UI and store changes within a chunk must be reviewed together because they share focus and draft state.
+
+## Delivery strategy
+
+The first useful increment is User Story 1 on recognized tables, with ambiguous source retained as Text and an explicit manual row path. Subsequent chunks add cross-section grouping and recovery without adding a second import entry point or changing already saved pages.

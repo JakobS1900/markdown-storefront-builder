@@ -4,6 +4,24 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## FEATURE 030 IMPORT CORRECTION PANEL IN PROGRESS
+
+On 2026-10-01, work started on branch `030-adjust-imported-prices`, based on
+the pushed `032-menu-first-workflow` prototype at `95a8396`. The
+[spec](../specs/030-adjust-imported-prices/spec.md),
+[plan](../specs/030-adjust-imported-prices/plan.md),
+[research](../specs/030-adjust-imported-prices/research.md),
+[review contract](../specs/030-adjust-imported-prices/contracts/review.md),
+[quickstart](../specs/030-adjust-imported-prices/quickstart.md) and
+[tasks](../specs/030-adjust-imported-prices/tasks.md) describe the broader
+correction panel. A plan review closed source-order, page-binding, manual Text
+recovery, source-replacement and old-tablet rendering gaps. Phase 1
+implementation is in progress; no feature 030 code is verified yet. Next:
+finish the pure reviewed-output foundation with tests and fresh reviews, then
+implement field correction, category/grouping, and recovery in separate
+reviewed chunks. Keep feature 032's draft PR #1 and the later stacked feature
+030 PR in draft until five real seller sessions exercise the combined build.
+
 ## FEATURE 032 USABILITY ITERATION VERIFIED, SELLER SESSIONS PENDING
 
 On 2026-10-01, a phone-sized audit of the prototype found too many competing starts on a blank page, a persistent strip of six generic section choices, and mixed pasted price lines whose punctuation entered item names. The [iteration audit](research/2026-10-01-usability-iteration-audit.md) records the starting screens, measured friction, screenshots, and results. The branch now gives Create a menu and Paste a page first, moves secondary starts and section types into named disclosures, parses clear mixed price boundaries line by line, and lets sellers correct proposed Item and Price values before Add. Saved document and export formats are unchanged.
@@ -71,7 +89,7 @@ partly verified. The APK has not been published.
 Five real seller task sessions remain. Record time, help, corrections, and wrong
 or missing values against the current release before claiming usability success
 or publishing a normal feature release. Feature 030's broader correction panel
-remains separately scoped and has not been implemented.
+is now in progress on its own branch.
 
 ## QUANTITY IMPORT BUGFIX: v0.12.1 SHIPPED
 
