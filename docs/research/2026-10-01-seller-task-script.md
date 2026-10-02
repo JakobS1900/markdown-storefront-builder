@@ -80,6 +80,29 @@ visible during review. Note whether they found the row correction controls
 without help. This task checks whether the row correction is discoverable on
 an ordinary price list as well as on a table.
 
+## Task 4: a name above a price table
+
+Give them this fictional page. Read this aloud: "Bring this in as a menu. Make
+Figures contain Arrow Orb in 12 oz at $25 and 16 oz at $32. Show me the buyer
+view and the text you would copy. Figures and Arrow Orb should each appear once."
+
+```markdown
+# Figures
+
+Arrow Orb
+
+| Item | Amount | Price |
+| --- | --- | --- |
+| | 12 oz | $25 |
+| | 16 oz | $32 |
+```
+
+Stop after both results or 8 minutes. Record whether the seller discovers a
+direct way to use the nearby name and heading, removes duplicate source sections
+by hand, publishes duplicates, or gives up. Check both amount and price pairs.
+Ask what they thought would happen to the original name and heading before Add.
+Do not show them the source-use control during the task.
+
 ## After each app version
 
 Ask: "Which step felt slow or confusing? What did you expect that control to
@@ -93,6 +116,7 @@ their words without explaining the design first.
 | | | | | 1 | | | | | | |
 | | | | | 2 | | | | | | |
 | | | | | 3 | | | | | | |
+| | | | | 4 | | | | | | |
 
 Do not treat a completed task alone as proof that the app is easier. Compare
 time, help, corrections, missing values, and the seller's explanation across
