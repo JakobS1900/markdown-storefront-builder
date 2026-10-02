@@ -41,6 +41,16 @@ closure reviews. Phase 4 now covers deliberate remapping, source replacement,
 empty-section recovery and focus after Clear selection. The all-moved heading
 case is marked `CHUNK 3` in code for that phase. The Android 6 typing check
 remains in whole-feature verification.
+
+A 320 CSS pixel Chrome check of Phase 3 on 2026-10-02 found a new release blocker
+for detached names. Mapping a two-offer table, assigning the preceding `Arrow
+Orb` line as both offers' shared name, and creating a `Figures` category left
+the original standalone name and heading in the saved page. Preview showed each
+twice. The [browser audit](research/2026-10-02-detached-name-browser-audit.md)
+has the source, steps and screenshots. After Phase 4, add a separately reviewed
+chunk with explicit source-line use for shared names and headings, including
+source coverage and saved-output checks. Do not hide the duplicates only in
+Preview or silently delete ambiguous Text.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build.
