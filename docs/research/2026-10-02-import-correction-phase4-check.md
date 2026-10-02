@@ -26,3 +26,11 @@ The focused store, UI and accessibility run passed 163 of 163 tests. A first ful
 - The PWA update gate served build A, then build B after deployment, and kept rendering after a failed refresh of a removed asset.
 
 The browser audit of detached source lines is separate: [it still shows duplicate standalone heading and name output](2026-10-02-detached-name-browser-audit.md). That is the next contract and UI chunk, not a Phase 4 pass claim.
+
+## Real browser recovery task
+
+I opened the built Phase 4 app in an isolated Chrome profile at 320 by 844 CSS pixels. I pasted a fictional `# Ceramics` heading and an Item, Amount, Price table with one `Mug`, `12 oz`, `$25` row. The UI proposed one section, showed the exact source, and offered Item, Price and Size column roles. I accepted the default roles, opened Adjust imported prices, and excluded the single offer. The review then showed the explicit Keep original heading and Remove original heading choices. Choosing Remove changed the Add button to `Add 0 sections as a new page` and disabled it.
+
+I opened Edit source, changed `Mug` to `Bowl` in the replacement buffer, and pressed Apply source replacement. The UI asked whether to discard corrections and review choices. The original source still contained `Mug`, while the buffer contained `Bowl`. Choosing Keep original source closed the buffer and left the original source and heading choice intact. Reopening the same discard prompt produced the [320 pixel capture](media/2026-10-02-import-recovery-320.png). At 390 CSS pixels the prompt remained visible in the [390 pixel capture](media/2026-10-02-import-recovery-390.png).
+
+Browser evaluation reported `clientWidth === scrollWidth` at both sizes, 320 and 390. The CDP session logged no runtime exception. This checks one fictional recovery route in Chrome; the final Android 6 correction task and seller observation remain pending.
