@@ -64,8 +64,8 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 **Independent Test**: Choosing a standalone name and preceding heading for two table rows gives each source line one coverage outcome and the same ordered blocks in review and confirmation. Undo or removal of all linked offers restores the source line.
 
-- [ ] T024 [US4] Add failing exact-line source-use, undo, coverage and review-to-confirm parity tests in `app/tests/page-paste-review.test.ts` and `app/tests/page-paste-store.test.ts`, including a matching typed value without a choice, a retained note, row exclusion and a later name or destination edit.
-- [ ] T025 [US4] Implement the minimal draft-only source-use choice, exact preceding-line candidates, and pure reviewed-output behavior in `app/src/page-paste-review.ts` and `app/src/store.ts`. Merge adjacent same-category menus only across used lines, retaining notes in order. Keep `Document` name, type and order unchanged. Get fresh spec and quality reviews, fix findings, and commit this contract alone before UI work.
+- [x] T024 [US4] Add failing exact-line source-use, undo, coverage and review-to-confirm parity tests in `app/tests/page-paste-review.test.ts` and `app/tests/page-paste-store.test.ts`, including a matching typed value without a choice, a retained note, row exclusion and a later name or destination edit.
+- [x] T025 [US4] Implement the minimal draft-only source-use choice, exact preceding-line candidates, and pure reviewed-output behavior in `app/src/page-paste-review.ts` and `app/src/store.ts`. Merge adjacent same-category menus only across used lines, retaining notes in order. Keep `Document` name, type and order unchanged. Fresh spec and quality reviews passed. The isolated contract was pushed as `d85c24e`. Full `npm run verify` exited 0 with 1,863 tests in 90 files, 64 accessibility tests and clean browser gates.
 
 ## Phase 5B: User Story 4, use detached source in the panel
 

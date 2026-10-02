@@ -53,11 +53,17 @@ for detached names. Mapping a two-offer table, assigning the preceding `Arrow
 Orb` line as both offers' shared name, and creating a `Figures` category left
 the original standalone name and heading in the saved page. Preview showed each
 twice. The [browser audit](research/2026-10-02-detached-name-browser-audit.md)
-has the source, steps and screenshots. Phase 5A is next: add a separately
-reviewed source-use contract for shared names and headings, including source
-coverage and saved-output checks. Commit that contract alone before the Phase 5B
-UI. Do not hide the duplicates only in Preview or silently delete ambiguous
-Text.
+has the source, steps and screenshots. Phase 5A's exact-line source-use contract
+was committed alone and pushed as `d85c24e` on 2026-10-02. Fresh spec and
+quality reviews passed after fixes for attached headings, Setext headings,
+quantity tables, added items, row moves, undo, and dropping a source section.
+The final full `npm run verify` exited 0: 90 files, 1,863 tests, 64 accessibility
+tests, clean secret and dash scans, zero light and dark contrast failures, and
+passing menu-file and PWA update gates. The saved `Document` schema is unchanged.
+Phase 5B is now in progress: show the exact source heading and name choices in
+the seller's correction panel, then verify Build, Preview and Copy without
+duplicate standalone source lines. Do not hide the duplicates only in Preview
+or silently delete ambiguous Text.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build.
