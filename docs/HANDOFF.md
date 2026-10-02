@@ -4,7 +4,7 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## FEATURE 030 IMPORT CORRECTION PANEL IN PROGRESS
+## FEATURE 030 IMPORT CORRECTION PANEL VERIFIED, SELLER SESSIONS PENDING
 
 On 2026-10-01, work started on branch `030-adjust-imported-prices`, based on
 the pushed `032-menu-first-workflow` prototype at `95a8396`. The
@@ -29,7 +29,6 @@ menu-file and PWA update gates. Chrome Task A then passed at 320 and 390 CSS
 pixels with two reviewed rows, original source visible, zero document overflow
 and zero browser exceptions; Build, Preview and Copy retained the corrected
 name and selling price. See the [browser check](research/2026-10-01-import-correction-phase2-check.md).
-The Android 6 typing check remains in the whole-feature verification phase.
 Phase 3 shared names and category moves are implemented. Sellers can select rows
 across correction pages, apply one item name, and move them to an existing or
 newly named Prices category. Duplicate category names have distinct choices.
@@ -45,8 +44,7 @@ reviews passed after fixing four findings. Its final `npm run verify` exited 0:
 90 test files, 1,845 tests, 64 accessibility tests, clean secret and dash scans,
 zero light and dark contrast failures, and passing menu-file and PWA update
 gates. The [Phase 4 check](research/2026-10-02-import-correction-phase4-check.md)
-records the review and verification evidence. The Android 6 correction check
-remains in whole-feature verification.
+records the review and verification evidence.
 
 A 320 CSS pixel Chrome check of Phase 3 on 2026-10-02 found a new release blocker
 for detached names. Mapping a two-offer table, assigning the preceding `Arrow
@@ -60,13 +58,28 @@ quantity tables, added items, row moves, undo, and dropping a source section.
 The final full `npm run verify` exited 0: 90 files, 1,863 tests, 64 accessibility
 tests, clean secret and dash scans, zero light and dark contrast failures, and
 passing menu-file and PWA update gates. The saved `Document` schema is unchanged.
-Phase 5B is now in progress: show the exact source heading and name choices in
-the seller's correction panel, then verify Build, Preview and Copy without
-duplicate standalone source lines. Do not hide the duplicates only in Preview
-or silently delete ambiguous Text.
+Phase 5B is implemented and reviewed. The panel offers exact nearby name and
+heading choices with the affected row count, a Keep choice, and Undo. The final
+holistic review found and closed heading placement across retained notes and
+intervening categories, stale Undo snapshots, and a live Text-to-Prices summary.
+Its closure review passed 236 focused tests in six files. Full `npm run verify`
+exited 0 on 2026-10-02: 90 files, 1,886 tests, 65 accessibility tests, clean
+secret and dash scans, zero light and dark contrast failures, and passing menu
+file and PWA update gates. The saved `Document` schema is unchanged.
+
+The final [Chrome Task D check](research/2026-10-02-detached-source-browser-check.md)
+used four detached names, two headings and eight amount-price pairs. Build,
+Preview and Copy kept the exact values with each heading and name once, no page
+overflow at 320 or 390 CSS pixels, and no browser exception. The signed
+`0.13.0-test.2` APK was built, signed with v1/v2/v3, and installed as an update
+on the Android 6.0.1 tablet. A direct Text-to-Prices correction saved, previewed
+and survived cold launch while pre-existing pages remained. The [device check](research/2026-10-02-android6-import-correction-check.md) records the commands,
+APK hash, screenshots and the local file picker limitation. This verifies API
+23 with WebView 106, not the tablet's former WebView 49.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
-in draft until five real seller sessions exercise the combined build.
+in draft until five real seller sessions exercise the combined build. The
+[seller task script](research/2026-10-01-seller-task-script.md) is ready to send.
 
 ## FEATURE 032 USABILITY ITERATION VERIFIED, SELLER SESSIONS PENDING
 

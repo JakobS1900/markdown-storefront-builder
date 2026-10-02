@@ -73,16 +73,16 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 **Independent Test**: Two categories and four detached names become four items with eight amount-price pairs in Build, Preview and Copy, without duplicate standalone Heading or Text sections.
 
-- [ ] T026 [US4] Add failing UI tests for source-identified name and category choices that act on all included table rows without prior selection, selected-row exceptions, keep-as-Text behavior, undo, keyboard focus and pagination in `app/tests/page-paste.test.ts` and `app/tests/a11y.test.ts`.
-- [ ] T027 [US4] Add the minimum source-use controls in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`. State the number of affected rows and show the exact source row and resulting category or name before Add; keep a visible choice to retain ambiguous source as Text or Heading.
-- [ ] T028 [US4] Add saved Build, Preview and Copy acceptance for Task D in `app/tests/import-quantity-integration.test.ts`. Run real Chrome Task D at 320 and 390 CSS pixels and record the observed output in `docs/research/`.
-- [ ] T029 [US4] Get fresh spec and quality reviews of the panel chunk, run focused tests and fix findings.
+- [x] T026 [US4] Add failing UI tests for source-identified name and category choices that act on all included table rows without prior selection, selected-row exceptions, keep-as-Text behavior, undo, keyboard focus and pagination in `app/tests/page-paste.test.ts` and `app/tests/a11y.test.ts`.
+- [x] T027 [US4] Add the minimum source-use controls in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`. State the number of affected rows and show the exact source row and resulting category or name before Add; keep a visible choice to retain ambiguous source as Text or Heading.
+- [x] T028 [US4] Add saved Build, Preview and Copy acceptance for Task D in `app/tests/import-quantity-integration.test.ts`. Run real Chrome Task D at 320 and 390 CSS pixels and record the observed output in `docs/research/2026-10-02-detached-source-browser-check.md`.
+- [x] T029 [US4] Get fresh spec and quality reviews of the panel chunk, run focused tests and fix findings. The panel's focused suite passed 129 tests after the quality fixes.
 
 ## Phase 6: Whole-feature verification and delivery
 
-- [ ] T030 Run one holistic review of the full `030-adjust-imported-prices` diff for source loss, category placement, grouping, review-to-confirm parity and preservation of existing pages. Fix findings with regressions.
-- [ ] T031 Run `npm run verify` in PowerShell and read its full exit status. Check the quantity fixture, all six column permutations, real Chrome Tasks A, B, C and D at 320 and 390 CSS pixels, and the Android 6 tablet with an updated signed APK. Record exact evidence in `docs/research/`.
-- [ ] T032 Update `docs/HANDOFF.md`, `specs/README.md` and this task list with actual status. Commit without AI attribution, push the branch and update the draft PR against `032-menu-first-workflow`.
+- [x] T030 Run one holistic review of the full `030-adjust-imported-prices` diff for source loss, category placement, grouping, review-to-confirm parity and preservation of existing pages. Fix findings with regressions. Closure review passed 236 focused tests across six files.
+- [x] T031 Run `npm run verify` in PowerShell and read its full exit status. Check the quantity fixture, all six column permutations, real Chrome Task A and recovery Task C at 320 and 390 CSS pixels, the two-category four-item Task B acceptance, and real Chrome Task D at both widths. Check the Android 6 tablet with an updated signed APK and record exact evidence in `docs/research/`. The final gate exited 0 with 1,886 tests in 90 files; Chrome Task D and the Android 6 correction check passed. Task D also exercised Task B's two-category four-item shape in the browser.
+- [x] T032 Update `docs/HANDOFF.md`, `specs/README.md` and this task list with actual status. Commit without AI attribution, push the branch and update the draft PR against `032-menu-first-workflow`.
 - [ ] T033 Keep the stacked PR draft until feature 032's five real seller sessions and this panel's seller observation have been reviewed. Do not publish a normal release from a solo test.
 
 ## Dependencies and parallel work
