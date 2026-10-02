@@ -3,7 +3,8 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { emptyDocument } from "@mdsb/engine";
 import { beforeEach, expect, it } from "vitest";
-import { adopt, getState, init, setPagePasteTableMapping, setSurface, subscribe } from "../src/store.js";
+import { adopt, createPagePasteCategoryForSelected, getPagePasteReview, getState, init,
+  setPagePasteTableMapping, setSurface, subscribe, togglePagePasteRowSelection } from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
 
 let stop: (() => void) | undefined;
@@ -105,7 +106,7 @@ it("opens labelled row corrections and shows exactly the selected result", () =>
   editReviewedField("Details, source row 3", "Glazed");
   expect(document.querySelector(".page-paste-row-result")?.textContent).toMatch(/Large mug.*16 oz.*Ask me.*Glazed/s);
   expect(document.querySelector<HTMLTextAreaElement>(".page-paste textarea")?.disabled).toBe(true);
-  expect(document.querySelector(".page-paste")?.textContent).toMatch(/Edit source.*later|source.*locked/i);
+  expect(document.querySelector(".page-paste")?.textContent).toMatch(/Edit source.*replace the current text/i);
 });
 
 it("applies one name and a new category to selected rows in the correction panel", () => {
@@ -202,6 +203,27 @@ it("clears selected rows from both correction pages", () => {
   expect(getState().pastingPage?.selectedRowKeys).toEqual([]);
   click("Show previous 5 correction rows");
   expect(document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:3:0"] .page-paste-select-row')?.checked).toBe(false);
+});
+
+it("focuses the section preview after clearing an off-page selection with no selectable row on screen", () => {
+  live();
+  click("Paste a page you already have");
+  const rows = Array.from({ length: 6 }, (_, index) => `| Item ${String(index + 1)} | 12 oz | $25 |`);
+  paste(["| Item | Amount | Price |", "| --- | --- | --- |", ...rows].join("\n"));
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  const selected = document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:3:0"] .page-paste-select-row');
+  if (selected === null) throw new Error("missing selection");
+  selected.checked = true;
+  selected.dispatchEvent(new Event("change", { bubbles: true }));
+  click("Show next 1 correction row");
+  const include = [...document.querySelectorAll<HTMLInputElement>(".page-paste-card input[type=checkbox]")]
+    .find((input) => input.labels?.[0]?.textContent === "Include source row 8");
+  if (include === undefined) throw new Error("missing include control");
+  include.checked = false;
+  include.dispatchEvent(new Event("change", { bubbles: true }));
+  click("Clear selection");
+  expect(document.activeElement).toBe(document.querySelector(".page-paste-preview"));
 });
 
 it("keeps unfinished group fields when selecting another row", () => {
@@ -661,7 +683,217 @@ it("does not replace corrected source when an earlier file read completes", asyn
   await Promise.resolve();
   expect(getState().pastingPage?.text).toBe("Mug - $25\nBowl - $32");
   expect(getState().pastingPage?.corrections?.["0:1:0"]?.price).toBe("Ask me");
-  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste button")].find((node) => node.textContent === "Read a text file from this device")?.disabled).toBe(true);
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste button")].find((node) => node.textContent === "Read a text file from this device")?.disabled).toBe(false);
+});
+
+it("opens a file chosen after corrections in the replacement buffer", async () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  editReviewedField("Price, source row 3", "Ask me");
+  const read = deferredFile();
+  read.resolve("Bowl - $32");
+  await Promise.resolve();
+  expect(getState().pastingPage?.text).toContain("Mug | 12 oz | $25");
+  expect(getState().pastingPage?.sourceBuffer).toBe("Bowl - $32");
+  click("Apply source replacement");
+  click("Discard corrections and replace source");
+  expect(getState().pastingPage?.text).toBe("Bowl - $32");
+  expect(getState().pastingPage?.corrections).toBeUndefined();
+});
+
+it("keeps composed source text in a buffer across a page switch and cancel", () => {
+  live();
+  const original = getState();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  click("Edit source");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  const buffer = document.querySelector<HTMLTextAreaElement>(".page-paste-source-buffer textarea");
+  if (buffer === null) throw new Error("missing buffer");
+  buffer.focus();
+  buffer.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+  buffer.value = "手作 Mug - $25";
+  buffer.dispatchEvent(new InputEvent("input", { bubbles: true, isComposing: true }));
+  buffer.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+  expect(getState().pastingPage?.sourceBuffer).toBe("手作 Mug - $25");
+  expect(getState().pastingPage?.text).toContain("Mug | 12 oz | $25");
+  adopt("another", emptyDocument("pastebin"));
+  expect(getState().pastingPage?.sourceBuffer).toBe("手作 Mug - $25");
+  adopt(original.pageId, original.doc);
+  click("Cancel source edit");
+  expect(getState().pastingPage?.sourceBuffer).toBeUndefined();
+  expect(getState().pastingPage?.mappings?.[0]).toEqual({ product: 0, price: 2, size: 1 });
+});
+
+it("edits a separate source buffer, cancels it, and asks before discarding corrections", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  editReviewedField("Price, source row 3", "Ask me");
+  click("Edit source");
+  const buffer = document.querySelector<HTMLTextAreaElement>(".page-paste-source-buffer textarea");
+  expect(buffer?.value).toContain("Mug | 12 oz | $25");
+  if (buffer === null) throw new Error("missing source buffer");
+  buffer.value = "Bowl - $32";
+  buffer.dispatchEvent(new Event("input", { bubbles: true }));
+  expect(getState().pastingPage?.text).toContain("Mug | 12 oz | $25");
+  click("Cancel source edit");
+  expect(getState().pastingPage?.corrections?.["0:3:0"]?.price).toBe("Ask me");
+  click("Edit source");
+  const replacement = document.querySelector<HTMLTextAreaElement>(".page-paste-source-buffer textarea");
+  if (replacement === null) throw new Error("missing source buffer");
+  replacement.value = "Bowl - $32";
+  replacement.dispatchEvent(new Event("input", { bubbles: true }));
+  click("Apply source replacement");
+  expect(document.querySelector(".page-paste-source-choice")?.textContent).toMatch(/discard.*corrections/i);
+  click("Keep original source");
+  expect(getState().pastingPage?.text).toContain("Mug | 12 oz | $25");
+});
+
+it("closes Edit source without a warning when no text changed", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  editReviewedField("Price, source row 3", "Ask me");
+  click("Edit source");
+  click("Apply source replacement");
+  expect(document.querySelector(".page-paste-source-choice")).toBeNull();
+  expect(getState().pastingPage?.sourceBuffer).toBeUndefined();
+  expect(getState().pastingPage?.corrections?.["0:3:0"]?.price).toBe("Ask me");
+  expect(document.activeElement?.textContent).toBe("Edit source");
+});
+
+it("asks before remapping a corrected table and restores the focused mapping after undo", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  editReviewedField("Price, source row 3", "Ask me");
+  const product = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-table select")]
+    .find((control) => control.labels?.[0]?.textContent === "Product column");
+  if (product === undefined) throw new Error("missing Product column");
+  product.value = "2";
+  product.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste-mapping-choice")?.textContent).toMatch(/keep.*edits.*discard/i);
+  click("Keep row edits");
+  expect(getState().pastingPage?.mappings?.[0]?.product).toBe(2);
+  click("Undo mapping change");
+  expect(getState().pastingPage?.mappings?.[0]?.product).toBe(0);
+  expect(document.activeElement).toBe([...document.querySelectorAll<HTMLSelectElement>(".page-paste-table select")]
+    .find((control) => control.labels?.[0]?.textContent === "Product column"));
+});
+
+it("asks what to do with a heading after moving its only item", () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Ceramics\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  togglePagePasteRowSelection("0:4:0", true);
+  createPagePasteCategoryForSelected("Gifts");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste-empty-heading")?.textContent).toMatch(/keep.*remove/i);
+  click("Remove original heading");
+  expect(getPagePasteReview()?.blocks.map((block) => block.kind)).toEqual(["menu"]);
+  expect(document.activeElement?.textContent).toBe("Remove original heading");
+  expect(document.querySelector(".page-paste-empty-heading")?.textContent).toContain("Chosen: Remove original heading");
+});
+
+it("asks what to do with a heading after excluding its only mapped item", () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Ceramics\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n\n# About\nHandmade goods");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  const include = [...document.querySelectorAll<HTMLInputElement>(".page-paste-card input[type=checkbox]")]
+    .find((input) => input.labels?.[0]?.textContent === "Include source row 4");
+  if (include === undefined) throw new Error("missing include control");
+  include.checked = false;
+  include.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste-empty-heading")?.textContent).toContain("No offers remain in this category");
+  click("Keep original heading");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(false);
+  expect(getPagePasteReview()?.blocks.map((block) => block.kind)).toContain("heading");
+});
+
+it("offers item entry and Text preservation for a header-only table", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |");
+  expect(document.querySelector(".page-paste-empty-table")?.textContent).toMatch(/keep.*Text.*remove.*enter an item/is);
+  expect(document.querySelector(".page-paste-empty-table")?.textContent).toContain("Adding an item also keeps the original header as Text");
+  click("Enter an item");
+  const fields = [...document.querySelectorAll<HTMLInputElement>(".page-paste-added-item input[type=text]")];
+  expect(fields.map((input) => input.labels?.[0]?.textContent)).toEqual(["Item name", "Amount", "Price"]);
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  for (const [index, value] of ["Mug", "12 oz", "$25"].entries()) {
+    const input = fields[index];
+    if (input === undefined) throw new Error("missing added item field");
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  expect(getPagePasteReview()?.blocks.map((block) => block.kind)).toEqual(["prose", "menu"]);
+  click("Keep header as Text");
+  expect(getPagePasteReview()?.blocks.map((block) => block.kind)).toEqual(["prose"]);
+});
+
+it("does not call a malformed table with a data row empty", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz |");
+  expect(document.querySelector(".page-paste-empty-table")).toBeNull();
+  expect(document.querySelector(".page-paste-sections")?.textContent).toContain("This table remains Text");
+  expect(getPagePasteReview()?.blocks.map((block) => block.kind)).toEqual(["prose"]);
+});
+
+it("updates the live section proposal while composing a new item name", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |");
+  click("Enter an item");
+  const input = document.querySelector<HTMLInputElement>(".page-paste-added-item input[type=text]");
+  if (input === null) throw new Error("missing item name");
+  input.focus();
+  expect(document.querySelector(".page-paste-section-issue")?.textContent).toContain("Name the new item");
+  input.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+  input.value = "手作 Mug";
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, isComposing: true }));
+  expect(document.activeElement).toBe(input);
+  expect(document.querySelector(".page-paste-added-item input[type=text]")).toBe(input);
+  expect(document.querySelector<HTMLInputElement>(".page-paste-sections input[type=checkbox]")?.labels?.[0]?.textContent)
+    .toMatch(/^Text, then Prices:/);
+  expect(document.querySelector(".page-paste-section-issue")?.textContent)
+    .toBe(getPagePasteReview()?.sections[0]?.issue ?? "");
+  input.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+});
+
+it("asks before keeping a new amount without a price", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |");
+  click("Enter an item");
+  for (const [label, value] of [["Item name", "Mug"], ["Amount", "12 oz"]] as const) {
+    const input = [...document.querySelectorAll<HTMLInputElement>(".page-paste-added-item input[type=text]")]
+      .find((field) => field.labels?.[0]?.textContent === label);
+    if (input === undefined) throw new Error(`missing ${label}`);
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste-section-issue")?.textContent).toMatch(/price/i);
+  click("Keep without a price");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(false);
+  expect(document.querySelector(".page-paste-added-item")?.textContent).toContain("Chosen: keep without a price");
 });
 
 it("pauses Add with an explanation after switching away from the starting page", () => {
@@ -687,7 +919,7 @@ it("names the actual Prices and Text output when one source section splits", () 
   expect(document.querySelector(".page-paste button.primary")?.textContent).toBe("Add 3 sections as a new page");
 });
 
-it("reads the chosen file after a review choice changes", async () => {
+it("buffers a chosen file after a review choice changes", async () => {
   live();
   click("Paste a page you already have");
   paste("# Original\n\nText here");
@@ -699,7 +931,12 @@ it("reads the chosen file after a review choice changes", async () => {
   checkbox.dispatchEvent(new Event("change", { bubbles: true }));
   read.resolve("# New file");
   await Promise.resolve();
-  expect(getState().pastingPage?.text).toBe("# New file");
+  expect(getState().pastingPage?.text).toBe("# Original\n\nText here");
+  expect(getState().pastingPage?.sourceBuffer).toBe("# New file");
+  click("Apply source replacement");
+  expect(getState().pastingPage?.sourceDiscardPrompt).toBe(true);
+  click("Keep original source");
+  expect(getState().pastingPage?.dropped).toEqual([0]);
 });
 
 it("does not put an old file into a newly opened paste panel", async () => {

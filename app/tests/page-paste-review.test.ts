@@ -223,10 +223,19 @@ it("does not publish an untouched blank selling price when another row is correc
   ] });
 });
 
-it("does not leave a category heading after every offer is excluded", () => {
-  const review = buildPagePasteReview({ text: "# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |",
+it("requires a choice for a heading after every offer is excluded", () => {
+  const draft = { text: "# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |",
     dropped: [], swapped: [], mappings: { 0: { product: 0, size: 1, price: 2 } },
-    corrections: { "0:5:0": { included: false } } });
-  expect(review.sections[0]?.rows[0]?.included).toBe(false);
-  expect(review.blocks).toEqual([]);
+    corrections: { "0:5:0": { included: false } } };
+  const unresolved = buildPagePasteReview(draft);
+  expect(unresolved.sections[0]?.rows[0]?.included).toBe(false);
+  expect(unresolved.canConfirm).toBe(false);
+  expect(unresolved.blocks).toEqual([{ kind: "heading", text: "Ceramics", level: 1 }]);
+  const kept = buildPagePasteReview({ ...draft, emptyHeadingChoices: { 0: "keep" } });
+  expect(kept.canConfirm).toBe(true);
+  expect(kept.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("heading");
+  const removed = buildPagePasteReview({ ...draft, emptyHeadingChoices: { 0: "remove" } });
+  expect(removed.canConfirm).toBe(true);
+  expect(removed.blocks).toEqual([]);
+  expect(removed.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("excluded");
 });

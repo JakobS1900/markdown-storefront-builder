@@ -51,12 +51,12 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 **Independent Test**: Correct a late row, cancel a source replacement, undo a mapping change, then cancel import; the saved page remains unchanged and the draft retains its exact values until cancelled.
 
-- [ ] T018 [US3] Add failing store tests for remap warning, one-step undo, buffered source replacement cancel, page-switch pause and return, competing switch during confirmation, and failed save in `app/tests/page-paste-store.test.ts`.
-- [ ] T019 [US3] Implement a deliberate discard choice, mapping snapshot and undo in `app/src/store.ts`; keep corrected row identity across mapping and both pagers, and regression-check the foundation's page-switch lock.
-- [ ] T020 [US3] Add failing UI tests for section 101, table row 21, a many-table fixture with at most 20 visible correction cards, Edit source cancel, pasted/file/IME replacement, missing-name block, numeric-name acceptance and empty-section recovery in `app/tests/page-paste.test.ts`. Include a headed category whose every offer moved away: give the original heading an explicit keep or remove choice before Add.
-- [ ] T021 [US3] Implement buffered Edit source and file replacement, recovery controls and focus restoration in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`.
-- [ ] T022 [US3] Extend `app/tests/a11y.test.ts` for visible names, keyboard operation and touch targets on the correction panel; test the failure path before fixing it.
-- [ ] T023 [US3] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings.
+- [x] T018 [US3] Add failing store tests for remap warning, one-step undo, buffered source replacement cancel, page-switch pause and return, competing switch during confirmation, and failed save in `app/tests/page-paste-store.test.ts`.
+- [x] T019 [US3] Implement a deliberate discard choice, mapping snapshot and undo in `app/src/store.ts`; keep corrected row identity across mapping and both pagers, and regression-check the foundation's page-switch lock.
+- [x] T020 [US3] Add failing UI tests for section 101, table row 21, a many-table fixture with at most 20 visible correction cards, Edit source cancel, pasted/file/IME replacement, missing-name block, numeric-name acceptance and empty-section recovery in `app/tests/page-paste.test.ts`. Include a headed category whose every offer moved away: give the original heading an explicit keep or remove choice before Add.
+- [x] T021 [US3] Implement buffered Edit source and file replacement, recovery controls and focus restoration in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`.
+- [x] T022 [US3] Extend `app/tests/a11y.test.ts` for visible names, keyboard operation and touch targets on the correction panel; test the failure path before fixing it.
+- [x] T023 [US3] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings. Both reviews passed after four findings were fixed. The final focused run passed 163 tests; the full `npm run verify` passed with 1,845 tests in 90 files and 64 accessibility tests.
 
 ## Phase 5A: User Story 4, source-use contract
 

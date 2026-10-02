@@ -1,12 +1,15 @@
 import { type PagePasteReview, type PagePasteReviewRow, type PagePasteReviewSection } from "../page-paste-review.js";
-import { readPagePasteTable, type PagePasteTableMapping, type ProposedSection } from "../page-text.js";
+import { readLines, readPagePasteTable, type PagePasteTableMapping, type ProposedSection } from "../page-text.js";
 import {
-  applyPagePasteSharedName, clearPagePasteRowSelection, clearPagePasteTableMapping, confirmPagePaste, correctPagePasteRow,
+  applyPagePasteSharedName, applyPagePasteSourceEdit, cancelPagePasteSourceEdit,
+  clearPagePasteRowSelection, clearPagePasteTableMapping, confirmPagePaste, correctPagePasteRow,
   createPagePasteCategoryForSelected, dropPagePasteSection, getPagePasteReview, getState,
   moveSelectedPagePasteRows, restorePagePasteSection,
-  pagePasteMappingLocked, startManualPagePasteSection,
+  pagePasteMappingLocked, pagePasteSourceHasChoices, startManualPagePasteSection,
   setPagePasteAdjustingSection, setPagePasteReviewStart, setPagePasteRowStart,
-  setPagePasteTableMapping, setPagePasteText, stopPastingPage, swapPagePasteSection,
+  resolvePagePasteMapping, setPagePasteSourceBuffer, setPagePasteTableMapping, setPagePasteText,
+  setPagePasteAddedItem, setPagePasteEmptyHeadingChoice,
+  startPagePasteSourceEdit, stopPastingPage, swapPagePasteSection, undoPagePasteTableMapping,
   togglePagePasteRowSelection,
 } from "../store.js";
 import { announce, button, checkbox, el, field, select } from "./dom.js";
@@ -24,15 +27,14 @@ interface SectionPage {
 }
 
 function lockedSource(): boolean {
-  // CHUNK 2: Phase 4 replaces this lock with buffered source replacement and a remap choice.
-  const draft = getState().pastingPage;
-  return Object.keys(draft?.corrections ?? {}).length > 0 || (draft?.manualSections?.length ?? 0) > 0;
+  return pagePasteSourceHasChoices() || getState().pastingPage?.sourceBuffer !== undefined;
 }
 
 function addDisabled(review: PagePasteReview, pending = false): boolean {
   const current = getState();
   const draft = current.pastingPage;
   return draft === undefined || review.blocks.length === 0 || !review.canConfirm || pending || draft.confirming === true ||
+    draft.sourceBuffer !== undefined || draft.pendingMapping !== undefined ||
     current.pageId !== draft.originPageId || current.doc.target !== draft.target;
 }
 
@@ -86,13 +88,12 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
         createPagePasteCategoryForSelected(batchFields.newCategoryName); batchFields.newCategoryName = ""; refresh();
         focusSectionButton(index, "Create category and move selected rows");
       } }),
-      // CHUNK 3: Phase 4 gives focus a fallback when this page has no selectable row.
       button({ label: "Clear selection", onClick: () => { clearPagePasteRowSelection(); refresh();
-        focusSection(index, ".page-paste-select-row"); } }),
+        focusSection(index, ".page-paste-select-row, .page-paste-preview"); } }),
     ]);
   return [el("div", { class: "page-paste-corrections", role: "group", "aria-label": `Adjust imported prices in section ${String(index + 1)}` }, [
     el("p", {}, [`Showing correction rows ${String(start + 1)} to ${String(end)} of ${String(rows.length)}. The original source stays above.`]),
-    el("p", { class: "hint" }, ["Source editing is locked after a correction. Columns in corrected tables are protected; untouched tables can still be assigned."]),
+    el("p", { class: "hint" }, ["Use Edit source to replace the pasted text. Changing corrected table columns asks what to do with your row edits."]),
     ...(manual ? [el("p", { class: "hint" }, ["Convert a Text row to Prices before selecting it for shared changes."])] : []),
     batch,
     ...rows.slice(start, end).map((row) => {
@@ -122,15 +123,16 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
         }
         const source = document.querySelector<HTMLTextAreaElement>(".page-paste textarea");
         if (source !== null) source.disabled = lockedSource();
+        const editSource = document.querySelector<HTMLButtonElement>(".page-paste-source-tools button");
+        if (editSource !== null && editSource.textContent === "Edit source") editSource.hidden = !lockedSource();
         const file = [...document.querySelectorAll<HTMLButtonElement>(".page-paste button")]
           .find((control) => control.textContent === "Read a text file from this device");
-        if (file !== undefined) file.disabled = lockedSource();
+        if (file !== undefined) file.disabled = getState().pastingPage?.confirming === true;
         for (const section of document.querySelectorAll<HTMLElement>(".page-paste-sections > li")) {
           const sectionIndex = Number(section.dataset.sectionIndex);
           for (const control of section.querySelectorAll<HTMLSelectElement>(".page-paste-table select")) control.disabled = pagePasteMappingLocked(sectionIndex);
-          for (const control of section.querySelectorAll<HTMLButtonElement>(".page-paste-table button")) {
+          for (const control of section.querySelectorAll<HTMLButtonElement>(".page-paste-table button"))
             if (control.textContent === "Keep this table as Text") control.disabled = pagePasteMappingLocked(sectionIndex);
-          }
         }
       };
       const edit = (fieldName: "name" | "amount" | "price" | "details", value: string): void => {
@@ -246,6 +248,13 @@ function tableReview(reviewed: PagePasteReviewSection, page: SectionPage, refres
     select({ label: "Size column", value: selected.size === undefined ? "" : String(selected.size), options: [{ value: "", label: "No size column" }, ...options], onChange: (value) => change("size", value) }),
     ...(mapping === undefined ? [button({ label: "Review these columns as Prices", onClick: () => { setPagePasteTableMapping(index, selected); refresh(); focusTableControl(index, "Product column"); } })] : []),
     ...(mapping === undefined ? [] : [button({ label: "Keep this table as Text", disabled: pagePasteMappingLocked(index), onClick: () => { clearPagePasteTableMapping(index); refresh(); focusSection(index, ".page-paste-table button"); } })]),
+    ...(draft?.pendingMapping?.index !== index ? [] : [el("div", { class: "page-paste-mapping-choice", role: "group", "aria-label": "Choose how to change table columns" }, [
+      el("p", {}, ["Changing this table's columns can replace row edits. Keep those edits, discard them, or cancel the change."]),
+      button({ label: "Keep row edits", onClick: () => { resolvePagePasteMapping("keep"); refresh(); focusTableControl(index, "Product column"); } }),
+      button({ label: "Discard row edits", onClick: () => { resolvePagePasteMapping("discard"); refresh(); focusTableControl(index, "Product column"); } }),
+      button({ label: "Cancel mapping change", onClick: () => { resolvePagePasteMapping("cancel"); refresh(); focusTableControl(index, "Product column"); } }),
+    ])]),
+    ...(draft?.mappingUndo?.index !== index ? [] : [button({ label: "Undo mapping change", onClick: () => { undoPagePasteTableMapping(); refresh(); focusTableControl(index, "Product column"); } })]),
     ...(invalid === undefined ? [] : [el("p", {}, [`Source row ${String(invalid.line)} ${invalid.cells[mapping?.product ?? 0] === "" && invalid.cells[mapping?.price ?? 0] === ""
       ? "has no Product or Price but has another value"
       : "has Size but no Price"}. Change the columns or keep this table as Text.`])]),
@@ -280,6 +289,11 @@ function shortContent(source: string): string {
   return line.length > 100 ? `${line.slice(0, 100)}…` : line;
 }
 
+function sectionLabel(section: PagePasteReviewSection): string {
+  const name = section.blocks.map((block) => kindName(block.kind)).join(", then ") || "No items yet";
+  return `${name}: ${shortContent(section.proposed.source)}`;
+}
+
 function focusSection(index: number, selector: string): void {
   const item = document.querySelector(`.page-paste-sections li[data-section-index="${String(index)}"]`);
   const control = item?.querySelector<HTMLElement>(selector);
@@ -294,6 +308,70 @@ function preview(section: ProposedSection): Node[] {
       ? [el("p", { class: "paste-capped" }, [`${String(lines.length - DRAWN_LINES)} more lines are included when the page is made.`])]
       : []),
   ];
+}
+
+function emptyTableRecovery(index: number, refresh: () => void): Node[] {
+  const item = getState().pastingPage?.addedItems?.[index];
+  const needsBlankPriceChoice = (entry: typeof item): boolean => entry !== undefined && entry.name.trim() !== "" &&
+    entry.amount.trim() !== "" && entry.price.trim() === "" && entry.allowBlankPrice !== true;
+  const update = (part: "name" | "amount" | "price", value: string): void => {
+    const current = getState().pastingPage?.addedItems?.[index] ?? { name: "", amount: "", price: "" };
+    setPagePasteAddedItem(index, { ...current, [part]: value, allowBlankPrice: false });
+    const review = getPagePasteReview();
+    const add = document.querySelector<HTMLButtonElement>(".page-paste button.primary");
+    if (review !== undefined && add !== null) {
+      add.disabled = addDisabled(review);
+      add.textContent = `Add ${String(review.blocks.length)} section${review.blocks.length === 1 ? "" : "s"} as a new page`;
+      const section = review.sections[index];
+      const element = document.querySelector(`.page-paste-sections li[data-section-index="${String(index)}"]`);
+      if (section !== undefined && element !== null) {
+        const label = element.querySelector<HTMLInputElement>("input[type=checkbox]")?.labels?.[0];
+        if (label !== undefined) label.textContent = sectionLabel(section);
+        const issue = element.querySelector<HTMLElement>(".page-paste-section-issue");
+        if (issue !== null) issue.textContent = section.issue ?? "";
+      }
+      const summary = document.querySelector<HTMLElement>(".page-paste-summary");
+      if (summary !== null) summary.textContent = review.blocks.length === 1
+        ? "This text can make one editable section." : "Review the sections this text can make.";
+      const latest = getState().pastingPage?.addedItems?.[index];
+      const blankPrice = element?.querySelector<HTMLButtonElement>(".page-paste-blank-price");
+      if (blankPrice !== undefined && blankPrice !== null) blankPrice.hidden = !needsBlankPriceChoice(latest);
+      const choice = element?.querySelector<HTMLElement>(".page-paste-blank-price-choice");
+      if (choice !== undefined && choice !== null) choice.textContent = latest?.allowBlankPrice === true &&
+        latest.price.trim() === "" ? "Chosen: keep without a price." : "";
+    }
+  };
+  const blankPrice = button({ label: "Keep without a price", onClick: () => {
+    const current = getState().pastingPage?.addedItems?.[index];
+    if (current === undefined) return;
+    setPagePasteAddedItem(index, { ...current, allowBlankPrice: true });
+    refresh();
+    [...document.querySelectorAll<HTMLInputElement>(".page-paste-added-item input[type=text]")]
+      .find((input) => input.labels?.[0]?.textContent === "Price")?.focus();
+  } });
+  blankPrice.classList.add("page-paste-blank-price");
+  blankPrice.hidden = !needsBlankPriceChoice(item);
+  return [el("div", { class: "page-paste-empty-table", role: "group", "aria-label": `Recover empty table in section ${String(index + 1)}` }, [
+    el("p", {}, ["This table has a header but no items. Keep the header as Text, remove this section, or enter an item. Adding an item also keeps the original header as Text."]),
+    el("div", { class: "paste-tools" }, [
+      button({ label: "Keep header as Text", onClick: () => { setPagePasteAddedItem(index, undefined); refresh();
+        focusSectionButton(index, "Keep header as Text"); } }),
+      button({ label: "Remove this empty section", onClick: () => { dropPagePasteSection(index); refresh();
+        focusSection(index, "input[type=checkbox]"); } }),
+      button({ label: "Enter an item", onClick: () => { setPagePasteAddedItem(index, { name: "", amount: "", price: "" }); refresh();
+        focusSection(index, ".page-paste-added-item input"); } }),
+    ]),
+    ...(item === undefined ? [] : [el("div", { class: "page-paste-added-item", role: "group", "aria-label": "New item for empty table" }, [
+      field({ label: "Item name", value: item.name, onInput: (value) => update("name", value) }),
+      field({ label: "Amount", value: item.amount, onInput: (value) => update("amount", value) }),
+      field({ label: "Price", value: item.price, onInput: (value) => update("price", value) }),
+      blankPrice,
+      el("p", { class: "page-paste-blank-price-choice", role: "status" }, [item.allowBlankPrice === true &&
+        item.price.trim() === "" ? "Chosen: keep without a price." : ""]),
+      button({ label: "Remove new item", onClick: () => { setPagePasteAddedItem(index, undefined); refresh();
+        focusSectionButton(index, "Enter an item"); } }),
+    ])]),
+  ])];
 }
 
 function panelBody(refresh: () => void, pending: boolean, confirm: () => void, page: SectionPage): Node[] {
@@ -332,7 +410,7 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
   }
 
   return [
-    el("p", {}, [count === 1 ? "This text can make one editable section." : "Review the sections this text can make."]),
+    el("p", { class: "page-paste-summary" }, [count === 1 ? "This text can make one editable section." : "Review the sections this text can make."]),
     ...(sections.length > DRAWN_SECTIONS
       ? [
           el("p", { class: "paste-capped" }, [`Showing sections ${String(start + 1)} to ${String(end)} of ${String(sections.length)}.`]),
@@ -341,14 +419,17 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
       : []),
     el("ul", { class: "page-paste-sections" }, sections.slice(start, end).map((reviewed) => {
       const { proposed: section, index, issue } = reviewed;
-      const name = reviewed.blocks.map((output) => kindName(output.kind)).join(", then ") || "No items yet";
-      const content = shortContent(section.source);
       const table = readPagePasteTable(section);
+      const sourceLines = readLines(section.source);
+      const headerOnly = table === undefined && sourceLines.filter((line) => line.kind === "tableHeader").length === 1 &&
+        sourceLines.filter((line) => line.kind === "tableRule").length === 1 &&
+        sourceLines.every((line) => line.kind === "tableHeader" || line.kind === "tableRule" ||
+          line.kind === "blank" || line.kind === "heading" || line.kind === "headingUnderline");
       const manual = draft.manualSections?.includes(index) === true;
       const active = sections.length === 1 || draft.adjustingSection === index || draft.adjustingSection === undefined && index === start;
       return el("li", { "data-section-index": index }, [
         checkbox({
-          label: `${name}: ${content}`,
+          label: sectionLabel(reviewed),
           checked: !draft.dropped.includes(index),
           onChange: (checked) => {
             if (checked) restorePagePasteSection(index);
@@ -360,14 +441,25 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
         ...(active ? [...preview(section), ...tableReview(reviewed, page, refresh)]
           : [button({ label: `Review section ${String(index + 1)}`,
               onClick: () => { setPagePasteAdjustingSection(index); refresh(); focusSection(index, ".page-paste-preview"); } })]),
+        ...(headerOnly ? emptyTableRecovery(index, refresh) : []),
+        ...(reviewed.headingRecovery !== true ? [] : [el("div", { class: "page-paste-empty-heading", role: "group", "aria-label": `Choose original heading in section ${String(index + 1)}` }, [
+          el("p", {}, ["No offers remain in this category. Keep or remove its heading before Add."]),
+          ...(draft.emptyHeadingChoices?.[index] === undefined ? [] : [el("p", { role: "status" }, [
+            `Chosen: ${draft.emptyHeadingChoices[index] === "keep" ? "Keep" : "Remove"} original heading`,
+          ])]),
+          button({ label: "Keep original heading", onClick: () => { setPagePasteEmptyHeadingChoice(index, "keep"); refresh();
+            focusSectionButton(index, "Keep original heading"); } }),
+          button({ label: "Remove original heading", onClick: () => { setPagePasteEmptyHeadingChoice(index, "remove"); refresh();
+            focusSectionButton(index, "Remove original heading"); } }),
+        ])]),
         ...((reviewed.rows.length > 0 && (reviewed.block.kind === "menu" || draft.mappings?.[index] !== undefined || manual))
           ? [button({ label: draft.adjustingSection === index ? "Close imported prices" : "Adjust imported prices",
               onClick: () => { setPagePasteAdjustingSection(draft.adjustingSection === index ? undefined : index); refresh(); focusSectionButton(index, draft.adjustingSection === index ? "Adjust imported prices" : "Close imported prices"); } })] : []),
-        ...(table === undefined && reviewed.block.kind === "prose" && !manual
+        ...(table === undefined && !headerOnly && reviewed.block.kind === "prose" && !manual
           ? [button({ label: "Adjust as prices", onClick: () => { setPagePasteAdjustingSection(index); startManualPagePasteSection(index); page.rows[index] = 0; refresh(); focusSection(index, ".page-paste-corrections input"); } })] : []),
         ...(table === undefined && draft.adjustingSection === index && reviewed.rows.length > 0
           ? correctionCards(reviewed, page, refresh) : []),
-        ...(issue === undefined ? [] : [el("p", {}, [issue])]),
+        ...(issue === undefined && !headerOnly ? [] : [el("p", { class: "page-paste-section-issue", role: "status" }, [issue ?? ""])]),
         ...(section.swappable && issue === undefined && readPagePasteTable(section) === undefined
           ? [button({
               label: `Make ${section.kind === "prose" ? "Prices instead of Text" : "Text instead of Prices"}`,
@@ -379,7 +471,7 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
     ...(getState().pageId === draft.originPageId && getState().doc.target === draft.target ? [] : [
       el("p", { role: "status" }, ["Return to the page where you started this paste to add it. Your review stays here."]),
     ]),
-    ...(lockedSource() ? [el("p", { role: "status" }, ["Source editing is locked while corrections are open. Corrected table columns are protected; other tables can still be assigned."])] : []),
+    ...(lockedSource() ? [el("p", { role: "status" }, ["Use Edit source to replace the current text. Your corrections stay until you confirm the replacement."])] : []),
     button({
       label: `Add ${String(count)} section${count === 1 ? "" : "s"} as a new page`,
       variant: "primary",
@@ -398,11 +490,6 @@ function fileControl(refresh: () => void, box: HTMLTextAreaElement): Node[] {
   picker.addEventListener("change", () => {
     const file = picker.files?.[0];
     if (file === undefined) return;
-    if (lockedSource()) {
-      announce("The source is locked while corrections are open. Your current review is unchanged.");
-      picker.value = "";
-      return;
-    }
     if (file.name.toLowerCase().endsWith(".json")) {
       announce("Choose a text or Markdown file. A saved page can be opened from Your pages.");
       picker.value = "";
@@ -411,25 +498,68 @@ function fileControl(refresh: () => void, box: HTMLTextAreaElement): Node[] {
     const draft = getState().pastingPage;
     open.disabled = true;
     void file.text().then((text) => {
-      if (draft === undefined || getState().pastingPage?.sourceRevision !== draft.sourceRevision || lockedSource()) return;
-      box.value = text;
-      setPagePasteText(text);
+      const latest = getState().pastingPage;
+      if (draft === undefined || latest?.sourceRevision !== draft.sourceRevision ||
+        latest.corrections !== draft.corrections || latest.manualSections !== draft.manualSections ||
+        latest.sourceBuffer !== draft.sourceBuffer || latest.confirming === true) return;
+      if (lockedSource()) startPagePasteSourceEdit(text);
+      else { box.value = text; setPagePasteText(text); }
       refresh();
-      announce("Read the file. Review the sections below.");
+      announce(lockedSource() ? "Read the file into Edit source. Apply it to replace the current review." : "Read the file. Review the sections below.");
     }).catch(() => {
       if (draft !== undefined && getState().pastingPage?.sourceRevision === draft.sourceRevision) {
         announce("That file could not be read. Nothing has been changed.");
       }
     })
-      .finally(() => { open.disabled = lockedSource() || getState().pastingPage?.confirming === true; picker.value = ""; });
+      .finally(() => { open.disabled = getState().pastingPage?.confirming === true; picker.value = ""; });
   });
   return [open, picker];
+}
+
+function sourceEditor(refresh: () => void, box: HTMLTextAreaElement, page: SectionPage): Node[] {
+  const draft = getState().pastingPage;
+  if (draft === undefined || draft.confirming) return [];
+  if (draft.sourceBuffer === undefined) {
+    const edit = button({ label: "Edit source", onClick: () => { startPagePasteSourceEdit(); refresh();
+      document.querySelector<HTMLTextAreaElement>(".page-paste-source-buffer textarea")?.focus(); } });
+    edit.hidden = !lockedSource();
+    return [edit];
+  }
+  const editor = field({ label: "Replacement source text", value: draft.sourceBuffer, multiline: true,
+    onInput: setPagePasteSourceBuffer });
+  return [el("div", { class: "page-paste-source-buffer", role: "group", "aria-label": "Edit source" }, [
+    editor,
+    el("div", { class: "paste-tools" }, [
+      button({ label: "Apply source replacement", onClick: () => {
+        if (applyPagePasteSourceEdit()) { box.value = getState().pastingPage?.text ?? ""; box.disabled = false;
+          page.start = 0; page.rows = {}; }
+        refresh();
+        const choice = document.querySelector<HTMLButtonElement>(".page-paste-source-choice button");
+        if (choice !== null) choice.focus();
+        else if (lockedSource()) document.querySelector<HTMLButtonElement>(".page-paste-source-tools button")?.focus();
+        else box.focus();
+      } }),
+      button({ label: "Cancel source edit", onClick: () => { cancelPagePasteSourceEdit(); refresh();
+        document.querySelector<HTMLButtonElement>(".page-paste-source-tools button")?.focus(); } }),
+    ]),
+    ...(draft.sourceDiscardPrompt !== true ? [] : [el("div", { class: "page-paste-source-choice", role: "group", "aria-label": "Replace source choice" }, [
+      el("p", {}, ["Replace this source and discard its corrections and review choices?"]),
+      button({ label: "Discard corrections and replace source", onClick: () => {
+        if (applyPagePasteSourceEdit(true)) { box.value = getState().pastingPage?.text ?? ""; box.disabled = false;
+          page.start = 0; page.rows = {}; }
+        refresh(); box.focus();
+      } }),
+      button({ label: "Keep original source", onClick: () => { cancelPagePasteSourceEdit(); refresh();
+        document.querySelector<HTMLButtonElement>(".page-paste-source-tools button")?.focus(); } }),
+    ])]),
+  ])];
 }
 
 export function pagePastePanel(): HTMLElement[] {
   const draft = getState().pastingPage;
   if (draft === undefined) return [];
   const body = el("div", { class: "page-paste-body" });
+  const sourceTools = el("div", { class: "page-paste-source-tools" });
   let pending = false;
   const page: SectionPage = { start: draft.reviewStart, rows: { ...draft.rowStarts } };
   // R9: repaint defers while a text field has focus. Refresh only this body so
@@ -440,7 +570,11 @@ export function pagePastePanel(): HTMLElement[] {
     refresh();
     void confirmPagePaste().finally(() => { pending = false; refresh(); });
   };
-  const refresh = (): void => body.replaceChildren(...panelBody(refresh, pending, confirm, page));
+  const refresh = (): void => {
+    box.disabled = getState().pastingPage?.confirming === true || lockedSource();
+    sourceTools.replaceChildren(...sourceEditor(refresh, box, page));
+    body.replaceChildren(...panelBody(refresh, pending, confirm, page));
+  };
   const input = field({
     label: "Paste the text of your page",
     value: draft.text,
@@ -448,15 +582,17 @@ export function pagePastePanel(): HTMLElement[] {
     hint: "Review what it will make. Nothing is saved until you press Add.",
     onInput: (text) => { page.start = 0; page.rows = {}; setPagePasteText(text); refresh(); },
   });
-  const box = input.querySelector("textarea");
-  if (box === null) throw new Error("missing paste box");
+  const candidate = input.querySelector("textarea");
+  if (candidate === null) throw new Error("missing paste box");
+  const box: HTMLTextAreaElement = candidate;
   box.disabled = draft.confirming === true || lockedSource();
   refresh();
   const files = fileControl(refresh, box);
-  if (draft.confirming || lockedSource()) for (const control of files) if (control instanceof HTMLButtonElement || control instanceof HTMLInputElement) control.disabled = true;
+  if (draft.confirming) for (const control of files) if (control instanceof HTMLButtonElement || control instanceof HTMLInputElement) control.disabled = true;
   return [el("div", { class: "page-paste", role: "group", "aria-label": "Paste a page you already have" }, [
     input,
     ...files,
+    sourceTools,
     ...(draft.confirming ? [el("p", { role: "status" }, ["Adding this page. Please wait."])] : []),
     body,
     button({ label: "Done pasting", disabled: draft.confirming === true, onClick: () => stopPastingPage() }),

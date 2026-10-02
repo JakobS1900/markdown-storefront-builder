@@ -37,9 +37,15 @@ Compatible amount and price rows group under the same item; changed details stay
 separate. A fictional two-category, four-item saved acceptance check retains
 all four names and eight amount and price pairs in Build, Preview and Copy.
 The 101 focused tests pass, as do typecheck, lint, dash scan and both independent
-closure reviews. Phase 4 now covers deliberate remapping, source replacement,
-empty-section recovery and focus after Clear selection. The all-moved heading
-case is marked `CHUNK 3` in code for that phase. The Android 6 typing check
+closure reviews. Phase 4 recovery is complete on 2026-10-02: deliberate remapping
+with undo, buffered source and file replacement, explicit keep or remove choices
+for headings left empty by moves or exclusions, header-only item entry, blank
+price acknowledgement, and focus after Clear selection. Fresh spec and quality
+reviews passed after fixing four findings. Its final `npm run verify` exited 0:
+90 test files, 1,845 tests, 64 accessibility tests, clean secret and dash scans,
+zero light and dark contrast failures, and passing menu-file and PWA update
+gates. The [Phase 4 check](research/2026-10-02-import-correction-phase4-check.md)
+records the review and verification evidence. The Android 6 correction check
 remains in whole-feature verification.
 
 A 320 CSS pixel Chrome check of Phase 3 on 2026-10-02 found a new release blocker
@@ -47,10 +53,11 @@ for detached names. Mapping a two-offer table, assigning the preceding `Arrow
 Orb` line as both offers' shared name, and creating a `Figures` category left
 the original standalone name and heading in the saved page. Preview showed each
 twice. The [browser audit](research/2026-10-02-detached-name-browser-audit.md)
-has the source, steps and screenshots. After Phase 4, add a separately reviewed
-chunk with explicit source-line use for shared names and headings, including
-source coverage and saved-output checks. Do not hide the duplicates only in
-Preview or silently delete ambiguous Text.
+has the source, steps and screenshots. Phase 5A is next: add a separately
+reviewed source-use contract for shared names and headings, including source
+coverage and saved-output checks. Commit that contract alone before the Phase 5B
+UI. Do not hide the duplicates only in Preview or silently delete ambiguous
+Text.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build.

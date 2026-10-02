@@ -43,6 +43,7 @@ it("assigns a shared name and new category to selected rows before saving", asyn
   store.togglePagePasteRowSelection("0:6:0", true);
   store.applyPagePasteSharedName("Arrow Orb");
   store.createPagePasteCategoryForSelected("Limited figures");
+  store.setPagePasteEmptyHeadingChoice(0, "keep");
   const review = store.getPagePasteReview();
   expect(review?.rows.map((row) => [row.name, row.destinationId])).toEqual([
     ["Arrow Orb", "new:0"], ["Arrow Orb", "new:0"],
@@ -129,6 +130,7 @@ it("lets another table choose columns after the first table has corrections", as
   expect(store.getState().pastingPage?.mappings?.[1]).toEqual({ product: 0, size: 1, price: 2 });
   store.setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
   expect(store.getState().pastingPage?.mappings?.[0]).toEqual({ product: 0, size: 1, price: 2 });
+  store.resolvePagePasteMapping("cancel");
   await store.confirmPagePaste();
   expect(store.getState().doc.blocks).toEqual([
     expect.objectContaining({ kind: "menu", tiers: [expect.objectContaining({ name: "Mug", price: "Ask me" })] }),
@@ -162,6 +164,9 @@ it("keeps all paste decisions in memory until confirm, including cancellation", 
   store.swapPagePasteSection(1);
   expect(store.getState().pastingPage?.swapped).toEqual([1]);
   store.setPagePasteText("Replacement");
+  expect(store.getState().pastingPage?.text).toContain("Hello there");
+  store.startPagePasteSourceEdit("Replacement");
+  expect(store.applyPagePasteSourceEdit(true)).toBe(true);
   expect(store.getState().pastingPage).toMatchObject({ text: "Replacement", dropped: [], swapped: [], reviewStart: 0 });
   store.stopPastingPage();
   expect(store.getState().pastingPage).toBeUndefined();
@@ -216,6 +221,9 @@ it("holds a mapping only for its source and saves the reviewed values", async ()
   store.setPagePasteText(source);
   store.setPagePasteTableMapping(0, { product: 1, price: 0, size: 2 });
   store.setPagePasteText("replacement");
+  expect(store.getState().pastingPage?.mappings?.[0]).toEqual({ product: 1, price: 0, size: 2 });
+  store.startPagePasteSourceEdit("replacement");
+  expect(store.applyPagePasteSourceEdit(true)).toBe(true);
   expect(store.getState().pastingPage?.mappings).toBeUndefined();
   store.stopPastingPage();
   expect(store.getState().pastingPage).toBeUndefined();
@@ -369,6 +377,178 @@ it("keeps a wide public price table intact in the saved page and Copy result", a
   const copied = compile(store.getState().doc, "pastebin").markdown;
   expect(copied).toContain("Mug \\| 12 oz \\| &#36;28");
   expect(copied).toContain("Bowl \\| 16 oz \\| &#36;32");
+});
+
+it("asks before remapping a corrected table, keeps edits by source row, and undoes the mapping", () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:3:0", { price: "Ask me" });
+  store.setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
+  expect(store.getState().pastingPage?.mappings?.[0]).toEqual({ product: 0, size: 1, price: 2 });
+  expect(store.getState().pastingPage?.pendingMapping).toMatchObject({ index: 0 });
+  store.resolvePagePasteMapping("cancel");
+  expect(store.getState().pastingPage?.corrections?.["0:3:0"]?.price).toBe("Ask me");
+  store.setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
+  store.resolvePagePasteMapping("keep");
+  expect(store.getPagePasteReview()?.rows[0]).toMatchObject({ key: "0:3:0", name: "$25", price: "Ask me" });
+  store.undoPagePasteTableMapping();
+  expect(store.getPagePasteReview()?.rows[0]).toMatchObject({ key: "0:3:0", name: "Mug", price: "Ask me" });
+});
+
+it("can discard edited values for one remap and undo that discard", () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:3:0", { price: "Ask me" });
+  store.setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
+  store.resolvePagePasteMapping("discard");
+  expect(store.getPagePasteReview()?.rows[0]).toMatchObject({ name: "$25", price: "Mug" });
+  store.undoPagePasteTableMapping();
+  expect(store.getPagePasteReview()?.rows[0]).toMatchObject({ name: "Mug", price: "Ask me" });
+});
+
+it("expires mapping undo before a later category edit can be lost", () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:3:0", { price: "Ask me" });
+  store.setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
+  store.resolvePagePasteMapping("keep");
+  store.togglePagePasteRowSelection("0:3:0", true);
+  store.createPagePasteCategoryForSelected("Gifts");
+  expect(store.getState().pastingPage?.mappingUndo).toBeUndefined();
+  store.undoPagePasteTableMapping();
+  expect(store.getPagePasteReview()?.rows[0]?.destinationId).toBe("new:0");
+});
+
+it("buffers source replacement and cancels without losing review choices", () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Price |\n| --- | --- |\n| Mug | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, price: 1 });
+  store.correctPagePasteRow("0:3:0", { price: "Ask me" });
+  store.startPagePasteSourceEdit();
+  store.setPagePasteSourceBuffer("Bowl - $32");
+  expect(store.getState().pastingPage?.text).toContain("Mug | $25");
+  expect(store.applyPagePasteSourceEdit()).toBe(false);
+  store.cancelPagePasteSourceEdit();
+  expect(store.getState().pastingPage?.corrections?.["0:3:0"]?.price).toBe("Ask me");
+  store.startPagePasteSourceEdit("Bowl - $32");
+  expect(store.applyPagePasteSourceEdit(true)).toBe(true);
+  expect(store.getState().pastingPage).toMatchObject({ text: "Bowl - $32", dropped: [], swapped: [] });
+  expect(store.getState().pastingPage?.corrections).toBeUndefined();
+});
+
+it("closes an unchanged source buffer without asking to discard corrections", () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:3:0", { price: "Ask me" });
+  const revision = store.getState().pastingPage?.sourceRevision;
+  store.startPagePasteSourceEdit();
+  expect(store.applyPagePasteSourceEdit()).toBe(true);
+  expect(store.getState().pastingPage?.sourceBuffer).toBeUndefined();
+  expect(store.getState().pastingPage?.sourceRevision).toBe(revision);
+  expect(store.getState().pastingPage?.corrections?.["0:3:0"]?.price).toBe("Ask me");
+});
+
+it("protects column assignments and excluded sections from source replacement", () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n\nKeep me");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.dropPagePasteSection(1);
+  store.setPagePasteText("Replacement");
+  expect(store.getState().pastingPage?.text).toContain("Keep me");
+  store.startPagePasteSourceEdit("Replacement");
+  expect(store.applyPagePasteSourceEdit()).toBe(false);
+  store.cancelPagePasteSourceEdit();
+  expect(store.getState().pastingPage?.mappings?.[0]).toEqual({ product: 0, size: 1, price: 2 });
+  expect(store.getState().pastingPage?.dropped).toEqual([1]);
+});
+
+it("protects an unfinished row selection and an open source buffer", () => {
+  store.startPastingPage();
+  store.setPagePasteText("Mug - $25\nBowl - $32");
+  store.togglePagePasteRowSelection("0:1:0", true);
+  expect(store.getState().pastingPage?.selectedRowKeys).toEqual(["0:1:0"]);
+  store.setPagePasteText("Replacement");
+  expect(store.getState().pastingPage?.text).toContain("Bowl - $32");
+  store.clearPagePasteRowSelection();
+  store.startPagePasteSourceEdit("Buffered replacement");
+  store.setPagePasteText("Direct replacement");
+  expect(store.getState().pastingPage?.text).toContain("Bowl - $32");
+});
+
+it("does not confirm while a source or mapping decision is unfinished", async () => {
+  const before = await db.listPages();
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:3:0", { price: "Ask me" });
+  store.startPagePasteSourceEdit("Bowl - $32");
+  await store.confirmPagePaste();
+  expect(await db.listPages()).toEqual(before);
+  store.cancelPagePasteSourceEdit();
+  store.setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
+  await store.confirmPagePaste();
+  expect(await db.listPages()).toEqual(before);
+  expect(store.getState().pastingPage?.pendingMapping).toMatchObject({ index: 0 });
+});
+
+it("requires a keep or remove choice for a headed section whose offers all move away", () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Ceramics\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.togglePagePasteRowSelection("0:4:0", true);
+  store.createPagePasteCategoryForSelected("Gifts");
+  expect(store.getPagePasteReview()?.canConfirm).toBe(false);
+  store.setPagePasteEmptyHeadingChoice(0, "keep");
+  expect(store.getPagePasteReview()?.blocks.map((block) => block.kind)).toEqual(["heading", "menu"]);
+  store.setPagePasteEmptyHeadingChoice(0, "remove");
+  expect(store.getPagePasteReview()?.blocks.map((block) => block.kind)).toEqual(["menu"]);
+  expect(store.getPagePasteReview()?.coverage.find((entry) => entry.sourceLine === 1)?.kind).toBe("excluded");
+});
+
+it("requires a heading choice when every mapped offer is excluded", () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Ceramics\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n\n# About\nHandmade goods");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:4:0", { included: false });
+  expect(store.getPagePasteReview()?.sections[0]?.headingRecovery).toBe(true);
+  expect(store.getPagePasteReview()?.canConfirm).toBe(false);
+  store.setPagePasteEmptyHeadingChoice(0, "keep");
+  expect(store.getPagePasteReview()?.canConfirm).toBe(true);
+  expect(store.getPagePasteReview()?.blocks.map((block) => block.kind)).toContain("heading");
+  expect(store.getPagePasteReview()?.coverage.find((entry) => entry.sourceLine === 1)?.kind).toBe("heading");
+  store.setPagePasteEmptyHeadingChoice(0, "remove");
+  expect(store.getPagePasteReview()?.canConfirm).toBe(true);
+  expect(store.getPagePasteReview()?.sections[0]?.blocks).toEqual([]);
+  expect(store.getPagePasteReview()?.coverage.find((entry) => entry.sourceLine === 1)?.kind).toBe("excluded");
+});
+
+it("keeps a header-only table public while a seller enters a new priced item", () => {
+  const source = "| Item | Amount | Price |\n| --- | --- | --- |";
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  store.setPagePasteAddedItem(0, { name: "Mug", amount: "12 oz", price: "$25" });
+  const review = store.getPagePasteReview();
+  expect(review?.blocks).toEqual([
+    expect.objectContaining({ kind: "prose", text: source }),
+    expect.objectContaining({ kind: "menu", tiers: [expect.objectContaining({ name: "Mug", unit: "12 oz", price: "$25" })] }),
+  ]);
+  expect(review?.coverage.every((entry) => entry.kind === "text")).toBe(true);
+});
+
+it("requires an explicit choice before adding a new amount without a price", () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |");
+  store.setPagePasteAddedItem(0, { name: "Mug", amount: "12 oz", price: "" });
+  expect(store.getPagePasteReview()?.canConfirm).toBe(false);
+  expect(store.getPagePasteReview()?.sections[0]?.issue).toMatch(/price/i);
+  store.setPagePasteAddedItem(0, { name: "Mug", amount: "12 oz", price: "", allowBlankPrice: true });
+  expect(store.getPagePasteReview()?.canConfirm).toBe(true);
+  expect(store.getPagePasteReview()?.blocks.at(-1)).toEqual(expect.objectContaining({ kind: "menu",
+    tiers: [expect.objectContaining({ name: "Mug", unit: "12 oz", price: "" })] }));
 });
 
 it.each([

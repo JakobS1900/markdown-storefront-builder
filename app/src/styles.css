@@ -1752,6 +1752,33 @@ fieldset.item > .btn.icon.danger {
   max-width: 100%;
 }
 
+.page-paste-source-buffer,
+.page-paste-mapping-choice,
+.page-paste-empty-table,
+.page-paste-empty-heading,
+.page-paste-added-item {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.page-paste-source-buffer textarea,
+.page-paste-added-item input {
+  width: 100%;
+  min-width: 0;
+}
+
+.page-paste-mapping-choice button,
+.page-paste-source-buffer button,
+.page-paste-empty-table button,
+.page-paste-empty-heading button,
+.page-paste-added-item button {
+  min-height: var(--tap);
+  min-width: var(--tap);
+}
+
 .page-paste-rows {
   padding-left: 1.5rem;
 }

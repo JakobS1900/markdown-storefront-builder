@@ -14,6 +14,9 @@ export interface PagePasteReviewDraft {
   readonly manualSections?: readonly number[];
   readonly categories?: readonly PagePasteCategory[];
   readonly selectedRowKeys?: readonly string[];
+  readonly emptyHeadingChoices?: Readonly<Record<number, "keep" | "remove">>;
+  readonly addedItems?: Readonly<Record<number, { readonly name: string; readonly amount: string; readonly price: string;
+    readonly allowBlankPrice?: boolean }>>;
 }
 
 export interface PagePasteCategory {
@@ -59,6 +62,7 @@ export interface PagePasteReviewSection {
   readonly consumedSourceLines: readonly number[];
   readonly issue?: string;
   readonly blocked?: boolean;
+  readonly headingRecovery?: boolean;
 }
 
 export interface PagePasteSourceCoverage {
@@ -134,11 +138,10 @@ function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteRevi
   const firstIncluded = rows.find((row) => row.included === true);
   const firstRowLine = firstIncluded?.sourceLine ?? Infinity;
   const firstRetainedLine = lines.findIndex((line, offset) => line.kind === "text" && !byLine.has(section.from + offset + 1) && line.text.trim() !== "");
-  // CHUNK 3: An all-moved headed section keeps its source heading. Phase 4 must offer an explicit empty-heading recovery choice.
   if (!manual && originalHeading !== undefined &&
     (firstIncluded !== undefined && (firstIncluded.destinationId !== `section:${String(sectionIndex)}` ||
       firstRetainedLine >= 0 && section.from + firstRetainedLine + 1 < firstRowLine) ||
-      firstIncluded === undefined && firstRetainedLine >= 0)) {
+      firstIncluded === undefined)) {
     const headingLine = lines.find((line) => line.kind === "heading");
     if (headingLine !== undefined) blocks.push(buildProposedBlock({ ...section, kind: "heading", source: headingLine.text }));
   }
@@ -286,7 +289,6 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       }
     }
     const manual = draft.manualSections?.includes(index) === true && mapping === undefined && block.kind === "prose";
-    // CHUNK 2: Header-only pipe tables have no text rows to convert. Phase 4 adds an item-entry recovery action.
     const manualRows: PagePasteReviewRow[] = manual ? readLines(source.source).flatMap((line, offset) => {
       if (line.kind !== "text" || line.text.trim() === "") return [];
       const sourceLine = source.from + offset + 1;
@@ -301,21 +303,41 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       row.included !== false && draft.corrections?.[row.key] === undefined &&
       (row.name.trim() === "" || row.amount.trim() !== "" && row.price.trim() === ""));
     // CHUNK 3: Keep moved offers at their source positions while a retained Text line splits the Prices blocks.
-    const blocks = rows.length > 0 && (manual || block.kind === "menu" || mapping !== undefined && validRoles && changed && !unsafeUncorrected)
+    const rowBlocks = rows.length > 0 && (manual || block.kind === "menu" || mapping !== undefined && validRoles && changed && !unsafeUncorrected)
       ? orderedRowBlocks(proposed, rows, categories, quantitySourceLines, manual, index)
       : menu?.blocks ?? [block];
+    const headingRecovery = rows.length > 0 && rowBlocks.some((output) => output.kind === "heading") &&
+      rows.every((row) => row.included !== true ||
+        row.destinationId !== `section:${String(index)}`);
+    const headingChoice = draft.emptyHeadingChoices?.[index];
+    const addedItem = draft.addedItems?.[index];
+    const addedItemNeedsPrice = addedItem !== undefined && addedItem.name.trim() !== "" &&
+      addedItem.amount.trim() !== "" && addedItem.price.trim() === "" && addedItem.allowBlankPrice !== true;
+    const blocks = [
+      ...rowBlocks.filter((output) => !(headingRecovery && headingChoice === "remove" && output.kind === "heading")),
+      ...(addedItem === undefined || addedItem.name.trim() === "" ? [] : [{ kind: "menu" as const,
+        tiers: [{ name: addedItem.name, price: addedItem.price,
+          ...(addedItem.amount === "" ? {} : { unit: addedItem.amount }) }] }]),
+    ];
     const consumedSourceLines = manual ? rows.filter((row) => row.included === true).map((row) => row.sourceLine)
       : mapping !== undefined ? blocks.some((output) => output.kind === "menu")
         ? rows.filter((row) => row.included !== false).map((row) => row.sourceLine) : []
         : menu?.consumedSourceLines ?? (block.kind === "menu" ? rows.map((row) => row.sourceLine) : []);
-    const issue = manual && blocks.some((output) => output.kind === "menu")
+    const issue = headingRecovery && headingChoice === undefined
+      ? "No offers remain in this category. Keep or remove its heading before Add."
+      : addedItem !== undefined && addedItem.name.trim() === ""
+        ? "Name the new item or remove it before Add."
+      : addedItemNeedsPrice ? "This new amount needs a price. Enter one or choose Keep without a price."
+      : manual && blocks.some((output) => output.kind === "menu")
       ? blocks.some((output) => output.kind === "prose") ? "Unselected source lines remain Text." : undefined
       : mapping === undefined ? menu?.issue ?? pagePasteConversionIssue(proposed)
       : unsafeUncorrected ? "Correct or exclude the remaining rows with a missing name or price before this table becomes Prices. Source remains Text."
       : blocks.length > 0 && blocks.every((output) => output.kind === "prose")
         ? "These columns could not make Prices. The source remains Text." : undefined;
     return { index, source, proposed, block, blocks, included: !draft.dropped.includes(index), rows, consumedSourceLines,
-      ...(changed && unsafeUncorrected ? { blocked: true } : {}), ...(issue === undefined ? {} : { issue }) };
+      ...(changed && unsafeUncorrected || headingRecovery && headingChoice === undefined ||
+        addedItem !== undefined && addedItem.name.trim() === "" || addedItemNeedsPrice ? { blocked: true } : {}),
+      ...(headingRecovery ? { headingRecovery: true } : {}), ...(issue === undefined ? {} : { issue }) };
   });
 
   const coverage = sections.flatMap((section): PagePasteSourceCoverage[] => {
@@ -324,8 +346,12 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
     return readLines(section.source.source).flatMap((line, offset) => {
       if (line.text.trim() === "") return [];
       const sourceLine = section.source.from + offset + 1;
-      const kind = !section.included || section.blocks.length === 0 || (!manual && section.rows.some((row) => row.sourceLine === sourceLine && row.included === false)) ? "excluded"
+      const kind = !section.included || section.blocks.length === 0 ||
+        (line.kind === "heading" && section.headingRecovery === true && draft.emptyHeadingChoices?.[section.index] === "remove") ||
+        (!manual && section.rows.some((row) => row.sourceLine === sourceLine && row.included === false)) ? "excluded"
         : manual ? itemLines.has(sourceLine) ? "item" : "text"
+          : section.block.kind === "prose" && section.blocks.some((output) => output.kind === "prose" && output.text === section.source.source)
+            ? "text"
           : section.blocks.every((block) => block.kind === "prose") ? "text"
           : line.kind === "heading" ? "heading"
             : line.kind === "tableHeader" || line.kind === "tableRule" || line.kind === "headingUnderline" || line.kind === "rule" ? "furniture"

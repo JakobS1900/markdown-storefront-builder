@@ -42,6 +42,7 @@ import { writePage } from "../src/db.js";
 import {
   addBlock,
   closeWizard,
+  correctPagePasteRow,
   getState,
   init,
   openSidebar,
@@ -50,6 +51,8 @@ import {
   selectTiers,
   setPasteText,
   setPagePasteText,
+  setPagePasteTableMapping,
+  startPagePasteSourceEdit,
   setSurface,
   startPasting,
   startPastingPage,
@@ -280,6 +283,26 @@ describe("the shell is accessible", () => {
       expect(control.tabIndex).toBeGreaterThanOrEqual(0);
     }
     expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
+  it("labels correction recovery controls and gives them phone-sized targets", async () => {
+    const root = mount();
+    startPastingPage();
+    setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+    setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+    correctPagePasteRow("0:3:0", { price: "Ask me" });
+    setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
+    startPagePasteSourceEdit();
+    renderShell(root);
+    const controls = [...document.querySelectorAll<HTMLButtonElement>(
+      ".page-paste-mapping-choice button, .page-paste-source-buffer button")];
+    expect(controls).toHaveLength(5);
+    expect(controls.every((control) => nameOf(control).length > 0 && control.tabIndex >= 0)).toBe(true);
+    const buffer = document.querySelector<HTMLTextAreaElement>(".page-paste-source-buffer textarea");
+    expect(buffer?.labels?.[0]?.textContent).toBe("Replacement source text");
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+    const css = await stylesheet();
+    expect(css).toMatch(/\.page-paste-mapping-choice button,\s*\.page-paste-source-buffer button,[^{]*\{[^}]*min-height:\s*var\(--tap\)/s);
   });
 
   it("has no axe violations in the build that actually ships, which has no uploading", async () => {
