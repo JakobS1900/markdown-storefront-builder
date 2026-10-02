@@ -1001,6 +1001,23 @@ it("states that undoing a heading restores every linked table", () => {
   expect(document.activeElement?.textContent).toBe("Use source row 1 as category for 1 row");
 });
 
+it("updates the section summary when a corrected price makes a table publishable", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  const section = document.querySelector('.page-paste-sections > li[data-section-index="0"]');
+  const label = section?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.labels?.[0];
+  const issue = section?.querySelector<HTMLElement>(".page-paste-section-issue");
+  expect(label?.textContent).toMatch(/^Text:/);
+  expect(issue?.textContent).toMatch(/correct or exclude/i);
+  editReviewedField("Price, source row 3", "$25");
+  expect(label?.textContent).toMatch(/^Prices:/);
+  expect(issue?.textContent).toBe("");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(false);
+});
+
 it("updates the live section proposal while composing a new item name", () => {
   live();
   click("Paste a page you already have");

@@ -107,6 +107,21 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
       const sync = (): void => {
         const updated = getPagePasteReview();
         if (updated === undefined) return;
+        const latestSection = updated.sections[index];
+        const sectionElement = document.querySelector<HTMLElement>(`.page-paste-sections > li[data-section-index="${String(index)}"]`);
+        if (latestSection !== undefined && sectionElement !== null) {
+          const label = sectionElement.querySelector<HTMLInputElement>('input[type="checkbox"]')?.labels?.[0];
+          if (label !== undefined) label.textContent = sectionLabel(latestSection);
+          let sectionIssue = sectionElement.querySelector<HTMLElement>(".page-paste-section-issue");
+          if (sectionIssue === null && latestSection.issue !== undefined) {
+            sectionIssue = el("p", { class: "page-paste-section-issue", role: "status" });
+            sectionElement.append(sectionIssue);
+          }
+          if (sectionIssue !== null) {
+            sectionIssue.textContent = latestSection.issue ?? "";
+            sectionIssue.hidden = latestSection.issue === undefined;
+          }
+        }
         for (const choice of document.querySelectorAll<HTMLElement>(`.page-paste-sections li[data-section-index="${String(index)}"] .page-paste-source-choice[data-source-line]`)) {
           const sourceLine = Number(choice.dataset.sourceLine);
           const role = choice.dataset.sourceRole;
