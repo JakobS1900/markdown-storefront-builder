@@ -2,6 +2,79 @@ import { expect, it } from "vitest";
 
 import { buildPagePasteReview } from "../src/page-paste-review.js";
 
+it.each([
+  ["Item", "Amount", "Price"], ["Item", "Price", "Amount"],
+  ["Amount", "Item", "Price"], ["Amount", "Price", "Item"],
+  ["Price", "Item", "Amount"], ["Price", "Amount", "Item"],
+])("reviews corrected fields in %s, %s, %s column order", (...headers) => {
+  const values: Record<string, string> = { Item: "Mug", Amount: "12 oz", Price: "from $25" };
+  const text = `| ${headers.join(" | ")} | Notes |\n| --- | --- | --- | --- |\n| ${headers.map((header) => values[header]).join(" | ")} | Blue |`;
+  const mapping = { product: headers.indexOf("Item"), size: headers.indexOf("Amount"), price: headers.indexOf("Price") };
+  const baseline = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: { 0: mapping } });
+  expect(baseline.rows[0]).toMatchObject({ name: "Mug", amount: "12 oz", price: "from $25", details: "Notes: Blue" });
+  expect(baseline.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Mug", unit: "12 oz", price: "from $25", blurb: "Notes: Blue" }] });
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: { 0: mapping }, corrections: {
+    "0:3:0": { name: "Large mug", amount: "16 oz", price: "Ask me", details: "Glazed" },
+  } });
+  expect(review.rows[0]).toMatchObject({ sourceLine: 3, name: "Large mug", amount: "16 oz", price: "Ask me", details: "Glazed", included: true });
+  expect(review.blocks).toEqual([{ kind: "menu", tiers: [{ name: "Large mug", unit: "16 oz", price: "Ask me", blurb: "Glazed" }] }]);
+  expect(review.canConfirm).toBe(true);
+});
+
+it("keeps exact free-text and zero prices, repeated headers, and unassigned cells", () => {
+  const text = "| Item | Amount | Price | Notes |\n| --- | --- | --- | --- |\n| Mug | 12 oz | $0 | Blue |\n| Item | Amount | Price | Notes |\n| --- | --- | --- | --- |\n| Bowl | 16 oz | from $25 | Red |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: { 0: { product: 0, size: 1, price: 2 } } });
+  expect(review.rows.map((row) => row.price)).toEqual(["$0", "from $25"]);
+  expect(review.rows.map((row) => row.details)).toEqual(["Notes: Blue", "Notes: Red"]);
+  expect(review.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Mug", price: "$0" }, { name: "Bowl", price: "from $25" }] });
+});
+
+it("requires a decision for missing and numeric names while allowing an intentional blank price", () => {
+  const text = "| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| 42 | 16 oz | |";
+  const base = { text, dropped: [], swapped: [], mappings: { 0: { product: 0, size: 1, price: 2 } } };
+  const unresolved = buildPagePasteReview(base);
+  expect(unresolved.canConfirm).toBe(false);
+  expect(unresolved.rows[0]?.issue).toMatch(/name/i);
+  expect(unresolved.rows[1]?.issue).toMatch(/numeric/i);
+  const resolved = buildPagePasteReview({ ...base, corrections: { "0:3:0": { name: "Mug" }, "0:4:0": { acceptedNumericName: true } } });
+  expect(resolved.canConfirm).toBe(true);
+  expect(resolved.sections[0]?.issue).toBeUndefined();
+  expect(resolved.rows[1]?.price).toBe("");
+  expect(resolved.rows[1]?.warning).toMatch(/No price is set/);
+  expect(resolved.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Mug", unit: "12 oz", price: "$25" }, { name: "42", unit: "16 oz" }] });
+});
+
+it("excludes one reviewed row without changing its neighbour", () => {
+  const text = "| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n| Bowl | 16 oz | $32 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: { 0: { product: 0, size: 1, price: 2 } }, corrections: { "0:3:0": { included: false } } });
+  expect(review.rows.map((row) => row.included)).toEqual([false, true]);
+  expect(review.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Bowl", price: "$32" }] });
+  expect(review.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("excluded");
+});
+
+it("manually selects one ambiguous Text line and retains its neighbours in order", () => {
+  const text = "Product,Price\nMug,$25\nA note";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], manualSections: [0], corrections: {
+    "0:2:0": { included: true, name: "Mug", price: "$25" },
+  } });
+  expect(review.blocks).toEqual([
+    { kind: "prose", text: "Product,Price" },
+    { kind: "menu", tiers: [{ name: "Mug", price: "$25" }] },
+    { kind: "prose", text: "A note" },
+  ]);
+  expect(review.coverage.map((line) => line.kind)).toEqual(["text", "item", "text"]);
+  expect(review.sections[0]?.issue).toMatch(/Unselected.*Text/);
+  expect(review.canConfirm).toBe(true);
+});
+
+it("keeps the other quantity offer when one amount-price pair is edited", () => {
+  const text = "| Mug | Price |\n| --- | --- |\n| 12 oz | $28 |\n| 16 oz | $32 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], corrections: { "0:4:0": { price: "$35" } } });
+  expect(review.canConfirm).toBe(true);
+  expect(review.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Mug", quantities: [{ amount: "12 oz", price: "$28" }, { amount: "16 oz", price: "$35" }] }] });
+  expect(review.rows.map((row) => row.price)).toEqual(["$28", "$35"]);
+});
+
 it("keeps mapped source rows stable and covers each nonempty line once", () => {
   const source = [
     "# Ceramics",
@@ -61,8 +134,8 @@ it("keeps a category heading before retained Text that precedes the first offer"
 it("gives automatic Prices rows stable source keys and the fields Add will use", () => {
   const result = buildPagePasteReview({ text: "Mug - $28\nBowl - $32", dropped: [], swapped: [] });
   expect(result.rows).toEqual([
-    { key: "0:1:0", sectionIndex: 0, sourceLine: 1, name: "Mug", amount: "", price: "$28", details: "" },
-    { key: "0:2:0", sectionIndex: 0, sourceLine: 2, name: "Bowl", amount: "", price: "$32", details: "" },
+    { key: "0:1:0", sectionIndex: 0, sourceLine: 1, name: "Mug", amount: "", price: "$28", details: "", included: true },
+    { key: "0:2:0", sectionIndex: 0, sourceLine: 2, name: "Bowl", amount: "", price: "$32", details: "", included: true },
   ]);
 });
 
@@ -71,8 +144,8 @@ it("gives quantity offers their own source keys under the shared item name", () 
     text: "| Mug | Price |\n| --- | --- |\n| 12 oz | $28 |\n| 16 oz | $32 |", dropped: [], swapped: [],
   });
   expect(result.rows).toEqual([
-    { key: "0:3:0", sectionIndex: 0, sourceLine: 3, name: "Mug", amount: "12 oz", price: "$28", details: "" },
-    { key: "0:4:0", sectionIndex: 0, sourceLine: 4, name: "Mug", amount: "16 oz", price: "$32", details: "" },
+    { key: "0:3:0", sectionIndex: 0, sourceLine: 3, name: "Mug", amount: "12 oz", price: "$28", details: "", included: true },
+    { key: "0:4:0", sectionIndex: 0, sourceLine: 4, name: "Mug", amount: "16 oz", price: "$32", details: "", included: true },
   ]);
 });
 

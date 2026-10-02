@@ -16,13 +16,18 @@ the pushed `032-menu-first-workflow` prototype at `95a8396`. The
 [tasks](../specs/030-adjust-imported-prices/tasks.md) describe the broader
 correction panel. A plan review closed source-order, page-binding, manual Text
 recovery, source-replacement and old-tablet rendering gaps. Phase 1's pure
-reviewed-output foundation shipped to the feature branch as `ee61132`. Fresh
-spec and quality reviews found source-loss, page-switch, row-identity and
-source-order cases; regressions and fixes closed them. The full `npm run verify`
-passed with exit 0 on 2026-10-01: 90 test files, 1,779 tests, 63 accessibility
-tests, clean light and dark contrast, menu file and PWA update gates. Phase 2
-field correction is now in progress. Next: implement field correction, then
-category/grouping and recovery in separate reviewed chunks.
+reviewed-output foundation shipped to the feature branch as `ee61132`.
+
+Phase 2 field correction is implemented and its fresh spec and quality closure
+reviews passed on 2026-10-01. Sellers can edit source-keyed Item, Amount, Price
+and Details rows, exclude recognized offers, explicitly convert ambiguous Text
+lines, accept a genuine numeric name, and assign each wide table's columns.
+Corrections to one table do not block mapping another. The final full
+`npm run verify` exited 0: 90 test files, 1,804 tests, 63 accessibility tests,
+clean secret and dash scans, zero light and dark contrast failures, and passing
+menu-file and PWA update gates. Real Chrome Task A and the Android 6 typing check
+remain in the whole-feature verification phase. Next: shared names and category
+moves, then recovery and source replacement in separate reviewed chunks.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build.

@@ -52,3 +52,11 @@ Rationale: an incorrect but plausible selling value is worse than a visible unre
 - Real Chrome checks at 320 and 390 CSS pixels and the Android 6 tablet check the correction form, focus, no horizontal overflow and persisted output.
 
 No dependency or schema change is planned.
+
+## Interface research checked during implementation
+
+The [GOV.UK check answers pattern](https://design-system.service.gov.uk/patterns/check-answers/) supports a review before a final action, clear change controls beside the values being reviewed, and restoring entered values when a person goes back. This is a useful design analogy for source text beside corrected menu rows. It does not prove this menu workflow is usable by sellers.
+
+The [GOV.UK validation pattern](https://design-system.service.gov.uk/patterns/validation/) advises keeping entered values after an error and generally waiting until a person finishes an answer before showing validation errors. The correction panel should not interrupt typing or replace a focused field while a seller fixes a name. Blocking Add when a required item name is unresolved still needs an actionable message beside that row.
+
+The [W3C guidance on visible labels](https://www.w3.org/WAI/WCAG22/Understanding/labels-or-instructions) explains why an accessible name alone does not replace a label that everyone can see. [WCAG 2.2 target size guidance](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum) sets an AA minimum of 24 by 24 CSS pixels with exceptions, while the [enhanced criterion](https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced) uses 44 by 44. The project chooses 44 by 44 for its phone controls. These references inform the controls and checks; the planned seller sessions remain the test of whether the flow feels simpler.

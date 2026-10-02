@@ -10,6 +10,17 @@ export interface PagePasteReviewDraft {
   readonly dropped: readonly number[];
   readonly swapped: readonly number[];
   readonly mappings?: Readonly<Record<number, PagePasteTableMapping>>;
+  readonly corrections?: Readonly<Record<string, PagePasteRowCorrection>>;
+  readonly manualSections?: readonly number[];
+}
+
+export interface PagePasteRowCorrection {
+  readonly name?: string;
+  readonly amount?: string;
+  readonly price?: string;
+  readonly details?: string;
+  readonly included?: boolean;
+  readonly acceptedNumericName?: boolean;
 }
 
 export interface PagePasteReviewRow {
@@ -20,6 +31,10 @@ export interface PagePasteReviewRow {
   readonly amount: string;
   readonly price: string;
   readonly details: string;
+  readonly included?: boolean;
+  readonly acceptedNumericName?: boolean;
+  readonly issue?: string;
+  readonly warning?: string;
 }
 
 export interface PagePasteReviewSection {
@@ -46,6 +61,76 @@ export interface PagePasteReview {
   readonly blocks: readonly ProposedBlock[];
   readonly rows: readonly PagePasteReviewRow[];
   readonly coverage: readonly PagePasteSourceCoverage[];
+  readonly canConfirm: boolean;
+}
+
+function correctedRow(row: PagePasteReviewRow, correction: PagePasteRowCorrection | undefined, defaultIncluded = true): PagePasteReviewRow {
+  const chosen = { ...row, included: defaultIncluded, ...correction };
+  const issue = chosen.included === false ? undefined
+    : chosen.name.trim() === "" ? "This price row needs an item name. Name it or exclude this row."
+      : /^\d+(?:[.,]\d+)?$/.test(chosen.name.trim()) && chosen.acceptedNumericName !== true
+        ? "This numeric item name may be an amount. Accept it if it is the real name." : undefined;
+  const warning = chosen.included !== false && chosen.name.trim() !== "" && chosen.price.trim() === ""
+    ? "No price is set. This item can stay without a price." : undefined;
+  return { ...chosen, ...(issue === undefined ? {} : { issue }), ...(warning === undefined ? {} : { warning }) };
+}
+
+function manualBlocks(section: ProposedSection, rows: readonly PagePasteReviewRow[]): readonly ProposedBlock[] {
+  const byLine = new Map(rows.map((row) => [row.sourceLine, row]));
+  const blocks: ProposedBlock[] = [];
+  let text: string[] = [];
+  let tiers: Extract<ProposedBlock, { kind: "menu" }>["tiers"] = [];
+  const flushText = (): void => { if (text.some((part) => part.trim() !== "")) blocks.push({ kind: "prose", text: text.join("\n") }); text = []; };
+  const flushMenu = (): void => { if (tiers.length > 0) blocks.push({ kind: "menu", tiers }); tiers = []; };
+  readLines(section.source).forEach((line, offset) => {
+    const row = byLine.get(section.from + offset + 1);
+    if (row?.included === true) {
+      flushText();
+      tiers = [...tiers, reviewedTier(row)];
+    } else {
+      flushMenu();
+      text.push(line.text);
+    }
+  });
+  flushText();
+  flushMenu();
+  return blocks;
+}
+
+function correctedAutomaticBlocks(blocks: readonly ProposedBlock[], rows: readonly PagePasteReviewRow[]): readonly ProposedBlock[] {
+  let offset = 0;
+  return blocks.flatMap((block): ProposedBlock[] => {
+    if (block.kind !== "menu") return [block];
+    const tiers = block.tiers.flatMap((tier): Extract<ProposedBlock, { kind: "menu" }>["tiers"][number][] => {
+      const count = tier.quantities?.length ?? 1;
+      const selected = rows.slice(offset, offset + count).filter((row) => row.included !== false);
+      offset += count;
+      if (tier.quantities === undefined || selected.length <= 1) return selected.map(reviewedTier);
+      const first = selected[0];
+      if (first !== undefined && selected.every((row) => row.name === first.name && row.details === first.details && row.amount !== "" && row.price !== "")) {
+        return [{ name: first.name, price: "", ...(first.details === "" ? {} : { blurb: first.details }), quantities: selected.map((row) => ({ amount: row.amount, price: row.price })) }];
+      }
+      return selected.map(reviewedTier);
+    });
+    return tiers.length === 0 ? [] : [{ ...block, tiers }];
+  });
+}
+
+function reviewedTier(row: PagePasteReviewRow): Extract<ProposedBlock, { kind: "menu" }>["tiers"][number] {
+  return {
+    name: row.name,
+    price: row.price,
+    ...(row.amount === "" ? {} : { unit: row.amount }),
+    ...(row.details === "" ? {} : { blurb: row.details }),
+  };
+}
+
+function mappedBlocks(section: ProposedSection, rows: readonly PagePasteReviewRow[]): readonly ProposedBlock[] {
+  const selected = rows.filter((row) => row.included !== false);
+  if (selected.length === 0) return [];
+  const heading = readRuns(section.source).find((run) => run.kind === "heading");
+  const title = heading === undefined ? undefined : buildProposedBlock({ ...section, kind: "heading", source: runText(heading) });
+  return [{ kind: "menu", ...(title?.kind === "heading" ? { heading: title.text } : {}), tiers: selected.map(reviewedTier) }];
 }
 
 function menuSource(section: ProposedSection, block: ProposedBlock): { blocks: readonly ProposedBlock[]; consumedSourceLines: readonly number[]; issue?: string } {
@@ -128,21 +213,40 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       const offer = automaticOffers[offset];
       return offer === undefined ? [] : [{ key: `${String(index)}:${String(sourceLine)}:0`, sectionIndex: index, sourceLine, ...offer }];
     }) ?? [];
-    const rows = mapping === undefined ? automaticRows : mappedRows;
-    const blocks = menu?.blocks ?? [block];
-    const consumedSourceLines = menu?.consumedSourceLines ?? (block.kind === "menu" ? rows.map((row) => row.sourceLine) : []);
-    const issue = mapping === undefined ? menu?.issue ?? pagePasteConversionIssue(proposed)
-      : block.kind === "prose" ? "These columns could not make Prices. The source remains Text." : undefined;
+    const manual = draft.manualSections?.includes(index) === true && mapping === undefined && block.kind === "prose";
+    // CHUNK 2: Header-only pipe tables have no text rows to convert. Phase 4 adds an item-entry recovery action.
+    const manualRows: PagePasteReviewRow[] = manual ? readLines(source.source).flatMap((line, offset) => {
+      if (line.kind !== "text" || line.text.trim() === "") return [];
+      const sourceLine = source.from + offset + 1;
+      return [{ key: `${String(index)}:${String(sourceLine)}:0`, sectionIndex: index, sourceLine,
+        name: line.text.trim(), amount: "", price: "", details: "" }];
+    }) : [];
+    const rows = (manual ? manualRows : mapping === undefined ? automaticRows : mappedRows)
+      .map((row) => correctedRow(row, draft.corrections?.[row.key], !manual));
+    const changed = rows.some((row) => draft.corrections?.[row.key] !== undefined);
+    const blocks = manual ? manualBlocks(proposed, rows)
+      : mapping !== undefined && changed ? mappedBlocks(proposed, rows)
+      : mapping === undefined && changed ? correctedAutomaticBlocks(menu?.blocks ?? [block], rows)
+        : menu?.blocks ?? [block];
+    const consumedSourceLines = manual ? rows.filter((row) => row.included === true).map((row) => row.sourceLine)
+      : menu?.consumedSourceLines ?? (block.kind === "menu" ? rows.map((row) => row.sourceLine) : []);
+    const issue = manual && blocks.some((output) => output.kind === "menu")
+      ? blocks.some((output) => output.kind === "prose") ? "Unselected source lines remain Text." : undefined
+      : mapping === undefined ? menu?.issue ?? pagePasteConversionIssue(proposed)
+      : blocks.length > 0 && blocks.every((output) => output.kind === "prose")
+        ? "These columns could not make Prices. The source remains Text." : undefined;
     return { index, source, proposed, block, blocks, included: !draft.dropped.includes(index), rows, consumedSourceLines, ...(issue === undefined ? {} : { issue }) };
   });
 
   const coverage = sections.flatMap((section): PagePasteSourceCoverage[] => {
     const itemLines = new Set(section.consumedSourceLines);
+    const manual = draft.manualSections?.includes(section.index) === true;
     return readLines(section.source.source).flatMap((line, offset) => {
       if (line.text.trim() === "") return [];
       const sourceLine = section.source.from + offset + 1;
-      const kind = !section.included ? "excluded"
-        : section.blocks.every((block) => block.kind === "prose") ? "text"
+      const kind = !section.included || section.blocks.length === 0 || (!manual && section.rows.some((row) => row.sourceLine === sourceLine && row.included === false)) ? "excluded"
+        : manual ? itemLines.has(sourceLine) ? "item" : "text"
+          : section.blocks.every((block) => block.kind === "prose") ? "text"
           : line.kind === "heading" ? "heading"
             : line.kind === "tableHeader" || line.kind === "tableRule" || line.kind === "headingUnderline" || line.kind === "rule" ? "furniture"
               : itemLines.has(sourceLine) ? "item" : "text";
@@ -151,5 +255,6 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
   });
   const blocks = sections.flatMap((section) => section.included ? section.blocks : []);
   const rows = sections.flatMap((section) => section.rows);
-  return { ...(proposal.title === undefined ? {} : { title: proposal.title }), sections, blocks, rows, coverage };
+  return { ...(proposal.title === undefined ? {} : { title: proposal.title }), sections, blocks, rows, coverage,
+    canConfirm: !sections.some((section) => section.included && section.rows.some((row) => row.included !== false && row.issue !== undefined)) };
 }

@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { emptyDocument } from "@mdsb/engine";
 import { beforeEach, expect, it } from "vitest";
-import { adopt, getState, init, setSurface, subscribe } from "../src/store.js";
+import { adopt, getState, init, setPagePasteTableMapping, setSurface, subscribe } from "../src/store.js";
 import { renderShell } from "../src/ui/shell.js";
 
 let stop: (() => void) | undefined;
@@ -29,6 +29,15 @@ function paste(text: string): void {
   if (box === null) throw new Error("missing paste box");
   box.value = text;
   box.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function editReviewedField(label: string, value: string): void {
+  const input = [...document.querySelectorAll<HTMLInputElement>(".page-paste-corrections input[type=text]")]
+    .find((node) => node.labels?.[0]?.textContent === label);
+  if (input === undefined) throw new Error(`missing correction field ${label}`);
+  input.focus();
+  input.value = value;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 beforeEach(() => {
@@ -78,6 +87,144 @@ it("explains why a wide price table stays Text in review", () => {
   expect(review?.textContent).toMatch(/three or more columns.*choose.*price.*Text/is);
   expect(review?.textContent).toContain("| Bowl | 16 oz | $32 |");
   expect([...document.querySelectorAll(".page-paste button")].some((node) => node.textContent === "Make Prices instead of Text")).toBe(false);
+});
+
+it("opens labelled row corrections and shows exactly the selected result", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Amount | Price | Item | Notes |\n| --- | --- | --- | --- |\n| 12 oz | $25 | Mug | Blue |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  expect(document.querySelector(".page-paste-preview")?.textContent).toContain("12 oz | $25 | Mug");
+  expect([...document.querySelectorAll(".page-paste-corrections label")].map((node) => node.textContent)).toEqual(expect.arrayContaining([
+    "Item, source row 3", "Amount, source row 3", "Price, source row 3", "Details, source row 3",
+  ]));
+  editReviewedField("Item, source row 3", "Large mug");
+  editReviewedField("Amount, source row 3", "16 oz");
+  editReviewedField("Price, source row 3", "Ask me");
+  editReviewedField("Details, source row 3", "Glazed");
+  expect(document.querySelector(".page-paste-row-result")?.textContent).toMatch(/Large mug.*16 oz.*Ask me.*Glazed/s);
+  expect(document.querySelector<HTMLTextAreaElement>(".page-paste textarea")?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste")?.textContent).toMatch(/Edit source.*later|source.*locked/i);
+});
+
+it("requires a name, offers numeric-name acceptance, and excludes a bad row", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| 42 | 16 oz | $32 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste-corrections")?.textContent).toMatch(/needs an item name/i);
+  editReviewedField("Item, source row 3", "Mug");
+  const accept = [...document.querySelectorAll<HTMLInputElement>(".page-paste-corrections input[type=checkbox]")]
+    .find((node) => node.labels?.[0]?.textContent === "Accept 42 as an item name, source row 4");
+  if (accept === undefined) throw new Error("missing numeric name choice");
+  accept.checked = true;
+  accept.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(false);
+  const include = [...document.querySelectorAll<HTMLInputElement>(".page-paste-corrections input[type=checkbox]")]
+    .find((node) => node.labels?.[0]?.textContent === "Include source row 3");
+  if (include === undefined) throw new Error("missing include choice");
+  include.checked = false;
+  include.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(getState().pastingPage?.corrections?.["0:3:0"]?.included).toBe(false);
+});
+
+it("reveals numeric-name acceptance without replacing the focused name field", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  editReviewedField("Item, source row 3", "42");
+  const name = [...document.querySelectorAll<HTMLInputElement>(".page-paste-corrections input[type=text]")]
+    .find((node) => node.labels?.[0]?.textContent === "Item, source row 3");
+  expect(document.activeElement).toBe(name);
+  const numeric = [...document.querySelectorAll<HTMLInputElement>(".page-paste-corrections input[type=checkbox]")]
+    .find((node) => node.labels?.[0]?.textContent === "Accept 42 as an item name, source row 3");
+  expect(numeric?.parentElement?.hidden).toBe(false);
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  numeric?.click();
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(false);
+});
+
+it("shows the original source beside the twenty-first correction card", () => {
+  live();
+  click("Paste a page you already have");
+  const rows = Array.from({ length: 21 }, (_, i) => `| Item ${String(i + 1)} | 12 oz | $${String(i + 1)} | Note ${String(i + 1)} |`);
+  paste(["| Item | Amount | Price | Notes |", "| --- | --- | --- | --- |", ...rows].join("\n"));
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  click("Show next 20 correction rows");
+  expect(document.querySelectorAll(".page-paste-card")).toHaveLength(1);
+  expect(document.querySelector(".page-paste-row-source")?.textContent).toBe(rows[20]);
+});
+
+it("collapses inactive mapped tables instead of rendering every row list", () => {
+  live();
+  click("Paste a page you already have");
+  paste(Array.from({ length: 12 }, (_, i) => `| Item | Amount | Price |\n| --- | --- | --- |\n| Item ${String(i + 1)} | 12 oz | $25 |`).join("\n\n"));
+  for (let i = 0; i < 12; i += 1) setPagePasteTableMapping(i, { product: 0, size: 1, price: 2 });
+  expect(document.querySelectorAll(".page-paste-sections > li")).toHaveLength(12);
+  expect(document.querySelectorAll(".page-paste-rows")).toHaveLength(1);
+  expect(document.querySelectorAll(".page-paste-preview")).toHaveLength(1);
+  click("Review section 2");
+  expect(document.querySelectorAll(".page-paste-rows")).toHaveLength(0);
+  expect(document.querySelectorAll(".page-paste-card")).toHaveLength(1);
+  expect(document.querySelectorAll(".page-paste-preview")).toHaveLength(1);
+  expect(document.querySelector('.page-paste-sections li[data-section-index="1"] .page-paste-row-source')?.textContent).toContain("Item 2");
+});
+
+it("lets an untouched second table assign columns after correcting the first", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Bowl | 16 oz | $32 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  editReviewedField("Price, source row 3", "Ask me");
+  click("Review section 2");
+  const second = document.querySelector<HTMLElement>('.page-paste-sections > li[data-section-index="1"]');
+  expect(second?.querySelector<HTMLSelectElement>(".page-paste-table select")?.disabled).toBe(false);
+  const review = [...(second?.querySelectorAll<HTMLButtonElement>("button") ?? [])]
+    .find((node) => node.textContent === "Review these columns as Prices");
+  if (review === undefined) throw new Error("missing second table review button");
+  review.click();
+  expect(getState().pastingPage?.mappings?.[1]).toEqual({ product: 0, size: 1, price: 2 });
+  expect(getState().pastingPage?.corrections?.["0:3:0"]?.price).toBe("Ask me");
+});
+
+it("keeps Add disabled when a row is edited after switching away from the draft page", () => {
+  live();
+  const original = getState();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  adopt("another", emptyDocument("pastebin"));
+  editReviewedField("Price, source row 3", "$32");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  adopt(original.pageId, original.doc);
+});
+
+it("offers explicit manual prices for unsupported Text while leaving unchosen lines as Text", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Product,Price\nMug,$25\nA note");
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Adjust as prices");
+  click("Adjust as prices");
+  expect(document.querySelector(".page-paste-corrections")?.textContent).toContain("Source row 2");
+  const second = document.querySelector<HTMLElement>('.page-paste-card[data-row-key="0:2:0"]');
+  const choice = second?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+  expect(choice?.labels?.[0]?.textContent).toBe("Convert source row 2 to Prices");
+  expect(second?.querySelector(".page-paste-row-result")?.textContent).toContain("Kept as Text");
+  expect(second?.querySelector(".page-paste-row-result")?.textContent).not.toContain("Excluded");
+  expect(document.querySelector(".page-paste button.primary")?.textContent).toContain("1 section");
+  if (!choice) throw new Error("missing manual conversion choice");
+  choice.checked = true;
+  choice.dispatchEvent(new Event("change", { bubbles: true }));
+  expect(document.querySelector('.page-paste-card[data-row-key="0:2:0"] .page-paste-row-result')?.textContent).toContain("Converted to Prices");
+  expect(document.querySelector(".page-paste button.primary")?.textContent).toContain("3 sections");
 });
 
 it("explains unsupported table syntax without offering unavailable mapping controls", () => {
@@ -350,6 +497,20 @@ it("does not replace text typed after a file read begins", async () => {
   await Promise.resolve();
   expect(getState().pastingPage?.text).toBe("New typed text");
   expect(document.querySelector<HTMLTextAreaElement>(".page-paste textarea")?.value).toBe("New typed text");
+});
+
+it("does not replace corrected source when an earlier file read completes", async () => {
+  live();
+  click("Paste a page you already have");
+  paste("Mug - $25\nBowl - $32");
+  const read = deferredFile();
+  click("Adjust imported prices");
+  editReviewedField("Price, source row 1", "Ask me");
+  read.resolve("Old file text");
+  await Promise.resolve();
+  expect(getState().pastingPage?.text).toBe("Mug - $25\nBowl - $32");
+  expect(getState().pastingPage?.corrections?.["0:1:0"]?.price).toBe("Ask me");
+  expect([...document.querySelectorAll<HTMLButtonElement>(".page-paste button")].find((node) => node.textContent === "Read a text file from this device")?.disabled).toBe(true);
 });
 
 it("pauses Add with an explanation after switching away from the starting page", () => {

@@ -24,12 +24,12 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 **Independent Test**: Map a fictional Amount, Price, Item table, edit one row, and see the exact corrected values in review, saved Build, Preview and Copy.
 
-- [ ] T005 [US1] Add failing tests for all six Item, Amount and Price column orders, extra columns, repeated headers, `$0`, `from $25`, `Ask me`, blank name, blank price, and numeric name in `app/tests/page-paste-review.test.ts`.
-- [ ] T006 [US1] Add failing draft lifecycle and frozen confirmation tests for row edits, exclusion and exact price text in `app/tests/page-paste-store.test.ts`.
-- [ ] T007 [US1] Implement row edits keyed by source identity, inclusion, field validation and accepted numeric names in `app/src/page-paste-review.ts` and `app/src/store.ts`; once a correction exists, disable direct source editing until buffered replacement arrives in T021.
-- [ ] T008 [US1] Add failing UI tests for `Adjust imported prices`, visible source, labelled Item, Amount, Price and Details fields, per-row exclusion, issue messages and focus in `app/tests/page-paste.test.ts`.
-- [ ] T009 [US1] Render bounded correction cards and a separate `Adjust as prices` manual path from ambiguous Text lines in `app/src/ui/page-paste.ts` and `app/src/styles.css`; limit total visible cards across all sections to 20, collapse inactive sections, and keep header furniture and unassigned source as Text until explicitly handled.
-- [ ] T010 [US1] Verify Task A in `specs/030-adjust-imported-prices/quickstart.md`, then get fresh spec and quality reviews of the phase and fix findings.
+- [x] T005 [US1] Add failing tests for all six Item, Amount and Price column orders, extra columns, repeated headers, `$0`, `from $25`, `Ask me`, blank name, blank price, and numeric name in `app/tests/page-paste-review.test.ts`.
+- [x] T006 [US1] Add failing draft lifecycle and frozen confirmation tests for row edits, exclusion and exact price text in `app/tests/page-paste-store.test.ts`.
+- [x] T007 [US1] Implement row edits keyed by source identity, inclusion, field validation and accepted numeric names in `app/src/page-paste-review.ts` and `app/src/store.ts`; once a correction exists, disable direct source editing until buffered replacement arrives in T021.
+- [x] T008 [US1] Add failing UI tests for `Adjust imported prices`, visible source, labelled Item, Amount, Price and Details fields, per-row exclusion, issue messages and focus in `app/tests/page-paste.test.ts`.
+- [x] T009 [US1] Render bounded correction cards and a separate `Adjust as prices` manual path from ambiguous Text lines in `app/src/ui/page-paste.ts` and `app/src/styles.css`; limit total visible cards across all sections to 20, collapse inactive sections, and keep header furniture and unassigned source as Text until explicitly handled.
+- [ ] T010 [US1] Verify Task A in `specs/030-adjust-imported-prices/quickstart.md`, then get fresh spec and quality reviews of the phase and fix findings. Code reviews and the full gate passed; browser Task A remains in the whole-feature check.
 
 ## Phase 3: User Story 2, shared names and categories
 

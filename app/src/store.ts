@@ -19,7 +19,7 @@ import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
 import { backupOpening, openBackup, waitForOpenBackups } from "./import.js";
-import { buildPagePasteReview } from "./page-paste-review.js";
+import { buildPagePasteReview, type PagePasteReview, type PagePasteRowCorrection } from "./page-paste-review.js";
 import { pagePasteConversionIssue, readPagePasteTable, readProposal, type PagePasteTableMapping } from "./page-text.js";
 import { canAddReviewedProduct, canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 // A type, and only a type. The answer set is defined beside the pure function
@@ -208,9 +208,13 @@ export interface State {
     readonly text: string;
     readonly sourceRevision: number;
     readonly reviewStart: number;
+    readonly rowStarts?: Readonly<Record<number, number>>;
+    readonly adjustingSection?: number;
     readonly dropped: readonly number[];
     readonly swapped: readonly number[];
     readonly mappings?: Readonly<Record<number, PagePasteTableMapping>>;
+    readonly corrections?: Readonly<Record<string, PagePasteRowCorrection>>;
+    readonly manualSections?: readonly number[];
     readonly confirming?: boolean;
   };
   readonly status: Status;
@@ -808,9 +812,20 @@ export function startPastingPage(): void {
   set({ pastingPage: { originPageId: state.pageId, target: state.doc.target, text: "", sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
 }
 
+let cachedPagePasteReview: { draft: NonNullable<State["pastingPage"]>; review: PagePasteReview } | undefined;
+
+export function getPagePasteReview(): PagePasteReview | undefined {
+  const draft = state.pastingPage;
+  if (draft === undefined) { cachedPagePasteReview = undefined; return undefined; }
+  if (cachedPagePasteReview?.draft === draft) return cachedPagePasteReview.review;
+  const review = buildPagePasteReview(draft);
+  cachedPagePasteReview = { draft, review };
+  return review;
+}
+
 export function setPagePasteText(text: string): void {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste) return;
+  if (current === undefined || confirmingPagePaste || Object.keys(current.corrections ?? {}).length > 0 || (current.manualSections?.length ?? 0) > 0) return;
   set({ pastingPage: { originPageId: current.originPageId, target: current.target, text, sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
 }
 
@@ -823,9 +838,32 @@ export function setPagePasteReviewStart(start: number): void {
   set({ pastingPage: { ...current, reviewStart: start } });
 }
 
+export function setPagePasteRowStart(index: number, start: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || !Number.isInteger(start) || start < 0 ||
+    getPagePasteReview()?.sections[index] === undefined) return;
+  set({ pastingPage: { ...current, rowStarts: { ...current.rowStarts, [index]: start } } });
+}
+
+export function setPagePasteAdjustingSection(index: number | undefined): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || index !== undefined && getPagePasteReview()?.sections[index] === undefined) return;
+  if (index === undefined) {
+    const next = { ...current };
+    delete next.adjustingSection;
+    set({ pastingPage: next });
+  } else set({ pastingPage: { ...current, adjustingSection: index } });
+}
+
+export function pagePasteMappingLocked(index: number): boolean {
+  const draft = state.pastingPage;
+  return draft?.manualSections?.includes(index) === true ||
+    Object.keys(draft?.corrections ?? {}).some((key) => key.startsWith(`${String(index)}:`));
+}
+
 export function setPagePasteTableMapping(index: number, mapping: PagePasteTableMapping): void {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste) return;
+  if (current === undefined || confirmingPagePaste || pagePasteMappingLocked(index)) return;
   const section = readProposal(current.text).sections[index];
   const table = section === undefined ? undefined : readPagePasteTable(section);
   if (table === undefined) return;
@@ -836,12 +874,28 @@ export function setPagePasteTableMapping(index: number, mapping: PagePasteTableM
 
 export function clearPagePasteTableMapping(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste || current.mappings?.[index] === undefined) return;
+  if (current === undefined || confirmingPagePaste || pagePasteMappingLocked(index) || current.mappings?.[index] === undefined) return;
   const mappings = { ...current.mappings };
   delete mappings[index];
   const rest = { ...current };
   delete rest.mappings;
   set({ pastingPage: Object.keys(mappings).length === 0 ? rest : { ...rest, mappings } });
+}
+
+export function correctPagePasteRow(key: string, correction: PagePasteRowCorrection): void {
+  const current = state.pastingPage;
+  const review = getPagePasteReview();
+  if (current === undefined || confirmingPagePaste || review === undefined || !review.rows.some((row) => row.key === key)) return;
+  const previous = current.corrections?.[key] ?? {};
+  set({ pastingPage: { ...current, corrections: { ...current.corrections, [key]: { ...previous, ...correction } } } });
+}
+
+export function startManualPagePasteSection(index: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.manualSections?.includes(index)) return;
+  const section = getPagePasteReview()?.sections[index];
+  if (section === undefined || section.block.kind !== "prose") return;
+  set({ pastingPage: { ...current, manualSections: [...(current.manualSections ?? []), index] } });
 }
 
 export function dropPagePasteSection(index: number): void {
@@ -896,11 +950,16 @@ export async function confirmPagePaste(): Promise<void> {
     set({ status: { kind: "error", message: "Return to the page where you started this paste before adding it. Your pasted text is still here." } });
     return;
   }
+  const review = getPagePasteReview();
+  if (review === undefined) return;
+  if (!review.canConfirm) {
+    set({ status: { kind: "error", message: "Resolve the named price rows in this review before adding the page. Nothing has been changed." } });
+    return;
+  }
   confirmingPagePaste = true;
   const frozen = { ...current, confirming: true };
   set({ pastingPage: frozen });
   try {
-    const review = buildPagePasteReview(current);
     const blocks = review.blocks.flatMap((block): Block[] => {
       if (block.kind === "menu") return [{ id: newId(), ...block, tiers: block.tiers.map((tier) => ({ id: newId(), ...tier })) }];
       return [{ id: newId(), ...block }];

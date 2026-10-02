@@ -19,6 +19,74 @@ beforeEach(async () => {
 });
 afterEach(() => vi.restoreAllMocks());
 
+it("keeps row corrections in the draft and saves the frozen reviewed values", async () => {
+  const source = "| Amount | Price | Item | Notes |\n| --- | --- | --- | --- |\n| 12 oz | $25 | Mug | Blue |\n| 16 oz | $32 | Bowl | Red |";
+  store.startPastingPage();
+  store.setPagePasteText(source);
+  store.setPagePasteTableMapping(0, { product: 2, size: 0, price: 1 });
+  store.correctPagePasteRow("0:3:0", { name: "Large mug", amount: "20 oz", price: "Ask me", details: "Glazed" });
+  store.correctPagePasteRow("0:4:0", { included: false });
+  expect(store.getState().pastingPage?.corrections).toMatchObject({ "0:3:0": { price: "Ask me" }, "0:4:0": { included: false } });
+  const proposed = buildPagePasteReview(store.getState().pastingPage ?? { text: "", dropped: [], swapped: [] });
+  expect(proposed.canConfirm).toBe(true);
+  expect(proposed.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Large mug", unit: "20 oz", price: "Ask me", blurb: "Glazed" }] });
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks[0]).toMatchObject(proposed.blocks[0] ?? {});
+  expect(compile(store.getState().doc, "pastebin").markdown).toContain("Ask me");
+});
+
+it("blocks an unnamed included price row until named or excluded", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  const before = await db.listPages();
+  await store.confirmPagePaste();
+  expect(await db.listPages()).toEqual(before);
+  expect(store.getState().pastingPage).toBeDefined();
+  store.correctPagePasteRow("0:3:0", { name: "Mug" });
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks[0]).toMatchObject({ kind: "menu", tiers: [{ name: "Mug", price: "$25" }] });
+});
+
+it("keeps a corrected source fixed until the separate source editor exists", () => {
+  store.startPastingPage();
+  store.setPagePasteText("Mug - $25\nBowl - $32");
+  store.correctPagePasteRow("0:1:0", { price: "$0" });
+  store.setPagePasteText("Replacement");
+  expect(store.getState().pastingPage?.text).toBe("Mug - $25\nBowl - $32");
+  expect(store.getState().pastingPage?.corrections?.["0:1:0"]?.price).toBe("$0");
+});
+
+it("lets another table choose columns after the first table has corrections", async () => {
+  const table = (name: string, price: string): string => `| Item | Amount | Price |\n| --- | --- | --- |\n| ${name} | 12 oz | ${price} |`;
+  store.startPastingPage();
+  store.setPagePasteText(`${table("Mug", "$25")}\n\n${table("Bowl", "$32")}`);
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:3:0", { price: "Ask me" });
+  store.setPagePasteTableMapping(1, { product: 0, size: 1, price: 2 });
+  expect(store.getState().pastingPage?.mappings?.[1]).toEqual({ product: 0, size: 1, price: 2 });
+  store.setPagePasteTableMapping(0, { product: 2, size: 1, price: 0 });
+  expect(store.getState().pastingPage?.mappings?.[0]).toEqual({ product: 0, size: 1, price: 2 });
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toEqual([
+    expect.objectContaining({ kind: "menu", tiers: [expect.objectContaining({ name: "Mug", price: "Ask me" })] }),
+    expect.objectContaining({ kind: "menu", tiers: [expect.objectContaining({ name: "Bowl", price: "$32" })] }),
+  ]);
+});
+
+it("reuses one review for an unchanged draft and refreshes it after an edit", () => {
+  store.startPastingPage();
+  store.setPagePasteText("Mug - $25\nBowl - $32");
+  const before = store.getPagePasteReview();
+  expect(before).toBeDefined();
+  expect(store.getPagePasteReview()).toBe(before);
+  store.correctPagePasteRow("0:1:0", { price: "Ask me" });
+  const after = store.getPagePasteReview();
+  expect(after).not.toBe(before);
+  expect(after?.rows[0]?.price).toBe("Ask me");
+  expect(store.getPagePasteReview()).toBe(after);
+});
+
 it("keeps all paste decisions in memory until confirm, including cancellation", async () => {
   const before = await db.listPages();
   const doc = store.getState().doc;
