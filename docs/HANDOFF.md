@@ -45,18 +45,20 @@ final `npm run verify` passed with exit 0, including 1,739 tests, 63
 accessibility tests, light and dark contrast, menu file and PWA update gates.
 
 Jakob connected tablet `3404d221b89fc1f1` on 2026-10-01. It is an SM_T700
-running Android 6.0.1, API 23; the app requires API 24, so this tablet cannot
-install the APK. Chrome 101 is present. Automatic approval review rejected the
-ADB command to open the local site in Chrome, so there is no on-tablet browser
-result either. The temporary ADB port reverse was removed. No tablet data or
-settings were changed.
+running Android 6.0.1, API 23. The app now uses Capacitor 7 and a legacy web
+bundle, declares API 23, and carries v1, v2, and v3 signatures. Its WebView 49
+showed a white screen. Jakob authorized updating WebView without Play Store
+sign-in. A Google signed WebView 106 ARM APK for API 23 was checked against the
+installed WebView certificate, installed, and confirmed as the active package.
+The final APK then rendered on the tablet. A Prices section survived reinstall
+and cold start. See `docs/research/2026-10-01-android-6-check.md`.
 
 The signed test APK was rebuilt from the final code as versionCode 19,
 versionName `0.13.0-test.1`. Gradle reported `BUILD SUCCESSFUL in 27s`;
-`apksigner` confirmed v2/v3 signatures and the expected certificate, and the
-bundled JavaScript hash matched `app/dist`. Exact hashes are in the prototype
-check. Installation and Android interaction remain unverified. The APK has not
-been published.
+`apksigner` confirmed v1/v2/v3 signatures and the expected certificate. The
+earlier API 24 build hashes are in the prototype check. The API 23 build is
+installed on the tablet and Android interaction is
+partly verified. The APK has not been published.
 
 Five real seller task sessions remain. Record time, help, corrections, and wrong
 or missing values against the current release before claiming usability success
