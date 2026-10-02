@@ -1767,15 +1767,37 @@ fieldset.item > .btn.icon.danger {
   margin-top: 0.75rem;
 }
 
-.page-paste-card {
+  .page-paste-card {
   display: grid;
   gap: 0.5rem;
   min-width: 0;
   padding: 0.75rem;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: var(--panel);
-}
+    background: var(--panel);
+  }
+
+  .page-paste-batch {
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+  }
+
+  .page-paste-batch .field,
+  .page-paste-batch input,
+  .page-paste-batch select,
+  .page-paste-batch button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .page-paste-destination {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
 
 .page-paste-card .field,
 .page-paste-card input {

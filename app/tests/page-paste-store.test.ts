@@ -35,6 +35,68 @@ it("keeps row corrections in the draft and saves the frozen reviewed values", as
   expect(compile(store.getState().doc, "pastebin").markdown).toContain("Ask me");
 });
 
+it("assigns a shared name and new category to selected rows before saving", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Figures\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.togglePagePasteRowSelection("0:5:0", true);
+  store.togglePagePasteRowSelection("0:6:0", true);
+  store.applyPagePasteSharedName("Arrow Orb");
+  store.createPagePasteCategoryForSelected("Limited figures");
+  const review = store.getPagePasteReview();
+  expect(review?.rows.map((row) => [row.name, row.destinationId])).toEqual([
+    ["Arrow Orb", "new:0"], ["Arrow Orb", "new:0"],
+  ]);
+  expect(review?.blocks).toContainEqual(expect.objectContaining({ kind: "menu", heading: "Limited figures", tiers: [
+    expect.objectContaining({ name: "Arrow Orb", quantities: [
+      { amount: "12 oz", price: "$25" }, { amount: "16 oz", price: "$32" },
+    ] }),
+  ] }));
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject(review?.blocks ?? []);
+  const output = compile(store.getState().doc, "pastebin").markdown;
+  expect(output).toContain("Limited figures");
+  expect(output).toContain("Arrow Orb");
+});
+
+it("waits for an untouched blank price before saving corrected mapped rows", async () => {
+  const before = await db.listPages();
+  const original = store.getState().doc;
+  store.startPastingPage();
+  store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n| Bowl | 16 oz | |");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.correctPagePasteRow("0:3:0", { name: "Large mug" });
+  expect(store.getPagePasteReview()?.canConfirm).toBe(false);
+  await store.confirmPagePaste();
+  expect(await db.listPages()).toEqual(before);
+  expect(store.getState().doc).toBe(original);
+  expect(store.getState().pastingPage?.corrections?.["0:3:0"]?.name).toBe("Large mug");
+  store.correctPagePasteRow("0:4:0", { price: "" });
+  expect(store.getPagePasteReview()?.canConfirm).toBe(true);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject([{ kind: "menu", tiers: [
+    { name: "Large mug", price: "$25" }, { name: "Bowl", price: "" },
+  ] }]);
+});
+
+it("clears selections across review pages after one shared-name action", () => {
+  store.startPastingPage();
+  store.setPagePasteText(["| Item | Amount | Price |", "| --- | --- | --- |",
+    ...Array.from({ length: 7 }, (_, index) => `| Item ${String(index + 1)} | 12 oz | $25 |`)].join("\n"));
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.togglePagePasteRowSelection("0:3:0", true);
+  store.togglePagePasteRowSelection("0:9:0", true);
+  store.applyPagePasteSharedName("Shared figure");
+  expect(store.getPagePasteReview()?.rows.filter((row) => row.selected)).toHaveLength(2);
+  store.clearPagePasteRowSelection();
+  expect(store.getPagePasteReview()?.rows.filter((row) => row.selected)).toHaveLength(0);
+  store.togglePagePasteRowSelection("0:4:0", true);
+  store.applyPagePasteSharedName("Separate figure");
+  expect(store.getPagePasteReview()?.rows.map((row) => row.name)).toEqual([
+    "Shared figure", "Separate figure", "Item 3", "Item 4", "Item 5", "Item 6", "Shared figure",
+  ]);
+});
+
 it("blocks an unnamed included price row until named or excluded", async () => {
   store.startPastingPage();
   store.setPagePasteText("| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |");

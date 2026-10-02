@@ -108,6 +108,146 @@ it("opens labelled row corrections and shows exactly the selected result", () =>
   expect(document.querySelector(".page-paste")?.textContent).toMatch(/Edit source.*later|source.*locked/i);
 });
 
+it("applies one name and a new category to selected rows in the correction panel", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  expect(document.querySelector(".page-paste-batch")).toBeNull();
+  for (const line of [3, 4]) {
+    const choice = [...document.querySelectorAll<HTMLInputElement>(".page-paste-corrections input[type=checkbox]")]
+      .find((node) => node.labels?.[0]?.textContent === `Select source row ${String(line)} for group changes`);
+    if (choice === undefined) throw new Error(`missing row selection ${String(line)}`);
+    choice.focus();
+    choice.click();
+    const restored = document.querySelector<HTMLInputElement>(`.page-paste-card[data-row-key="0:${String(line)}:0"] .page-paste-select-row`);
+    expect(document.activeElement).toBe(restored);
+  }
+  const batch = document.querySelector(".page-paste-batch");
+  const firstCard = document.querySelector(".page-paste-card");
+  if (batch === null || firstCard === null) throw new Error("missing batch controls or card");
+  expect(batch.compareDocumentPosition(firstCard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  editReviewedField("Shared item name for selected rows", "Arrow Orb");
+  click("Use name on selected rows");
+  editReviewedField("New category name", "Limited figures");
+  click("Create category and move selected rows");
+  const cards = [...document.querySelectorAll(".page-paste-card")];
+  expect(cards).toHaveLength(2);
+  for (const card of cards) expect(card.textContent).toMatch(/Destination: Limited figures/);
+  expect(document.querySelector(".page-paste-row-result")?.textContent).toContain("Arrow Orb");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(false);
+});
+
+it("moves only selected rows to an existing Prices section with the same visible name", () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n| Bowl | 16 oz | $32 |\n\n# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 20 oz | $40 |");
+  click("Review these columns as Prices");
+  setPagePasteTableMapping(1, { product: 0, size: 1, price: 2 });
+  click("Adjust imported prices");
+  const chosen = [...document.querySelectorAll<HTMLInputElement>(".page-paste-corrections input[type=checkbox]")]
+    .find((node) => node.labels?.[0]?.textContent === "Select source row 6 for group changes");
+  if (chosen === undefined) throw new Error("missing row selection");
+  chosen.click();
+  const destination = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-corrections select")]
+    .find((node) => node.labels?.[0]?.textContent === "Destination category for selected rows");
+  if (destination === undefined) throw new Error("missing destination category");
+  expect([...destination.options].map((option) => option.value)).toEqual(["", "section:0", "section:1"]);
+  destination.value = "section:1";
+  destination.dispatchEvent(new Event("change", { bubbles: true }));
+  click("Move selected rows to category");
+  expect(getState().pastingPage?.corrections?.["0:6:0"]?.destinationId).toBe("section:1");
+  expect(getState().pastingPage?.corrections?.["0:5:0"]?.destinationId).toBeUndefined();
+});
+
+it("offers a deliberate blank price choice before adding another corrected table row", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n| Bowl | 16 oz | |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  editReviewedField("Item, source row 3", "Large mug");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(true);
+  expect(document.querySelector(".page-paste-corrections")?.textContent).toContain("Keep without a price, source row 4");
+  const keep = [...document.querySelectorAll<HTMLButtonElement>(".page-paste-corrections button")]
+    .find((node) => node.textContent === "Keep without a price, source row 4");
+  keep?.focus();
+  click("Keep without a price, source row 4");
+  expect(getState().pastingPage?.corrections?.["0:4:0"]?.price).toBe("");
+  expect(document.querySelector<HTMLButtonElement>(".page-paste button.primary")?.disabled).toBe(false);
+  expect(document.querySelector(".page-paste-row-result")?.textContent).toContain("Large mug");
+  const price = [...document.querySelectorAll<HTMLInputElement>('.page-paste-card[data-row-key="0:4:0"] input[type=text]')]
+    .find((input) => input.labels?.[0]?.textContent === "Price, source row 4");
+  expect(document.activeElement).toBe(price);
+});
+
+it("clears selected rows from both correction pages", () => {
+  live();
+  click("Paste a page you already have");
+  paste(["| Item | Amount | Price |", "| --- | --- | --- |",
+    ...Array.from({ length: 6 }, (_, index) => `| Item ${String(index + 1)} | 12 oz | $25 |`)].join("\n"));
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  const first = document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:3:0"] .page-paste-select-row');
+  if (first === null) throw new Error("missing first row selection");
+  first.click();
+  click("Show next 1 correction row");
+  const later = document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:8:0"] .page-paste-select-row');
+  if (later === null) throw new Error("missing later row selection");
+  later.click();
+  expect(document.querySelector(".page-paste-batch")?.textContent).toContain("2 selected price rows");
+  click("Clear selection");
+  expect(document.querySelector(".page-paste-batch")).toBeNull();
+  expect(getState().pastingPage?.selectedRowKeys).toEqual([]);
+  click("Show previous 5 correction rows");
+  expect(document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:3:0"] .page-paste-select-row')?.checked).toBe(false);
+});
+
+it("keeps unfinished group fields when selecting another row", () => {
+  live();
+  click("Paste a page you already have");
+  paste("| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n| Bowl | 16 oz | $32 |");
+  click("Review these columns as Prices");
+  click("Adjust imported prices");
+  document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:3:0"] .page-paste-select-row')?.click();
+  editReviewedField("Shared item name for selected rows", "Shared name in progress");
+  editReviewedField("New category name", "Draft category");
+  const destination = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-corrections select")]
+    .find((node) => node.labels?.[0]?.textContent === "Destination category for selected rows");
+  if (destination === undefined) throw new Error("missing destination picker");
+  destination.value = "section:0";
+  destination.dispatchEvent(new Event("change", { bubbles: true }));
+  document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:4:0"] .page-paste-select-row')?.click();
+  const batchInputs = [...document.querySelectorAll<HTMLInputElement>(".page-paste-batch input[type=text]")];
+  expect(batchInputs.map((input) => input.value)).toEqual(["Shared name in progress", "Draft category"]);
+  expect(document.querySelector<HTMLSelectElement>(".page-paste-batch select")?.value).toBe("section:0");
+  click("Use name on selected rows");
+  expect(document.activeElement?.textContent).toBe("Use name on selected rows");
+  expect(getState().pastingPage?.selectedRowKeys).toEqual(["0:3:0", "0:4:0"]);
+});
+
+it("distinguishes two new categories with the same visible name", () => {
+  live();
+  click("Paste a page you already have");
+  paste("Mug - $25\nBowl - $32");
+  click("Adjust imported prices");
+  document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:1:0"] .page-paste-select-row')?.click();
+  editReviewedField("New category name", "Ceramics");
+  click("Create category and move selected rows");
+  click("Clear selection");
+  document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:2:0"] .page-paste-select-row')?.click();
+  editReviewedField("New category name", "Ceramics");
+  click("Create category and move selected rows");
+  const options = [...(document.querySelector<HTMLSelectElement>(".page-paste-batch select")?.options ?? [])]
+    .filter((option) => option.value.startsWith("new:"));
+  expect(options.map((option) => [option.value, option.textContent])).toEqual([
+    ["new:0", "Ceramics (new category 1)"], ["new:1", "Ceramics (new category 2)"],
+  ]);
+  expect(document.querySelector('.page-paste-card[data-row-key="0:1:0"] .page-paste-destination')?.textContent).toContain("new category 1");
+  expect(document.querySelector('.page-paste-card[data-row-key="0:2:0"] .page-paste-destination')?.textContent).toContain("new category 2");
+});
+
 it("requires a name, offers numeric-name acceptance, and excludes a bad row", () => {
   live();
   click("Paste a page you already have");
@@ -156,7 +296,8 @@ it("shows the original source beside the twenty-first correction card", () => {
   paste(["| Item | Amount | Price | Notes |", "| --- | --- | --- | --- |", ...rows].join("\n"));
   click("Review these columns as Prices");
   click("Adjust imported prices");
-  click("Show next 20 correction rows");
+  for (let i = 0; i < 3; i += 1) click("Show next 5 correction rows");
+  click("Show next 1 correction row");
   expect(document.querySelectorAll(".page-paste-card")).toHaveLength(1);
   expect(document.querySelector(".page-paste-row-source")?.textContent).toBe(rows[20]);
 });
@@ -217,6 +358,8 @@ it("offers explicit manual prices for unsupported Text while leaving unchosen li
   const second = document.querySelector<HTMLElement>('.page-paste-card[data-row-key="0:2:0"]');
   const choice = second?.querySelector<HTMLInputElement>('input[type="checkbox"]');
   expect(choice?.labels?.[0]?.textContent).toBe("Convert source row 2 to Prices");
+  expect(second?.querySelector(".page-paste-select-row")).toBeNull();
+  expect(document.querySelector(".page-paste-corrections")?.textContent).toMatch(/Convert.*Prices.*select.*shared/i);
   expect(second?.querySelector(".page-paste-row-result")?.textContent).toContain("Kept as Text");
   expect(second?.querySelector(".page-paste-row-result")?.textContent).not.toContain("Excluded");
   expect(document.querySelector(".page-paste button.primary")?.textContent).toContain("1 section");
@@ -225,6 +368,14 @@ it("offers explicit manual prices for unsupported Text while leaving unchosen li
   choice.dispatchEvent(new Event("change", { bubbles: true }));
   expect(document.querySelector('.page-paste-card[data-row-key="0:2:0"] .page-paste-row-result')?.textContent).toContain("Converted to Prices");
   expect(document.querySelector(".page-paste button.primary")?.textContent).toContain("3 sections");
+  expect(document.querySelector('.page-paste-card[data-row-key="0:2:0"] .page-paste-select-row')).not.toBeNull();
+  document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:2:0"] .page-paste-select-row')?.click();
+  expect(getState().pastingPage?.selectedRowKeys).toEqual(["0:2:0"]);
+  document.querySelector<HTMLInputElement>('.page-paste-card[data-row-key="0:2:0"] input[type=checkbox]')?.click();
+  expect(getState().pastingPage?.selectedRowKeys).toEqual([]);
+  expect(document.querySelector('.page-paste-card[data-row-key="0:2:0"] .page-paste-select-row')).toBeNull();
+  expect(document.querySelector(".page-paste-batch")).toBeNull();
+  expect(document.querySelector(".page-paste button.primary")?.textContent).toContain("1 section");
 });
 
 it("explains unsupported table syntax without offering unavailable mapping controls", () => {

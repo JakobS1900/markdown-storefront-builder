@@ -30,8 +30,17 @@ pixels with two reviewed rows, original source visible, zero document overflow
 and zero browser exceptions; Build, Preview and Copy retained the corrected
 name and selling price. See the [browser check](research/2026-10-01-import-correction-phase2-check.md).
 The Android 6 typing check remains in the whole-feature verification phase.
-Next: shared names and category
-moves, then recovery and source replacement in separate reviewed chunks.
+Phase 3 shared names and category moves are implemented. Sellers can select rows
+across correction pages, apply one item name, and move them to an existing or
+newly named Prices category. Duplicate category names have distinct choices.
+Compatible amount and price rows group under the same item; changed details stay
+separate. A fictional two-category, four-item saved acceptance check retains
+all four names and eight amount and price pairs in Build, Preview and Copy.
+The 101 focused tests pass, as do typecheck, lint, dash scan and both independent
+closure reviews. Phase 4 now covers deliberate remapping, source replacement,
+empty-section recovery and focus after Clear selection. The all-moved heading
+case is marked `CHUNK 3` in code for that phase. The Android 6 typing check
+remains in whole-feature verification.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build.

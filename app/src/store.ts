@@ -214,6 +214,8 @@ export interface State {
     readonly swapped: readonly number[];
     readonly mappings?: Readonly<Record<number, PagePasteTableMapping>>;
     readonly corrections?: Readonly<Record<string, PagePasteRowCorrection>>;
+    readonly categories?: readonly { readonly id: string; readonly name: string }[];
+    readonly selectedRowKeys?: readonly string[];
     readonly manualSections?: readonly number[];
     readonly confirming?: boolean;
   };
@@ -887,7 +889,53 @@ export function correctPagePasteRow(key: string, correction: PagePasteRowCorrect
   const review = getPagePasteReview();
   if (current === undefined || confirmingPagePaste || review === undefined || !review.rows.some((row) => row.key === key)) return;
   const previous = current.corrections?.[key] ?? {};
-  set({ pastingPage: { ...current, corrections: { ...current.corrections, [key]: { ...previous, ...correction } } } });
+  set({ pastingPage: { ...current, corrections: { ...current.corrections, [key]: { ...previous, ...correction } },
+    ...(correction.included === false ? { selectedRowKeys: current.selectedRowKeys?.filter((selected) => selected !== key) ?? [] } : {}) } });
+}
+
+export function togglePagePasteRowSelection(key: string, selected: boolean): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || !getPagePasteReview()?.rows.some((row) =>
+    row.key === key && (selected === false || row.included === true))) return;
+  const keys = current.selectedRowKeys ?? [];
+  set({ pastingPage: { ...current, selectedRowKeys: selected ? [...new Set([...keys, key])]
+    : keys.filter((candidate) => candidate !== key) } });
+}
+
+export function clearPagePasteRowSelection(): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || (current.selectedRowKeys?.length ?? 0) === 0) return;
+  set({ pastingPage: { ...current, selectedRowKeys: [] } });
+}
+
+export function applyPagePasteSharedName(name: string): void {
+  const current = state.pastingPage;
+  const keys = current?.selectedRowKeys ?? [];
+  if (current === undefined || confirmingPagePaste || keys.length === 0 || name.trim() === "") return;
+  const corrections = { ...current.corrections };
+  for (const key of keys) corrections[key] = { ...corrections[key], name, acceptedNumericName: false };
+  set({ pastingPage: { ...current, corrections } });
+}
+
+export function moveSelectedPagePasteRows(destinationId: string): void {
+  const current = state.pastingPage;
+  const keys = current?.selectedRowKeys ?? [];
+  if (current === undefined || confirmingPagePaste || keys.length === 0 ||
+    !getPagePasteReview()?.categories.some((category) => category.id === destinationId)) return;
+  const corrections = { ...current.corrections };
+  for (const key of keys) corrections[key] = { ...corrections[key], destinationId };
+  set({ pastingPage: { ...current, corrections } });
+}
+
+export function createPagePasteCategoryForSelected(name: string): void {
+  const current = state.pastingPage;
+  const keys = current?.selectedRowKeys ?? [];
+  const trimmed = name.trim();
+  if (current === undefined || confirmingPagePaste || keys.length === 0 || trimmed === "") return;
+  const id = `new:${String(current.categories?.length ?? 0)}`;
+  const corrections = { ...current.corrections };
+  for (const key of keys) corrections[key] = { ...corrections[key], destinationId: id };
+  set({ pastingPage: { ...current, categories: [...(current.categories ?? []), { id, name: trimmed }], corrections } });
 }
 
 export function startManualPagePasteSection(index: number): void {

@@ -1,15 +1,22 @@
 import { type PagePasteReview, type PagePasteReviewRow, type PagePasteReviewSection } from "../page-paste-review.js";
 import { readPagePasteTable, type PagePasteTableMapping, type ProposedSection } from "../page-text.js";
 import {
-  clearPagePasteTableMapping, confirmPagePaste, correctPagePasteRow, dropPagePasteSection, getPagePasteReview, getState, restorePagePasteSection,
+  applyPagePasteSharedName, clearPagePasteRowSelection, clearPagePasteTableMapping, confirmPagePaste, correctPagePasteRow,
+  createPagePasteCategoryForSelected, dropPagePasteSection, getPagePasteReview, getState,
+  moveSelectedPagePasteRows, restorePagePasteSection,
   pagePasteMappingLocked, startManualPagePasteSection,
   setPagePasteAdjustingSection, setPagePasteReviewStart, setPagePasteRowStart,
   setPagePasteTableMapping, setPagePasteText, stopPastingPage, swapPagePasteSection,
+  togglePagePasteRowSelection,
 } from "../store.js";
 import { announce, button, checkbox, el, field, select } from "./dom.js";
 
 const DRAWN_SECTIONS = 100;
 const DRAWN_LINES = 20;
+
+// Values typed for a batch action are pending form input, not a reviewed correction.
+// The source revision keeps them through UI refreshes and resets them for a new paste.
+let pendingBatch: { sourceRevision: number; sharedName: string; newCategoryName: string; destinationId: string } | undefined;
 
 interface SectionPage {
   start: number;
@@ -38,12 +45,56 @@ function proposedRow(row: PagePasteReviewRow, manual: boolean): string {
 function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, refresh: () => void): Node[] {
   const rows = reviewed.rows;
   const index = reviewed.index;
+  const review = getPagePasteReview();
+  if (review === undefined) return [];
+  const selectedCount = review.rows.filter((row) => row.selected === true).length;
+  const categoryLabel = (id: string): string => {
+    const category = review.categories.find((item) => item.id === id);
+    if (category === undefined) return "Choose a destination";
+    return category.id.startsWith("section:")
+      ? `${category.name} (source section ${String(Number(category.id.slice(8)) + 1)})`
+      : `${category.name} (new category ${String(review.categories.filter((item) => item.id.startsWith("new:")).findIndex((item) => item.id === id) + 1)})`;
+  };
+  const sourceRevision = getState().pastingPage?.sourceRevision ?? -1;
+  if (pendingBatch?.sourceRevision !== sourceRevision) pendingBatch = { sourceRevision, sharedName: "", newCategoryName: "", destinationId: "" };
+  const batchFields = pendingBatch;
   const manual = getState().pastingPage?.manualSections?.includes(index) === true;
-  const start = Math.min(page.rows[index] ?? 0, Math.max(0, Math.floor((rows.length - 1) / ROW_PAGE) * ROW_PAGE));
-  const end = Math.min(start + ROW_PAGE, rows.length);
+  const start = Math.min(page.rows[index] ?? 0, Math.max(0, Math.floor((rows.length - 1) / CORRECTION_PAGE) * CORRECTION_PAGE));
+  const end = Math.min(start + CORRECTION_PAGE, rows.length);
+  const batch = selectedCount === 0
+    ? el("p", { class: "hint" }, ["Select price rows below to give them one name or move them together."])
+    : el("div", { class: "page-paste-batch", role: "group", "aria-label": "Change selected price rows" }, [
+      el("p", {}, [`${String(selectedCount)} selected price row${selectedCount === 1 ? "" : "s"}. Selection carries across review pages.`]),
+      field({ label: "Shared item name for selected rows", value: batchFields.sharedName, onInput: (value) => { batchFields.sharedName = value; } }),
+      button({ label: "Use name on selected rows", onClick: () => {
+        if (batchFields.sharedName.trim() === "") { announce("Enter an item name for the selected rows."); return; }
+        applyPagePasteSharedName(batchFields.sharedName); batchFields.sharedName = ""; refresh();
+        focusSectionButton(index, "Use name on selected rows");
+      } }),
+      select({ label: "Destination category for selected rows", value: batchFields.destinationId, options: [
+        { value: "", label: "Choose a Prices category" },
+        ...review.categories.map((category) => ({ value: category.id, label: categoryLabel(category.id) })),
+      ], onChange: (value) => { batchFields.destinationId = value; } }),
+      button({ label: "Move selected rows to category", onClick: () => {
+        if (batchFields.destinationId === "") { announce("Choose a destination category first."); return; }
+        moveSelectedPagePasteRows(batchFields.destinationId); refresh();
+        focusSectionButton(index, "Move selected rows to category");
+      } }),
+      field({ label: "New category name", value: batchFields.newCategoryName, onInput: (value) => { batchFields.newCategoryName = value; } }),
+      button({ label: "Create category and move selected rows", onClick: () => {
+        if (batchFields.newCategoryName.trim() === "") { announce("Enter a new category name first."); return; }
+        createPagePasteCategoryForSelected(batchFields.newCategoryName); batchFields.newCategoryName = ""; refresh();
+        focusSectionButton(index, "Create category and move selected rows");
+      } }),
+      // CHUNK 3: Phase 4 gives focus a fallback when this page has no selectable row.
+      button({ label: "Clear selection", onClick: () => { clearPagePasteRowSelection(); refresh();
+        focusSection(index, ".page-paste-select-row"); } }),
+    ]);
   return [el("div", { class: "page-paste-corrections", role: "group", "aria-label": `Adjust imported prices in section ${String(index + 1)}` }, [
     el("p", {}, [`Showing correction rows ${String(start + 1)} to ${String(end)} of ${String(rows.length)}. The original source stays above.`]),
     el("p", { class: "hint" }, ["Source editing is locked after a correction. Columns in corrected tables are protected; untouched tables can still be assigned."]),
+    ...(manual ? [el("p", { class: "hint" }, ["Convert a Text row to Prices before selecting it for shared changes."])] : []),
+    batch,
     ...rows.slice(start, end).map((row) => {
       const result = el("p", { class: "page-paste-row-result", role: "status" }, [proposedRow(row, manual)]);
       const issue = el("p", { class: "page-paste-row-issue", role: "status" }, [row.issue ?? row.warning ?? ""]);
@@ -86,15 +137,30 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
         correctPagePasteRow(row.key, fieldName === "name" ? { name: value, acceptedNumericName: false } : { [fieldName]: value });
         sync();
       };
+      const selectRow = checkbox({ label: `Select source row ${String(row.sourceLine)} for group changes`, checked: row.selected === true,
+        onChange: (selected) => { togglePagePasteRowSelection(row.key, selected); refresh();
+          focusSection(index, `.page-paste-card[data-row-key="${row.key}"] .page-paste-select-row`); } });
+      selectRow.querySelector("input")?.classList.add("page-paste-select-row");
       return el("div", { class: "page-paste-card", "data-row-key": row.key }, [
         el("strong", {}, [`Source row ${String(row.sourceLine)}`]),
         el("pre", { class: "page-paste-row-source" }, [getState().pastingPage?.text.split(/\r?\n/)[row.sourceLine - 1] ?? ""]),
+        el("p", { class: "page-paste-destination" }, [`Destination: ${categoryLabel(row.destinationId)}`]),
         checkbox({ label: manual ? `Convert source row ${String(row.sourceLine)} to Prices` : `Include source row ${String(row.sourceLine)}`,
           checked: row.included === true,
           onChange: (included) => { correctPagePasteRow(row.key, { included }); refresh(); focusSection(index, `.page-paste-card[data-row-key="${row.key}"] input[type=checkbox]`); } }),
+        ...(row.included === true ? [selectRow] : []),
         field({ label: `Item, source row ${String(row.sourceLine)}`, value: row.name, onInput: (value) => edit("name", value) }),
         field({ label: `Amount, source row ${String(row.sourceLine)}`, value: row.amount, onInput: (value) => edit("amount", value) }),
         field({ label: `Price, source row ${String(row.sourceLine)}`, value: row.price, onInput: (value) => edit("price", value) }),
+        ...(reviewed.block.kind === "prose" && getState().pastingPage?.mappings?.[index] !== undefined &&
+          row.included === true && row.amount.trim() !== "" && row.price.trim() === "" &&
+          getState().pastingPage?.corrections?.[row.key]?.price === undefined
+          ? [button({ label: `Keep without a price, source row ${String(row.sourceLine)}`, onClick: () => {
+            correctPagePasteRow(row.key, { price: "" }); refresh();
+            const card = document.querySelector(`.page-paste-card[data-row-key="${row.key}"]`);
+            [...(card?.querySelectorAll<HTMLInputElement>("input[type=text]") ?? [])]
+              .find((input) => input.labels?.[0]?.textContent === `Price, source row ${String(row.sourceLine)}`)?.focus();
+          } })] : []),
         field({ label: `Details, source row ${String(row.sourceLine)}`, value: row.details, onInput: (value) => edit("details", value) }),
         numeric,
         issue,
@@ -102,8 +168,8 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
       ]);
     }),
     el("div", { class: "paste-tools" }, [
-      ...(start === 0 ? [] : [button({ label: `Show previous ${String(ROW_PAGE)} correction rows`, onClick: () => { page.rows[index] = Math.max(0, start - ROW_PAGE); setPagePasteRowStart(index, page.rows[index] ?? 0); refresh(); focusRowPager(index, "previous"); } })]),
-      ...(end >= rows.length ? [] : [button({ label: `Show next ${String(ROW_PAGE)} correction rows`, onClick: () => { page.rows[index] = end; setPagePasteRowStart(index, end); refresh(); focusRowPager(index, "next"); } })]),
+      ...(start === 0 ? [] : [button({ label: `Show previous ${String(CORRECTION_PAGE)} correction rows`, onClick: () => { page.rows[index] = Math.max(0, start - CORRECTION_PAGE); setPagePasteRowStart(index, page.rows[index] ?? 0); refresh(); focusRowPager(index, "previous"); } })]),
+      ...(end >= rows.length ? [] : [button({ label: `Show next ${String(Math.min(CORRECTION_PAGE, rows.length - end))} correction row${rows.length - end === 1 ? "" : "s"}`, onClick: () => { page.rows[index] = end; setPagePasteRowStart(index, end); refresh(); focusRowPager(index, "next"); } })]),
     ]),
   ])];
 }
@@ -127,6 +193,7 @@ function focusSectionButton(index: number, label: string): void {
 }
 
 const ROW_PAGE = 20;
+const CORRECTION_PAGE = 5;
 
 function suggestedMapping(headers: readonly string[]): PagePasteTableMapping {
   const index = (pattern: RegExp, fallback: number): number => {

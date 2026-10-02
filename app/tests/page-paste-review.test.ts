@@ -134,8 +134,8 @@ it("keeps a category heading before retained Text that precedes the first offer"
 it("gives automatic Prices rows stable source keys and the fields Add will use", () => {
   const result = buildPagePasteReview({ text: "Mug - $28\nBowl - $32", dropped: [], swapped: [] });
   expect(result.rows).toEqual([
-    { key: "0:1:0", sectionIndex: 0, sourceLine: 1, name: "Mug", amount: "", price: "$28", details: "", included: true },
-    { key: "0:2:0", sectionIndex: 0, sourceLine: 2, name: "Bowl", amount: "", price: "$32", details: "", included: true },
+    { key: "0:1:0", sectionIndex: 0, sourceLine: 1, destinationId: "section:0", name: "Mug", amount: "", price: "$28", details: "", included: true },
+    { key: "0:2:0", sectionIndex: 0, sourceLine: 2, destinationId: "section:0", name: "Bowl", amount: "", price: "$32", details: "", included: true },
   ]);
 });
 
@@ -144,8 +144,8 @@ it("gives quantity offers their own source keys under the shared item name", () 
     text: "| Mug | Price |\n| --- | --- |\n| 12 oz | $28 |\n| 16 oz | $32 |", dropped: [], swapped: [],
   });
   expect(result.rows).toEqual([
-    { key: "0:3:0", sectionIndex: 0, sourceLine: 3, name: "Mug", amount: "12 oz", price: "$28", details: "", included: true },
-    { key: "0:4:0", sectionIndex: 0, sourceLine: 4, name: "Mug", amount: "16 oz", price: "$32", details: "", included: true },
+    { key: "0:3:0", sectionIndex: 0, sourceLine: 3, destinationId: "section:0", name: "Mug", amount: "12 oz", price: "$28", details: "", included: true },
+    { key: "0:4:0", sectionIndex: 0, sourceLine: 4, destinationId: "section:0", name: "Mug", amount: "16 oz", price: "$32", details: "", included: true },
   ]);
 });
 
@@ -153,4 +153,80 @@ it("covers a saved divider as furniture rather than retained Text", () => {
   const result = buildPagePasteReview({ text: "---", dropped: [], swapped: [] });
   expect(result.blocks).toEqual([{ kind: "divider" }]);
   expect(result.coverage).toEqual([{ sectionIndex: 0, sourceLine: 1, kind: "furniture" }]);
+});
+
+it("connects detached names to selected amount and price rows without consuming the names", () => {
+  const text = "Arrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: {
+    1: { product: 0, size: 1, price: 2 },
+  }, corrections: {
+    "1:5:0": { name: "Arrow Orb" }, "1:6:0": { name: "Arrow Orb" },
+  } });
+  expect(review.canConfirm).toBe(true);
+  expect(review.blocks).toEqual([
+    { kind: "prose", text: "Arrow Orb" },
+    { kind: "menu", tiers: [{ name: "Arrow Orb", price: "", quantities: [
+      { amount: "12 oz", price: "$25" }, { amount: "16 oz", price: "$32" },
+    ] }] },
+  ]);
+  expect(review.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("text");
+  expect(review.coverage.filter((line) => line.kind === "item").map((line) => line.sourceLine)).toEqual([5, 6]);
+});
+
+it("moves offers to distinct destinations with the same visible name and retains intervening notes", () => {
+  const text = "# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n| Bowl | 16 oz | $32 |\n\nRemember the glaze\n\n# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 20 oz | $40 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: {
+    0: { product: 0, size: 1, price: 2 }, 2: { product: 0, size: 1, price: 2 },
+  }, categories: [{ id: "new:0", name: "Ceramics" }], corrections: {
+    "0:6:0": { destinationId: "new:0" },
+  } });
+  expect(review.categories.map((category) => category.id)).toEqual(["section:0", "section:2", "new:0"]);
+  expect(review.categories.map((category) => category.name)).toEqual(["Ceramics", "Ceramics", "Ceramics"]);
+  expect(review.rows.find((row) => row.sourceLine === 6)?.destinationId).toBe("new:0");
+  expect(review.blocks.map((block) => block.kind)).toEqual(["menu", "menu", "prose", "menu"]);
+  expect(review.blocks[1]).toMatchObject({ kind: "menu", heading: "Ceramics", tiers: [{ name: "Bowl" }] });
+  expect(review.blocks[2]).toMatchObject({ kind: "prose" });
+  expect(review.blocks[2]?.kind === "prose" ? review.blocks[2].text : "").toContain("Remember the glaze");
+  expect(review.blocks[3]).toMatchObject({ kind: "menu", heading: "Ceramics", tiers: [{ name: "Vase" }] });
+});
+
+it("keeps offers with different details separate while grouping compatible adjacent offers", () => {
+  const text = "| Item | Amount | Price | Notes |\n| --- | --- | --- | --- |\n| Figure | 12 oz | $25 | Blue |\n| Figure | 16 oz | $32 | Blue |\n| Figure | 20 oz | $40 | Red |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: { 0: { product: 0, size: 1, price: 2 } } });
+  expect(review.blocks).toEqual([{ kind: "menu", tiers: [
+    { name: "Figure", price: "", blurb: "Notes: Blue", quantities: [
+      { amount: "12 oz", price: "$25" }, { amount: "16 oz", price: "$32" },
+    ] },
+    { name: "Figure", unit: "20 oz", price: "$40", blurb: "Notes: Red" },
+  ] }]);
+});
+
+it("does not publish an untouched blank selling price when another row is corrected", () => {
+  const text = "| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |\n| Bowl | 16 oz | |";
+  const base = { text, dropped: [], swapped: [], mappings: { 0: { product: 0, size: 1, price: 2 } } };
+  const oneEdit = buildPagePasteReview({ ...base, corrections: { "0:3:0": { name: "Large mug" } } });
+  expect(oneEdit.blocks).toEqual([{ kind: "prose", text }]);
+  expect(oneEdit.canConfirm).toBe(false);
+  const bothEdited = buildPagePasteReview({ ...base, corrections: {
+    "0:3:0": { name: "Large mug" }, "0:4:0": { price: "Ask me" },
+  } });
+  expect(bothEdited.canConfirm).toBe(true);
+  expect(bothEdited.blocks).toMatchObject([{ kind: "menu", tiers: [
+    { name: "Large mug", price: "$25" }, { name: "Bowl", price: "Ask me" },
+  ] }]);
+  const intentionallyBlank = buildPagePasteReview({ ...base, corrections: {
+    "0:3:0": { name: "Large mug" }, "0:4:0": { price: "" },
+  } });
+  expect(intentionallyBlank.canConfirm).toBe(true);
+  expect(intentionallyBlank.blocks[0]).toMatchObject({ kind: "menu", tiers: [
+    { name: "Large mug", price: "$25" }, { name: "Bowl", price: "" },
+  ] });
+});
+
+it("does not leave a category heading after every offer is excluded", () => {
+  const review = buildPagePasteReview({ text: "# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 12 oz | $25 |",
+    dropped: [], swapped: [], mappings: { 0: { product: 0, size: 1, price: 2 } },
+    corrections: { "0:5:0": { included: false } } });
+  expect(review.sections[0]?.rows[0]?.included).toBe(false);
+  expect(review.blocks).toEqual([]);
 });

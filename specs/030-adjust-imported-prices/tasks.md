@@ -37,13 +37,13 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 **Independent Test**: Two fictional categories and four items retain every chosen name, amount and price after moving one row to a new category and adding the page.
 
-- [ ] T011 [US2] Add failing pure tests for detached names, shared names on selected rows, duplicate visible category names, notes between offers, a move across a retained note and another heading, and quantity grouping in `app/tests/page-paste-review.test.ts`.
-- [ ] T012 [US2] Implement draft destination IDs, category names, row moves and stable source ordering in `app/src/page-paste-review.ts` and `app/src/store.ts`.
-- [ ] T013 [US2] Group compatible same-name amount-price offers into existing `quantities`; use `unit` on standalone offers and separate tiers when row details differ in `app/src/page-paste-review.ts`.
-- [ ] T014 [US2] Add failing UI tests for assigning a shared item name and moving selected rows to existing or new categories in `app/tests/page-paste.test.ts`.
-- [ ] T015 [US2] Add category and multi-row controls to the correction panel in `app/src/ui/page-paste.ts` and `app/src/styles.css`, keeping source text and destination visible at 320 CSS pixels.
-- [ ] T016 [US2] Add a saved Build, Preview and Copy acceptance test for Task B in `app/tests/page-paste-store.test.ts` and `app/tests/import-quantity-integration.test.ts`.
-- [ ] T017 [US2] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings.
+- [x] T011 [US2] Add failing pure tests for detached names, shared names on selected rows, duplicate visible category names, notes between offers, a move across a retained note and another heading, and quantity grouping in `app/tests/page-paste-review.test.ts`.
+- [x] T012 [US2] Implement draft destination IDs, category names, row moves and stable source ordering in `app/src/page-paste-review.ts` and `app/src/store.ts`.
+- [x] T013 [US2] Group compatible same-name amount-price offers into existing `quantities`; use `unit` on standalone offers and separate tiers when row details differ in `app/src/page-paste-review.ts`.
+- [x] T014 [US2] Add failing UI tests for assigning a shared item name and moving selected rows to existing or new categories in `app/tests/page-paste.test.ts`.
+- [x] T015 [US2] Add category and multi-row controls to the correction panel in `app/src/ui/page-paste.ts` and `app/src/styles.css`, keeping source text and destination visible at 320 CSS pixels.
+- [x] T016 [US2] Add a saved Build, Preview and Copy acceptance test for Task B in `app/tests/page-paste-store.test.ts` and `app/tests/import-quantity-integration.test.ts`.
+- [x] T017 [US2] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings. All 101 focused tests and independent closure reviews passed.
 
 ## Phase 4: User Story 3, recover safely
 
@@ -53,7 +53,7 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 - [ ] T018 [US3] Add failing store tests for remap warning, one-step undo, buffered source replacement cancel, page-switch pause and return, competing switch during confirmation, and failed save in `app/tests/page-paste-store.test.ts`.
 - [ ] T019 [US3] Implement a deliberate discard choice, mapping snapshot and undo in `app/src/store.ts`; keep corrected row identity across mapping and both pagers, and regression-check the foundation's page-switch lock.
-- [ ] T020 [US3] Add failing UI tests for section 101, table row 21, a many-table fixture with at most 20 visible correction cards, Edit source cancel, pasted/file/IME replacement, missing-name block, numeric-name acceptance and empty-section recovery in `app/tests/page-paste.test.ts`.
+- [ ] T020 [US3] Add failing UI tests for section 101, table row 21, a many-table fixture with at most 20 visible correction cards, Edit source cancel, pasted/file/IME replacement, missing-name block, numeric-name acceptance and empty-section recovery in `app/tests/page-paste.test.ts`. Include a headed category whose every offer moved away: give the original heading an explicit keep or remove choice before Add.
 - [ ] T021 [US3] Implement buffered Edit source and file replacement, recovery controls and focus restoration in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`.
 - [ ] T022 [US3] Extend `app/tests/a11y.test.ts` for visible names, keyboard operation and touch targets on the correction panel; test the failure path before fixing it.
 - [ ] T023 [US3] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings.
