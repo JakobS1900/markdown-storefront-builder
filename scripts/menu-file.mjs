@@ -129,7 +129,10 @@ let nextId = 1;
 const pending = new Map();
 
 async function connect() {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 180; i++) {
+    if (chrome.exitCode !== null || chrome.signalCode !== null) {
+      throw new Error(`headless Chrome exited before startup (${chrome.exitCode ?? chrome.signalCode})`);
+    }
     try {
       const tabs = await (await fetch(`http://127.0.0.1:${CDP_PORT}/json/list`)).json();
       const page = tabs.find((t) => t.type === "page");
@@ -153,7 +156,7 @@ async function connect() {
     }
     await sleep(250);
   }
-  throw new Error("headless Chrome did not start");
+  throw new Error("headless Chrome did not start within 45 seconds");
 }
 
 const send = (method, params = {}) => {
