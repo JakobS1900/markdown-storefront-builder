@@ -25,8 +25,12 @@ lines, accept a genuine numeric name, and assign each wide table's columns.
 Corrections to one table do not block mapping another. The final full
 `npm run verify` exited 0: 90 test files, 1,804 tests, 63 accessibility tests,
 clean secret and dash scans, zero light and dark contrast failures, and passing
-menu-file and PWA update gates. Real Chrome Task A and the Android 6 typing check
-remain in the whole-feature verification phase. Next: shared names and category
+menu-file and PWA update gates. Chrome Task A then passed at 320 and 390 CSS
+pixels with two reviewed rows, original source visible, zero document overflow
+and zero browser exceptions; Build, Preview and Copy retained the corrected
+name and selling price. See the [browser check](research/2026-10-01-import-correction-phase2-check.md).
+The Android 6 typing check remains in the whole-feature verification phase.
+Next: shared names and category
 moves, then recovery and source replacement in separate reviewed chunks.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
