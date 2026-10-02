@@ -16,7 +16,7 @@ On a late review page, correct an item and navigate away and back. Change a colu
 
 ## Task D: Use a detached name and heading once
 
-Paste two fictional headings. Under each, put two item names on their own lines above amount-and-price tables with empty Item cells. Choose each exact source name for its table rows and each heading for the corresponding Prices category. Before Add, verify the review identifies the original source lines as used and that no standalone copy will publish. Add, then check each category and item name appears once in Build, Preview and Copy, with all eight amount-price pairs intact. In a separate draft, undo one source-use choice and confirm that line returns as Text or Heading. Retain a note between offers and check that it stays in source order.
+Paste two fictional headings. Under each, put two item names on their own lines above amount-and-price tables with empty Item cells. Without selecting each row first, choose each exact source name for its table and each heading for the corresponding Prices category. Check that the controls state how many rows they will change. Before Add, verify the review identifies the original source lines as used and that no standalone copy will publish. Add, then check each category and item name appears once in Build, Preview and Copy, with all eight amount-price pairs intact. In a separate draft, undo one source-use choice and confirm that line returns as Text or Heading. Retain a note between offers and check that it stays in source order.
 
 ## Phone and tablet
 

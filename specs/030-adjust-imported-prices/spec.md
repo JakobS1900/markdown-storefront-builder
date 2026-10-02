@@ -61,7 +61,7 @@ A seller brings in a menu where a category heading and item name appear on their
 
 **Acceptance Scenarios**:
 
-1. **Given** a standalone name immediately before a table, **when** the seller chooses that source line as the selected rows' shared name, **then** those rows use the name and the original line does not also appear as a separate Text section.
+1. **Given** a standalone name immediately before a table, **when** the seller chooses that source line as the table rows' shared name, **then** its included rows use the name without requiring individual row selection and the original line does not also appear as a separate Text section. A seller can narrow the action to selected rows when needed.
 2. **Given** a heading before one or more tables, **when** the seller chooses it as their Prices category, **then** the saved page uses the heading for those offers and does not also publish a duplicate standalone Heading section.
 3. **Given** a source line that could be an item, heading or note, **when** the seller keeps it as Text or undoes a source-use choice, **then** its original content remains visible in review and in the saved result unless they explicitly exclude it.
 4. **Given** a source-use choice and later edits, moves or exclusions, **when** no included offer still uses that source line, **then** the line returns to its original reviewed role before Add.
@@ -95,7 +95,7 @@ A seller brings in a menu where a category heading and item name appear on their
 - **FR-011**: Corrections MUST remain local to the import draft until confirmation. Cancel MUST leave the saved document unchanged. Original source MUST not be sent to external analysis services, telemetry or debugging logs.
 - **FR-012**: Correction fields MUST have visible labels and accessible names identifying their item, support keyboard operation and phone touch targets, and fit a 320 CSS pixel viewport without horizontal form scrolling.
 - **FR-013**: Source replacement and interpretation changes MUST not silently destroy edits. Preserving ambiguous content as Text MUST remain available.
-- **FR-014**: Review MUST offer an explicit, source-identified action for using the nearest preceding standalone text line as selected offers' shared item name, when no other table or heading intervenes, and for using the nearest preceding heading before the next heading as their destination Prices category. Typing the same words alone MUST NOT silently consume the source line.
+- **FR-014**: Review MUST offer an explicit, source-identified action for using the nearest preceding standalone text line as shared item name, when no other table or heading intervenes, and for using the nearest preceding heading before the next heading as destination Prices category. Each action MUST state how many included table rows it will change and apply to the whole table by default, with a selected-row subset available for exceptions. Typing the same words alone MUST NOT silently consume the source line.
 - **FR-015**: A source line chosen for an item name or category MUST be represented once in the reviewed and saved result. Undoing the choice or leaving no included offer that uses it MUST restore its original Text or Heading output unless the seller separately excluded it.
 - **FR-016**: Source-use choices MUST preserve notes and unrelated lines in their original order, remain attached to exact source lines across review pagination, and remain local to the draft until Add.
 

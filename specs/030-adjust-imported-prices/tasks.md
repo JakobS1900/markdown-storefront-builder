@@ -73,8 +73,8 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 
 **Independent Test**: Two categories and four detached names become four items with eight amount-price pairs in Build, Preview and Copy, without duplicate standalone Heading or Text sections.
 
-- [ ] T026 [US4] Add failing UI tests for source-identified name and category choices, keep-as-Text behavior, undo, keyboard focus and pagination in `app/tests/page-paste.test.ts` and `app/tests/a11y.test.ts`.
-- [ ] T027 [US4] Add the minimum source-use controls in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`. Show the exact source row and resulting category or name before Add; keep a visible choice to retain ambiguous source as Text or Heading.
+- [ ] T026 [US4] Add failing UI tests for source-identified name and category choices that act on all included table rows without prior selection, selected-row exceptions, keep-as-Text behavior, undo, keyboard focus and pagination in `app/tests/page-paste.test.ts` and `app/tests/a11y.test.ts`.
+- [ ] T027 [US4] Add the minimum source-use controls in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`. State the number of affected rows and show the exact source row and resulting category or name before Add; keep a visible choice to retain ambiguous source as Text or Heading.
 - [ ] T028 [US4] Add saved Build, Preview and Copy acceptance for Task D in `app/tests/import-quantity-integration.test.ts`. Run real Chrome Task D at 320 and 390 CSS pixels and record the observed output in `docs/research/`.
 - [ ] T029 [US4] Get fresh spec and quality reviews of the panel chunk, run focused tests and fix findings.
 
