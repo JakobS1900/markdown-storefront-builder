@@ -170,7 +170,7 @@ function groupedTiers(rows: readonly PagePasteReviewRow[], quantitySourceLines: 
 
 function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteReviewRow[],
   categories: readonly PagePasteCategory[], quantitySourceLines: ReadonlySet<number>,
-  manual: boolean, sectionIndex: number): readonly ProposedBlock[] {
+  manual: boolean, sectionIndex: number, blockDestinations: WeakMap<ProposedBlock, string>): readonly ProposedBlock[] {
   const lines = readLines(section.source);
   const byLine = new Map(rows.map((row) => [row.sourceLine, row]));
   const blocks: ProposedBlock[] = [];
@@ -185,7 +185,10 @@ function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteRevi
     if (menuRows.length > 0) {
       const category = categories.find((candidate) => candidate.id === destinationId);
       const heading = category?.id.startsWith("new:") ? category.name : category?.heading;
-      blocks.push({ kind: "menu", ...(heading === undefined ? {} : { heading }), tiers: groupedTiers(menuRows, quantitySourceLines) });
+      const block: ProposedBlock = { kind: "menu", ...(heading === undefined ? {} : { heading }),
+        tiers: groupedTiers(menuRows, quantitySourceLines) };
+      blocks.push(block);
+      blockDestinations.set(block, destinationId);
     }
     menuRows = [];
   };
@@ -320,6 +323,7 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
     }),
     ...(draft.categories ?? []),
   ];
+  const blockDestinations = new WeakMap<ProposedBlock, string>();
   const sections = prepared.map(({ source, index, proposed, mapping, block }): PagePasteReviewSection => {
     const table = mapping === undefined ? undefined : readPagePasteTable(proposed);
     const roles = mapping === undefined ? [] : [mapping.product, mapping.price, ...(mapping.size === undefined ? [] : [mapping.size])];
@@ -371,7 +375,7 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       (row.name.trim() === "" || row.amount.trim() !== "" && row.price.trim() === ""));
     // CHUNK 3: Keep moved offers at their source positions while a retained Text line splits the Prices blocks.
     const rowBlocks = rows.length > 0 && (manual || block.kind === "menu" || mapping !== undefined && validRoles && changed && !unsafeUncorrected)
-      ? orderedRowBlocks(proposed, rows, categories, quantitySourceLines, manual, index)
+      ? orderedRowBlocks(proposed, rows, categories, quantitySourceLines, manual, index, blockDestinations)
       : menu?.blocks ?? [block];
     const headingRecovery = rows.length > 0 && rowBlocks.some((output) => output.kind === "heading") &&
       rows.every((row) => row.included !== true ||
@@ -486,6 +490,7 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
     });
   });
   const blocks: ProposedBlock[] = [];
+  let visibleSourceHeading: string | undefined;
   let previousDestination: string | undefined;
   let usedGap = false;
   const destinationKey = (id: string): string => {
@@ -500,15 +505,24 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
     if (!section.included) { usedGap = false; continue; }
     if (section.blocks.length === 0 && readLines(section.source.source).some((_, offset) =>
       activeUses.has(section.source.from + offset + 1))) { usedGap = true; continue; }
+    const destinations = [...new Set(section.rows.filter((row) => row.included === true).map((row) => row.destinationId))];
     for (const block of section.blocks) {
-      const destinations = [...new Set(section.rows.filter((row) => row.included === true).map((row) => row.destinationId))];
-      const destination = block.kind === "menu" && section.blocks.length === 1 && destinations.length === 1 && destinations[0] !== undefined
-        ? destinationKey(destinations[0]) : undefined;
+      const destinationId = blockDestinations.get(block) ?? (section.blocks.length === 1 && destinations.length === 1
+        ? destinations[0] : undefined);
+      const destination = block.kind === "menu" && destinationId !== undefined ? destinationKey(destinationId) : undefined;
+      const sourceCategory = destination?.startsWith("source:") === true &&
+        activeUses.get(Number(destination.slice(7))) === "category";
       const previous = blocks.at(-1);
       if (usedGap && previous?.kind === "menu" && block.kind === "menu" &&
         previousDestination !== undefined && previousDestination === destination && previous.heading === block.heading) {
         blocks[blocks.length - 1] = { ...previous, tiers: [...previous.tiers, ...block.tiers] };
+      } else if (block.kind === "menu" && sourceCategory && visibleSourceHeading === destination) {
+        const unheaded = { ...block };
+        delete unheaded.heading;
+        blocks.push(unheaded);
       } else blocks.push(block);
+      if (block.kind === "heading" || block.kind === "menu")
+        visibleSourceHeading = block.kind === "menu" && sourceCategory ? destination : undefined;
       previousDestination = destination;
       usedGap = false;
     }

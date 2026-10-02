@@ -366,8 +366,68 @@ it("keeps a retained note between menus in the same reused category", () => {
       "5:15:0": { name: "Comet", destinationId: "source:1" } },
   });
   expect(review.blocks.map((block) => block.kind)).toEqual(["menu", "prose", "menu"]);
+  expect(review.blocks.filter((block) => block.kind === "menu" && block.heading === "Figures")).toHaveLength(1);
+  expect(review.blocks[0]).toMatchObject({ kind: "menu", heading: "Figures", tiers: [
+    { name: "Arrow Orb", unit: "12 oz", price: "$25" },
+  ] });
+  expect(review.blocks[2]).toEqual({ kind: "menu", tiers: [
+    { name: "Comet", unit: "16 oz", price: "$32" },
+  ] });
   expect(review.blocks[1]?.kind === "prose" ? review.blocks[1].text : "").toContain("Remember the glaze");
   expect(review.coverage.find((line) => line.sourceLine === 9)?.kind).toBe("text");
+});
+
+it("emits a reused source heading once when one section contains menu, note, menu", () => {
+  const text = "# Figures\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 12 oz | $20 |\n\nMug - $25\nA note\nBowl - $32";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [1],
+    mappings: { 0: { product: 0, size: 1, price: 2 } }, manualSections: [1],
+    sourceUses: { 1: { role: "category", rowKeys: ["0:5:0", "1:7:0", "1:9:0"] } },
+    corrections: { "0:5:0": { destinationId: "source:1" },
+      "1:7:0": { included: true, name: "Mug", price: "$25", destinationId: "source:1" },
+      "1:9:0": { included: true, name: "Bowl", price: "$32", destinationId: "source:1" } },
+  });
+  expect(review.canConfirm).toBe(true);
+  expect(review.blocks.map((block) => block.kind)).toEqual(["menu", "menu", "prose", "menu"]);
+  expect(review.blocks.filter((block) => block.kind === "menu" && block.heading === "Figures")).toHaveLength(1);
+  expect(review.blocks[0]).toMatchObject({ kind: "menu", heading: "Figures", tiers: [{ name: "Vase", unit: "12 oz", price: "$20" }] });
+  expect(review.blocks[1]).toEqual({ kind: "menu", tiers: [{ name: "Mug", price: "$25" }] });
+  expect(review.blocks[2]).toEqual({ kind: "prose", text: "A note" });
+  expect(review.blocks[3]).toEqual({ kind: "menu", tiers: [{ name: "Bowl", price: "$32" }] });
+  expect(review.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedCategory");
+});
+
+it("repeats a source heading after a different category takes over", () => {
+  const text = "# Figures\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 12 oz | $20 |\n\n# Ceramics\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 16 oz | $25 |\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Bowl | 20 oz | $32 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [],
+    mappings: { 0: { product: 0, size: 1, price: 2 }, 1: { product: 0, size: 1, price: 2 },
+      2: { product: 0, size: 1, price: 2 } },
+    sourceUses: { 1: { role: "category", rowKeys: ["0:5:0", "2:15:0"] } },
+    corrections: { "0:5:0": { destinationId: "source:1" },
+      "2:15:0": { destinationId: "source:1" } },
+  });
+  expect(review.canConfirm).toBe(true);
+  expect(review.blocks.map((block) => block.kind === "menu" ? block.heading : block.kind)).toEqual([
+    "Figures", "Ceramics", "Figures",
+  ]);
+  expect(review.blocks.filter((block) => block.kind === "menu").flatMap((block) => block.tiers.map((tier) => tier.name)))
+    .toEqual(["Vase", "Mug", "Bowl"]);
+});
+
+it("repeats a source heading after an unheaded menu in another destination", () => {
+  const text = "# Figures\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 12 oz | $20 |\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Mug | 16 oz | $25 |\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Bowl | 20 oz | $32 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [],
+    mappings: { 0: { product: 0, size: 1, price: 2 }, 1: { product: 0, size: 1, price: 2 },
+      2: { product: 0, size: 1, price: 2 } },
+    sourceUses: { 1: { role: "category", rowKeys: ["0:5:0", "2:13:0"] } },
+    corrections: { "0:5:0": { destinationId: "source:1" },
+      "2:13:0": { destinationId: "source:1" } },
+  });
+  expect(review.canConfirm).toBe(true);
+  expect(review.blocks.map((block) => block.kind === "menu" ? block.heading : block.kind)).toEqual([
+    "Figures", undefined, "Figures",
+  ]);
+  expect(review.blocks.filter((block) => block.kind === "menu").flatMap((block) => block.tiers.map((tier) => tier.name)))
+    .toEqual(["Vase", "Mug", "Bowl"]);
 });
 
 it("moves offers to distinct destinations with the same visible name and retains intervening notes", () => {

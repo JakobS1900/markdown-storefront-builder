@@ -295,6 +295,104 @@ it("uses one line in multi-line prose and Undo restores the full source section"
   expect(store.getState().doc.blocks).toMatchObject(review?.blocks ?? []);
 });
 
+it("shows a reused category heading once across two menus separated by a note", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n\nRemember the glaze\n\nComet\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 16 oz | $32 |");
+  store.setPagePasteTableMapping(2, { product: 0, size: 1, price: 2 });
+  store.setPagePasteTableMapping(5, { product: 0, size: 1, price: 2 });
+  expect(store.usePagePasteSourceLine(3, 2, "name")).toBe(1);
+  expect(store.usePagePasteSourceLine(1, 2, "category")).toBe(1);
+  expect(store.usePagePasteSourceLine(11, 5, "name")).toBe(1);
+  expect(store.usePagePasteSourceLine(1, 5, "category")).toBe(1);
+  const reviewed = store.getPagePasteReview();
+  expect(reviewed?.blocks.map((block) => block.kind)).toEqual(["menu", "prose", "menu"]);
+  expect(reviewed?.blocks.filter((block) => block.kind === "menu" && block.heading === "Figures")).toHaveLength(1);
+  expect(reviewed?.canConfirm).toBe(true);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject(reviewed?.blocks ?? []);
+  const output = compile(store.getState().doc, "pastebin").markdown;
+  expect(output.match(/Figures/g)).toHaveLength(1);
+  expect(output.indexOf("Arrow Orb")).toBeLessThan(output.indexOf("Remember the glaze"));
+  expect(output.indexOf("Remember the glaze")).toBeLessThan(output.indexOf("Comet"));
+  expect(output).toContain("12 oz");
+  expect(output).toContain("16 oz");
+});
+
+it("saves one heading when a manually selected section has menu, note, menu", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Figures\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 12 oz | $20 |\n\nMug - $25\nA note\nBowl - $32");
+  store.setPagePasteTableMapping(0, { product: 0, size: 1, price: 2 });
+  store.swapPagePasteSection(1);
+  store.startManualPagePasteSection(1);
+  store.correctPagePasteRow("1:7:0", { included: true, name: "Mug", price: "$25" });
+  store.correctPagePasteRow("1:9:0", { included: true, name: "Bowl", price: "$32" });
+  expect(store.usePagePasteSourceLine(1, 0, "category")).toBe(1);
+  store.togglePagePasteRowSelection("1:7:0", true);
+  store.togglePagePasteRowSelection("1:9:0", true);
+  store.moveSelectedPagePasteRows("source:1");
+  const reviewed = store.getPagePasteReview();
+  expect(reviewed?.blocks.map((block) => block.kind)).toEqual(["menu", "menu", "prose", "menu"]);
+  expect(reviewed?.blocks.filter((block) => block.kind === "menu" && block.heading === "Figures")).toHaveLength(1);
+  expect(reviewed?.canConfirm).toBe(true);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject(reviewed?.blocks ?? []);
+  const output = compile(store.getState().doc, "pastebin").markdown;
+  expect(output.match(/Figures/g)).toHaveLength(1);
+  expect(output.indexOf("Vase")).toBeLessThan(output.indexOf("Mug"));
+  expect(output.indexOf("Mug")).toBeLessThan(output.indexOf("A note"));
+  expect(output.indexOf("A note")).toBeLessThan(output.indexOf("Bowl"));
+  expect(output).toContain("12 oz");
+  expect(output).toContain("&#36;25");
+  expect(output).toContain("&#36;32");
+});
+
+it("undoes a reused source name to the most recent manual name", () => {
+  store.startPastingPage();
+  store.setPagePasteText("Arrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |");
+  store.setPagePasteTableMapping(1, { product: 0, size: 1, price: 2 });
+  expect(store.usePagePasteSourceLine(1, 1, "name")).toBe(1);
+  store.correctPagePasteRow("1:5:0", { name: "Comet" });
+  expect(store.getPagePasteReview()?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("text");
+  expect(store.usePagePasteSourceLine(1, 1, "name")).toBe(1);
+  store.undoPagePasteSourceLine(1);
+  expect(store.getPagePasteReview()?.rows[0]?.name).toBe("Comet");
+  expect(store.getPagePasteReview()?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("text");
+});
+
+it("undoes a reused source heading to the most recent category", () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Figures\n\nA note\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 12 oz | $25 |");
+  store.setPagePasteTableMapping(2, { product: 0, size: 1, price: 2 });
+  expect(store.usePagePasteSourceLine(1, 2, "category")).toBe(1);
+  store.togglePagePasteRowSelection("2:7:0", true);
+  store.createPagePasteCategoryForSelected("Other figures");
+  expect(store.getPagePasteReview()?.rows[0]?.destinationId).toBe("new:0");
+  expect(store.usePagePasteSourceLine(1, 2, "category")).toBe(1);
+  store.undoPagePasteSourceLine(1);
+  expect(store.getPagePasteReview()?.rows[0]?.destinationId).toBe("new:0");
+  expect(store.getPagePasteReview()?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("heading");
+});
+
+it("undoes a row moved back to a source heading to its immediately prior category", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Figures\n\nA note\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 12 oz | $25 |");
+  store.setPagePasteTableMapping(2, { product: 0, size: 1, price: 2 });
+  expect(store.usePagePasteSourceLine(1, 2, "category")).toBe(1);
+  store.togglePagePasteRowSelection("2:7:0", true);
+  store.createPagePasteCategoryForSelected("Other figures");
+  store.correctPagePasteRow("2:7:0", { price: "$32", details: "Glazed" });
+  expect(store.getPagePasteReview()?.rows[0]?.destinationId).toBe("new:0");
+  store.moveSelectedPagePasteRows("source:1");
+  expect(store.getPagePasteReview()?.rows[0]?.destinationId).toBe("source:1");
+  store.undoPagePasteSourceLine(1);
+  const reviewed = store.getPagePasteReview();
+  expect(reviewed?.rows[0]).toMatchObject({ destinationId: "new:0", price: "$32", details: "Glazed" });
+  expect(reviewed?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("heading");
+  expect(reviewed?.canConfirm).toBe(true);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject(reviewed?.blocks ?? []);
+});
+
 it("waits for an untouched blank price before saving corrected mapped rows", async () => {
   const before = await db.listPages();
   const original = store.getState().doc;

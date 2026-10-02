@@ -1065,7 +1065,9 @@ export function usePagePasteSourceLine(sourceLine: number, tableIndex: number, r
   const corrections = { ...current.corrections };
   const previous = { ...existing?.previous };
   for (const row of rows) {
-    if (!existing?.rowKeys.includes(row.key)) previous[row.key] = current.corrections?.[row.key] ?? {};
+    const stillUsing = role === "name" ? row.name === candidate.value
+      : row.destinationId === `source:${String(sourceLine)}`;
+    if (!existing?.rowKeys.includes(row.key) || !stillUsing) previous[row.key] = current.corrections?.[row.key] ?? {};
     corrections[row.key] = role === "name"
       ? { ...corrections[row.key], name: candidate.value, acceptedNumericName: false }
       : { ...corrections[row.key], destinationId: `source:${String(sourceLine)}` };
@@ -1116,7 +1118,8 @@ export function moveSelectedPagePasteRows(destinationId: string): void {
   const sourceUse = current.sourceUses?.[sourceLine];
   const previous = { ...sourceUse?.previous };
   if (sourceUse?.role === "category") for (const key of keys)
-    if (!sourceUse.rowKeys.includes(key)) previous[key] = current.corrections?.[key] ?? {};
+    if (!sourceUse.rowKeys.includes(key) || current.corrections?.[key]?.destinationId !== destinationId)
+      previous[key] = current.corrections?.[key] ?? {};
   for (const key of keys) corrections[key] = { ...corrections[key], destinationId };
   const sourceUses = sourceUse?.role === "category" ? { ...current.sourceUses,
     [sourceLine]: { ...sourceUse, rowKeys: [...new Set([...sourceUse.rowKeys, ...keys])], previous } }
