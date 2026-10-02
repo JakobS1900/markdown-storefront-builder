@@ -58,17 +58,37 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 - [ ] T022 [US3] Extend `app/tests/a11y.test.ts` for visible names, keyboard operation and touch targets on the correction panel; test the failure path before fixing it.
 - [ ] T023 [US3] Get fresh spec and quality reviews of the phase, run focused tests, and fix findings.
 
-## Phase 5: Whole-feature verification and delivery
+## Phase 5A: User Story 4, source-use contract
 
-- [ ] T024 Run one holistic review of the full `030-adjust-imported-prices` diff for source loss, category placement, grouping, review-to-confirm parity and preservation of existing pages. Fix findings with regressions.
-- [ ] T025 Run `npm run verify` in PowerShell and read its full exit status. Check the quantity fixture, all six column permutations, real Chrome Task A and Task B at 320 and 390 CSS pixels, and the Android 6 tablet with an updated signed APK. Record exact evidence in `docs/research/`.
-- [ ] T026 Update `docs/HANDOFF.md`, `specs/README.md` and this task list with actual status. Commit without AI attribution, push the branch and open a draft PR against `032-menu-first-workflow`.
-- [ ] T027 Keep the stacked PR draft until feature 032's five real seller sessions and this panel's seller observation have been reviewed. Do not publish a normal release from a solo test.
+**Goal**: Give one exact detached source line a deliberate reviewed role without changing the saved document schema.
+
+**Independent Test**: Choosing a standalone name and preceding heading for two table rows gives each source line one coverage outcome and the same ordered blocks in review and confirmation. Undo or removal of all linked offers restores the source line.
+
+- [ ] T024 [US4] Add failing exact-line source-use, undo, coverage and review-to-confirm parity tests in `app/tests/page-paste-review.test.ts` and `app/tests/page-paste-store.test.ts`, including a matching typed value without a choice, a retained note, row exclusion and a later name or destination edit.
+- [ ] T025 [US4] Implement the minimal draft-only source-use choice, exact preceding-line candidates, and pure reviewed-output behavior in `app/src/page-paste-review.ts` and `app/src/store.ts`. Merge adjacent same-category menus only across used lines, retaining notes in order. Keep `Document` name, type and order unchanged. Get fresh spec and quality reviews, fix findings, and commit this contract alone before UI work.
+
+## Phase 5B: User Story 4, use detached source in the panel
+
+**Goal**: Let the seller choose the nearby name and heading in the correction panel and publish each once.
+
+**Independent Test**: Two categories and four detached names become four items with eight amount-price pairs in Build, Preview and Copy, without duplicate standalone Heading or Text sections.
+
+- [ ] T026 [US4] Add failing UI tests for source-identified name and category choices, keep-as-Text behavior, undo, keyboard focus and pagination in `app/tests/page-paste.test.ts` and `app/tests/a11y.test.ts`.
+- [ ] T027 [US4] Add the minimum source-use controls in `app/src/ui/page-paste.ts` and responsive styling in `app/src/styles.css`. Show the exact source row and resulting category or name before Add; keep a visible choice to retain ambiguous source as Text or Heading.
+- [ ] T028 [US4] Add saved Build, Preview and Copy acceptance for Task D in `app/tests/import-quantity-integration.test.ts`. Run real Chrome Task D at 320 and 390 CSS pixels and record the observed output in `docs/research/`.
+- [ ] T029 [US4] Get fresh spec and quality reviews of the panel chunk, run focused tests and fix findings.
+
+## Phase 6: Whole-feature verification and delivery
+
+- [ ] T030 Run one holistic review of the full `030-adjust-imported-prices` diff for source loss, category placement, grouping, review-to-confirm parity and preservation of existing pages. Fix findings with regressions.
+- [ ] T031 Run `npm run verify` in PowerShell and read its full exit status. Check the quantity fixture, all six column permutations, real Chrome Tasks A, B, C and D at 320 and 390 CSS pixels, and the Android 6 tablet with an updated signed APK. Record exact evidence in `docs/research/`.
+- [ ] T032 Update `docs/HANDOFF.md`, `specs/README.md` and this task list with actual status. Commit without AI attribution, push the branch and update the draft PR against `032-menu-first-workflow`.
+- [ ] T033 Keep the stacked PR draft until feature 032's five real seller sessions and this panel's seller observation have been reviewed. Do not publish a normal release from a solo test.
 
 ## Dependencies and parallel work
 
-T001 through T004 precede every user story because all consumers need the same reviewed-output contract. User Story 1 provides editable fields for User Story 2. User Story 3 relies on both. Independent test fixtures for the six column orders and two-category menu can be written in parallel before their implementation chunks. UI and store changes within a chunk must be reviewed together because they share focus and draft state.
+T001 through T004 precede every user story because all consumers need the same reviewed-output contract. User Story 1 provides editable fields for User Story 2. User Story 3 relies on both. User Story 4 follows recovery because source-use choices must participate in undo and source replacement. Its source-use contract lands alone before the UI. Independent test fixtures for the six column orders and two-category menu can be written in parallel before their implementation chunks. UI and store changes within a chunk must be reviewed together because they share focus and draft state.
 
 ## Delivery strategy
 
-The first useful increment is User Story 1 on recognized tables, with ambiguous source retained as Text and an explicit manual row path. Subsequent chunks add cross-section grouping and recovery without adding a second import entry point or changing already saved pages.
+The first useful increment is User Story 1 on recognized tables, with ambiguous source retained as Text and an explicit manual row path. Subsequent chunks add cross-section grouping, recovery and explicit use of detached source without adding a second import entry point or changing already saved pages.

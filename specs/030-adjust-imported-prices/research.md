@@ -44,6 +44,12 @@ Decision: preserve free-text prices byte for byte after the seller edits them. N
 
 Rationale: an incorrect but plausible selling value is worse than a visible unresolved row. The exact private seller menu is unavailable, so fictional corpus cases measure structural safety only.
 
+### Detached source lines used once
+
+Decision added 2026-10-02: offer exact source lines as choices for a shared item name or Prices category. For a table, the name candidate is the nearest preceding standalone nonempty Text line without another table or heading between them. The category candidate is the nearest preceding Heading until another heading appears. The seller must choose a source line for that purpose; matching typed words alone do not imply it. When chosen, its standalone Text or Heading block is removed from the reviewed result and its source coverage records the chosen role. If the choice is undone or no included offer still uses it, restore the original block. Merge adjacent menu blocks with the same chosen category when the only intervening content was used source text. Keep a retained note in place, even when this requires repeating a category heading after the note.
+
+Rationale: a [320 CSS pixel browser run](../../docs/research/2026-10-02-detached-name-browser-audit.md) of the Phase 3 build preserved correct amount and price pairs but rendered `Figures` and `Arrow Orb` twice after the seller assigned the detached lines as a category and shared name. Requiring the seller to find and uncheck both originals makes this correction path too slow and easy to get wrong. Alternative rejected: silently remove source lines whose text happens to match a correction. The same words can be a note or a distinct item, and exact source identity plus an explicit choice is safer.
+
 ## Verification anchors
 
 - `app/tests/import-quantity-integration.test.ts` already checks two categories, five items and 16 amount-price pairs through save, compile and rendered preview.

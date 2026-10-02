@@ -18,6 +18,10 @@ Validation issues are attached to source keys. An included row with a price and 
 
 An existing destination points to a proposed Prices section by index. A new destination has a draft-local ID and a seller-entered heading. Distinct destinations can share a visible name. Empty names are allowed only when the seller explicitly chooses an unnamed Prices section. Moving a row changes its destination, not its source key or position. Its destination heading may repeat when a note or another heading separates its offers.
 
+## Detached source use
+
+A draft-only source-use choice identifies one exact standalone Text or Heading source line, its chosen role as shared item name or category, and the included reviewed rows using it. The source line remains in the original paste. Its review coverage changes from retained Text or standalone Heading to used item name or category only while at least one included row still uses the chosen value and destination. A typed matching value does not create a source-use choice. Undo or a later edit that removes every linked use restores the line's original reviewed output. Retained notes remain between their surrounding offers. Adjacent offers of the same chosen category can share a Prices block when no retained content separates them.
+
 ## Correction state
 
 The page-paste draft owns row edits, inclusion choices, category names, manual rows, mappings, a one-step mapping undo snapshot, review positions, the original source revision, and the starting page ID and target. It never updates `Document`. Cancel drops this state. Before corrections, source text can be edited directly. After corrections, source replacement uses a separate buffer and an explicit discard choice; cancelling leaves both the original textarea and draft unchanged. File input uses the same path. A page switch pauses the draft; Add is disabled until the starting page is reopened or the draft is cancelled. Confirmation checks the page binding before the write, uses the captured target, and locks page changes until its own adoption completes.
