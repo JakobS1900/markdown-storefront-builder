@@ -27,7 +27,7 @@ import {
 import { openBackup } from "../import.js";
 import { rememberWizardOpen } from "../surface-history.js";
 import { showsEmptyState, starterPicker } from "./pages-sidebar.js";
-import { announce, button, el, field, render } from "./dom.js";
+import { announce, button, disclosure, el, field, render } from "./dom.js";
 import { KIND_LABEL, blankBlock, blockForm } from "./forms.js";
 import { WIZARD_ID } from "./wizard.js";
 import { pagePastePanel } from "./page-paste.js";
@@ -116,21 +116,8 @@ function focusCategory(blockId: string): void {
 // imported above. The dependency runs one way: this file reads from there, and
 // nothing there reads from here.
 
-/**
- * What somebody sees before they have written anything.
- *
- * The web build has always opened on a blank editor, which demonstrates
- * nothing. A person handed a link to see whether the thing works arrives at an
- * empty form and a row of buttons, and has to imagine the rest.
- *
- * So the empty state offers a real page. It goes through `openBackup`, the same
- * path the import uses, which means a file that does not parse is refused here
- * exactly as a bad backup is, and the example arrives as its own page instead
- * of overwriting anything. The address is relative because the app is served
- * from a subdirectory on the web and from the root of a custom scheme inside
- * the Android shell, and an absolute path is wrong for one of those.
- */
-function emptyState(state: State): HTMLElement[] {
+/** Start a menu or paste a page, with other starting routes one tap away. */
+function emptyState(state: State, title: HTMLElement): HTMLElement[] {
   const load = button({
     label: "See an example page",
     onClick: () => {
@@ -200,9 +187,9 @@ function emptyState(state: State): HTMLElement[] {
 
   return [
     el("p", { class: "empty" }, [
-      "Start with a menu, paste a page you already have, or choose a starting point.",
+      "Make a menu from scratch or paste a page you already have.",
     ]),
-    el("div", { class: "adders" }, [
+    el("div", { class: "adders empty-starts" }, [
       button({
         label: "Create a menu",
         variant: "primary",
@@ -214,12 +201,15 @@ function emptyState(state: State): HTMLElement[] {
           focusCategory(block.id);
         },
       }),
-      wizard,
       button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
-      load,
     ]),
     ...pagePastePanel(),
-    starterPicker("starters-group-empty"),
+    disclosure({
+      id: "build-more-starts",
+      summary: "More ways to start",
+      children: [el("div", { class: "adders" }, [wizard, load]), starterPicker("starters-group-empty")],
+    }),
+    disclosure({ id: "build-private-title", summary: "Private page title", children: [title] }),
   ];
 }
 
@@ -361,32 +351,38 @@ export function buildSurface(container: HTMLElement): void {
 
   const adders = el(
     "div",
-    // `adders-dock` is the one that stays reachable: on a phone it sticks above
-    // the tab bar rather than sitting at the far end of the list. The other
-    // `.adders` on this surface, the one in `pageList`, is not docked, because
-    // starting a new page is not a thing anybody does repeatedly.
-    { class: "adders adders-dock", role: "group", "aria-label": "Add a section" },
+    { class: "adders", role: "group", "aria-label": "Add a section" },
     ADDABLE.map((kind) =>
       button({
         label: KIND_LABEL[kind],
-        // Chips, which is what `.adders .btn.ghost` in the stylesheet was
-        // written for and what it never got applied to. Six of these were
-        // `primary`, so the empty state painted the solid accent seven times:
-        // once on "See an example page", which is the thing a new person
-        // should press, and six times on the row below it, which is not.
-        // Seven primaries is no primary.
         variant: "ghost",
         onClick: () => {
+          const group = adders.closest("details");
+          if (group instanceof HTMLDetailsElement) group.open = false;
           const block = blankBlock(kind);
           addBlock(block);
           announce(`Added ${KIND_LABEL[kind]}`);
           // Adding selects what it added, so the same problem applies: the new
           // section's fields render below the buttons that were just pressed.
           revealSection(block.id);
+          document.querySelector<HTMLElement>(`[aria-controls="editor-${block.id}"]`)
+            ?.focus({ preventScroll: true });
         },
       }),
     ),
   );
+
+  const title = field({
+    label: "Page title (optional)",
+    value: state.doc.title ?? "",
+    hint: "Only you see this. It is how the page is listed when you come back.",
+    onInput: (value) => {
+      const next = { ...state.doc } as Record<string, unknown>;
+      if (value === "") delete next["title"];
+      else next["title"] = value;
+      update(next as typeof state.doc);
+    },
+  });
 
   render(
     container,
@@ -394,20 +390,15 @@ export function buildSurface(container: HTMLElement): void {
       // The page list used to open this surface, above the page being edited.
       // It is in the sidebar now, reachable from all three surfaces instead of
       // this one, which is feature 025 and FR-106: there is exactly one of it.
-      field({
-        label: "Page title (optional)",
-        value: state.doc.title ?? "",
-        hint: "Only you see this. It is how the page is listed when you come back.",
-        onInput: (value) => {
-          const next = { ...state.doc } as Record<string, unknown>;
-          if (value === "") delete next["title"];
-          else next["title"] = value;
-          update(next as typeof state.doc);
-        },
+      ...(showsEmptyState(state)
+        ? emptyState(state, title)
+        : [title, pagePasteStart(), ...pagePastePanel(), list]),
+      disclosure({
+        id: "build-other-sections",
+        className: `section-additions${blocks.length === 0 ? "" : " section-additions-sticky"}`,
+        summary: "Add a different section",
+        children: [adders],
       }),
-      ...(showsEmptyState(state) ? emptyState(state) : [pagePasteStart(), ...pagePastePanel(), list]),
-      el("h2", { class: "sr-only" }, ["Add a section"]),
-      adders,
     ]),
   );
 }

@@ -167,7 +167,7 @@ describe("where the list is drawn", () => {
     expect(paste).toBeInstanceOf(HTMLButtonElement);
     (paste as HTMLButtonElement).click();
     expect(getState().surface).toBe("build");
-    expect(getState().pastingPage).toEqual({ text: "", dropped: [], swapped: [] });
+    expect(getState().pastingPage).toMatchObject({ text: "", dropped: [], swapped: [], reviewStart: 0 });
     const next = shell();
     expect(next.querySelector(".page-paste")).not.toBeNull();
   });

@@ -1,7 +1,7 @@
 import { buildMappedPagePasteBlock, buildProposedBlock, mapPagePasteTable, pagePasteConversionIssue, readPagePasteTable, readProposal, swapProposalKind, type PagePasteTableMapping, type ProposedSection } from "../page-text.js";
 import {
   clearPagePasteTableMapping, confirmPagePaste, dropPagePasteSection, getState, restorePagePasteSection,
-  setPagePasteTableMapping, setPagePasteText, stopPastingPage, swapPagePasteSection,
+  setPagePasteReviewStart, setPagePasteTableMapping, setPagePasteText, stopPastingPage, swapPagePasteSection,
 } from "../store.js";
 import { announce, button, checkbox, el, field, select } from "./dom.js";
 
@@ -148,7 +148,8 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
       label: `Show previous ${String(previous)} sections`,
       onClick: () => {
         page.start = Math.max(0, start - DRAWN_SECTIONS);
-        refresh();
+        setPagePasteReviewStart(page.start);
+        focusSection(page.start, "input[type=checkbox]");
       },
     }));
   }
@@ -158,7 +159,8 @@ function panelBody(refresh: () => void, pending: boolean, confirm: () => void, p
       label: `Show next ${String(next)} sections`,
       onClick: () => {
         page.start = end;
-        refresh();
+        setPagePasteReviewStart(page.start);
+        focusSection(page.start, "input[type=checkbox]");
       },
     }));
   }
@@ -225,15 +227,13 @@ function fileControl(refresh: () => void, box: HTMLTextAreaElement): Node[] {
     const draft = getState().pastingPage;
     open.disabled = true;
     void file.text().then((text) => {
-      // A delayed read belongs only to the draft that started it. Typing,
-      // closing, and reopening all replace that draft object in the store.
-      if (draft === undefined || getState().pastingPage !== draft) return;
+      if (draft === undefined || getState().pastingPage?.sourceRevision !== draft.sourceRevision) return;
       box.value = text;
       setPagePasteText(text);
       refresh();
       announce("Read the file. Review the sections below.");
     }).catch(() => {
-      if (draft !== undefined && getState().pastingPage === draft) {
+      if (draft !== undefined && getState().pastingPage?.sourceRevision === draft.sourceRevision) {
         announce("That file could not be read. Nothing has been changed.");
       }
     })
@@ -247,7 +247,7 @@ export function pagePastePanel(): HTMLElement[] {
   if (draft === undefined) return [];
   const body = el("div", { class: "page-paste-body" });
   let pending = false;
-  const page: SectionPage = { start: 0, rows: {} };
+  const page: SectionPage = { start: draft.reviewStart, rows: {} };
   // R9: repaint defers while a text field has focus. Refresh only this body so
   // the paste textarea and the Android keyboard connection remain intact.
   const confirm = (): void => {

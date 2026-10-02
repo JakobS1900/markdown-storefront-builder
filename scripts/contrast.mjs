@@ -533,6 +533,10 @@ async function auditFormatBar() {
     await evaluate(`(async () => {
       const bar = document.querySelector('#surface .format-bar');
       const buttons = [...bar.querySelectorAll('button')];
+      // The compact section dock can leave this distant example below the
+      // viewport. Axe marks offscreen controls incomplete instead of measuring
+      // their colors, so bring the actual buttons into view first.
+      bar.scrollIntoView({ block: 'center' });
 
       const r = await axe.run(document.body, {
         runOnly: { type: 'rule', values: ['color-contrast'] },

@@ -77,3 +77,11 @@ specs/032-menu-first-workflow/  spec, plan, research, data model, tasks, quickst
 ## Complexity Tracking
 
 No constitution violation. The transient mapping record is needed because review and confirmation must use the same seller choice without changing the saved schema.
+
+## Usability iteration plan, 2026-10-01
+
+The observed mixed list error begins in `readCandidates`: one delimiter is inferred for the entire paste, then a line using another separator falls back to the last number. That fallback leaves punctuation in names and removes words such as `from` from prices. Preserve the existing whole-paste inference for consistent tables, but detect a clear alternate item-price separator on an individual line. Keep the original line in review. Add transient per-line name and price corrections to the current price-list paste draft, and make confirmation consume those reviewed values. Source replacement clears the corrections. This changes no `Document` field or compiler contract.
+
+The blank screen needs progressive disclosure in the existing Build component. Show the two task starts first; place wizard, example, templates and private title behind secondary controls. Replace the six-choice phone dock with one named section disclosure when a page has content. Keep category and item actions visible within the menu. Existing section creation stays reachable.
+
+Two independent chunks can proceed in parallel. Chunk 4 owns `price-list-text.ts`, price-list paste review, transient correction state and focused tests. Chunk 5 owns `build.ts`, phone layout, and first-sight tests. Each begins with failing tests and receives fresh spec and quality reviews. Then run the whole verify gate and real Chrome workflows at 320 and 390 CSS pixels, including keyboard-focused corrections. A tablet pass checks visible controls and saved values. Seller sessions remain the release gate.

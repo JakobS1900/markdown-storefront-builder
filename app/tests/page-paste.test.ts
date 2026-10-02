@@ -274,15 +274,23 @@ it("lets the seller review and drop sections beyond the first hundred", () => {
   paste(Array.from({ length: 102 }, (_, i) => `Section ${String(i + 1)}`).join("\n\n"));
   expect(document.querySelectorAll(".page-paste-sections li")).toHaveLength(100);
   expect(document.querySelector(".page-paste")?.textContent).toContain("Showing sections 1 to 100 of 102");
-  click("Show next 2 sections");
+  const next = [...document.querySelectorAll<HTMLButtonElement>(".page-paste button")]
+    .find((control) => control.textContent === "Show next 2 sections");
+  if (next === undefined) throw new Error("missing next sections button");
+  next.focus();
+  next.click();
   expect(document.querySelectorAll(".page-paste-sections li")).toHaveLength(2);
   expect(document.querySelector(".page-paste")?.textContent).toContain("Section 102");
+  expect(document.activeElement).toBe(document.querySelector('.page-paste li[data-section-index="100"] input[type=checkbox]'));
   const last = [...document.querySelectorAll<HTMLInputElement>(".page-paste input[type=checkbox]")]
     .find((box) => box.labels?.[0]?.textContent?.includes("Section 102") ?? false);
   if (last === undefined) throw new Error("missing final section checkbox");
+  last.focus();
   last.checked = false;
   last.dispatchEvent(new Event("change", { bubbles: true }));
   expect(document.querySelector(".page-paste")?.textContent).toContain("Add 101 sections as a new page");
+  expect(document.querySelector(".page-paste")?.textContent).toContain("Showing sections 101 to 102 of 102");
+  expect(document.activeElement).toBe(document.querySelector('.page-paste li[data-section-index="101"] input[type=checkbox]'));
 });
 
 it("keeps whitespace empty and offers a single short line honestly", () => {
@@ -341,6 +349,21 @@ it("does not replace text typed after a file read begins", async () => {
   await Promise.resolve();
   expect(getState().pastingPage?.text).toBe("New typed text");
   expect(document.querySelector<HTMLTextAreaElement>(".page-paste textarea")?.value).toBe("New typed text");
+});
+
+it("reads the chosen file after a review choice changes", async () => {
+  live();
+  click("Paste a page you already have");
+  paste("# Original\n\nText here");
+  const read = deferredFile();
+  const checkbox = document.querySelector<HTMLInputElement>(".page-paste input[type=checkbox]");
+  if (checkbox === null) throw new Error("missing section checkbox");
+  checkbox.focus();
+  checkbox.checked = false;
+  checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+  read.resolve("# New file");
+  await Promise.resolve();
+  expect(getState().pastingPage?.text).toBe("# New file");
 });
 
 it("does not put an old file into a newly opened paste panel", async () => {

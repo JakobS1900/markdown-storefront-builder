@@ -4,6 +4,14 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## FEATURE 032 USABILITY ITERATION VERIFIED, SELLER SESSIONS PENDING
+
+On 2026-10-01, a phone-sized audit of the prototype found too many competing starts on a blank page, a persistent strip of six generic section choices, and mixed pasted price lines whose punctuation entered item names. The [iteration audit](research/2026-10-01-usability-iteration-audit.md) records the starting screens, measured friction, screenshots, and results. The branch now gives Create a menu and Paste a page first, moves secondary starts and section types into named disclosures, parses clear mixed price boundaries line by line, and lets sellers correct proposed Item and Price values before Add. Saved document and export formats are unchanged.
+
+Fresh review found four more paths to fix: a blank corrected item could silently disappear, review lines beyond 100 were unreachable, delayed file reads could lose or overwrite a changed source, and changing section 101 in whole-page review lost its position. Closure review also caught keyboard focus dropping after the section pager. Each has a failing regression followed by a fix. The final full `npm run verify` passed with exit 0 in 3m 44s: 89 test files, 1,762 tests, 63 accessibility tests, clean light and dark contrast, menu file, and PWA update gates. Chrome task runs at 320 and 390 CSS pixels showed zero runtime exceptions and no document-width overflow, with exact corrected values in Preview and Copy.
+
+On tablet `3404d221b89fc1f1`, the first signed iteration APK passed direct menu entry, price correction, Preview, Copy, and cold-start persistence on Android 6.0.1 with WebView 106. The final APK was rebuilt after the pager fix with JDK 21 (`BUILD SUCCESSFUL in 2m 21s`), passed v1/v2/v3 signature and API 23 checks, and installed with `Success`. Final SHA-256: `073EDF47E7562C9CFCD2F1C344090DC4E583890961BBBD86D7A76542F0056FCC`. A cold launch showed `DeviceQA` and `Ceramics, 2 items`; the pre-existing `Untitled page` was also present in the saved page drawer during the task run. The tablet's USB stay-awake setting was restored to `0`. See [device check](research/2026-10-01-android-6-check.md). This iteration is on [draft PR #1](https://github.com/JakobS1900/markdown-storefront-builder/pull/1). T025, five real seller sessions using [the task script](research/2026-10-01-seller-task-script.md), remains the release gate. Do not claim a measured usability win or publish a normal release before those sessions.
+
 ## FEATURE 032 MENU WORKFLOW PROTOTYPE VERIFIED
 
 On 2026-10-01, a seller workflow audit reproduced a public three-column menu

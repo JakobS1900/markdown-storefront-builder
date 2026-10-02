@@ -19,7 +19,8 @@ complete baseline tasks first, then install the prototype as an update with
 `adb install -r`. Do not uninstall an existing app to switch versions, because
 uninstalling removes saved pages. To alternate version order, use separate test
 devices or independent browser sessions. Record which setup was used. The
-prototype has not yet had a handset check or public test release.
+prototype was checked on an Android 6.0.1 tablet after its WebView update. It is
+still a draft build, not a public release.
 
 ## Task 1: make a menu
 
@@ -52,6 +53,24 @@ Stop the timer when they have shown both results, or after 10 minutes. Check
 that both names, both sizes, and both selling prices survive. Also ask them to
 point to anything they were unsure about before pressing Add.
 
+## Task 3: correct a short price list
+
+Give them this fictional list. Read this aloud: "Add these items to a menu. Before
+you add them, change the second item to Hand-dyed silk scarf at from $40. Show me
+what a buyer would see."
+
+```text
+Woven basket, $24
+Hand-dyed scarf: from $35
+Cotton tote | $18
+```
+
+Stop after the buyer view or 10 minutes. Check that the other two names and prices
+remain as pasted, the corrected second row is exact, and the original lines were
+visible during review. Note whether they found the row correction controls
+without help. This task checks the usability iteration, not the broader feature
+030 correction panel.
+
 ## After each app version
 
 Ask: "Which step felt slow or confusing? What did you expect that control to
@@ -64,6 +83,7 @@ their words without explaining the design first.
 |---|---|---|---|---|---|---|---|---|---|---|
 | | | | | 1 | | | | | | |
 | | | | | 2 | | | | | | |
+| | | | | 3 | | | | | | |
 
 Do not treat a completed task alone as proof that the app is easier. Compare
 time, help, corrections, missing values, and the seller's explanation across

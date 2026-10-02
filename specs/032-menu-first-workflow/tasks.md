@@ -56,3 +56,11 @@ The three implementation phases are the project chunks. Complete each phase with
 - [x] T024 Capture phone-width screenshots for Tasks A and B and record exact Build, Preview, and Copy results in `docs/research/`.
 - [ ] T025 Arrange at least five real seller sessions comparing current build and prototype, then record task completion, elapsed time, corrections, assistance, and missing values in `docs/research/`. This is the release decision gate; no usability success claim before it.
 - [ ] T026 Update `specs/README.md`, `docs/HANDOFF.md`, and release documentation with actual status. Commit without AI attribution. Ship only after T025 and the normal signed APK and device checks.
+
+## Phase 5: Usability iteration from the phone audit
+
+- [x] T027 [US3] Add a failing pure test for mixed comma, colon, and pipe lines that checks clean names and exact price text. Implement line-specific interpretation only where the item-price boundary is clear, preserving original source and consistent table behavior.
+- [x] T028 [US3] Add failing UI and store tests for correcting one pasted row's name and price, focused keyboard use, source replacement, Add, Preview, Copy, and cancel. Implement transient reviewed values with a visible row editor and no document write before Add.
+- [x] T029 [US2] Add failing first-sight tests for the two primary starts, named secondary paths, and generic section choices reachable without a persistent six-button dock. Implement in Build and phone styles without changing saved documents.
+- [x] T030 Get fresh spec and quality reviews for each chunk, fix findings, and run one cross-chunk review of the combined usability diff.
+- [x] T031 Run `npm run verify`, repeat the four-item and mixed-paste workflows in real Chrome at 320 and 390 CSS pixels, then check the tablet. Record exact evidence and update the live handoff. Push the review branch. T025 remains the release gate.

@@ -127,3 +127,17 @@ A seller pastes a three-column public menu table and sees its source next to pro
 - Existing wizard, templates, and detailed section forms remain available during evaluation. Whether to remove or demote them is decided after seller testing.
 - The import examples are fictional. The user's private menu is neither needed nor requested.
 - The immediate guard can land before the compact editor and table mapping, but the complete feature is evaluated as one workflow.
+
+## Usability iteration, 2026-10-01
+
+The prototype's phone-sized audit found two further problems before seller sessions. A blank page presented four start buttons, a template picker, a private title field, and six section types at once. A paste containing one comma row, one colon row, and one pipe row proposed damaged item names even though the three prices remained visible. Jakob asked to improve usability now, superseding the earlier choice to wait for seller sessions before demoting secondary starts. These are observed prototype defects, so the evaluation build must address them before the seller tasks.
+
+- **FR-032-18**: A blank page MUST make starting a menu and bringing in an existing page the two visible primary decisions. Wizard, example, templates, private title, and other section types MUST remain reachable through clearly named secondary controls.
+- **FR-032-19**: While editing a menu, the six generic section choices MUST not occupy the persistent phone dock. A seller MUST still be able to add another kind of section without returning to a blank page.
+- **FR-032-20**: A price list with mixed comma, colon, and pipe item-price separators MUST review each line with its intended item name and exact price when those roles are clear. Ambiguous lines MUST remain visible for seller correction rather than silently changing their meaning.
+- **FR-032-21**: Before adding pasted price-list rows, a seller MUST be able to correct an individual proposed item name and selling price without rewriting the source paste. The corrected values MUST be the values added to Build, Preview, and Copy. Editing the source MUST reset corrections tied to its old lines.
+- **FR-032-22**: Review controls MUST retain focus and edited values while the Android keyboard is open, with visible labels, accessible names, and no horizontal form scroll at 320 CSS pixels.
+
+**SC-032-06**: At 390 CSS pixels, a blank page exposes the menu and existing-page starts without the six generic section buttons; a one-item menu keeps the generic section choices behind one named disclosure. All existing routes remain reachable.
+
+**SC-032-07**: The fictional mixed list `Woven basket, $24`, `Hand-dyed scarf: from $35`, `Cotton tote | $18` proposes three clean item names with exact prices. Changing only the second row's name and price before Add changes only that saved row. Cancel and source replacement do not apply stale corrections.

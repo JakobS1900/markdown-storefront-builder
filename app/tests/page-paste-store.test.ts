@@ -30,7 +30,7 @@ it("keeps all paste decisions in memory until confirm, including cancellation", 
   store.swapPagePasteSection(1);
   expect(store.getState().pastingPage?.swapped).toEqual([1]);
   store.setPagePasteText("Replacement");
-  expect(store.getState().pastingPage).toEqual({ text: "Replacement", dropped: [], swapped: [] });
+  expect(store.getState().pastingPage).toMatchObject({ text: "Replacement", dropped: [], swapped: [], reviewStart: 0 });
   store.stopPastingPage();
   expect(store.getState().pastingPage).toBeUndefined();
   expect(writes).not.toHaveBeenCalled();

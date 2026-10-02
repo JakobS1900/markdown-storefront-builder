@@ -67,6 +67,89 @@ function group(): HTMLDetailsElement | null {
   return document.querySelector<HTMLDetailsElement>("fieldset.item .more");
 }
 
+function summary(label: string): HTMLDetailsElement {
+  const found = [...document.querySelectorAll<HTMLDetailsElement>("#surface details")].find(
+    (details) => details.querySelector(":scope > summary")?.textContent?.trim() === label,
+  );
+  if (found === undefined) throw new Error(`missing disclosure ${label}`);
+  return found;
+}
+
+describe("starting a page", () => {
+  it("shows only the two seller starts before opening secondary choices", () => {
+    live();
+
+    expect([...document.querySelectorAll("#surface .empty-starts > button")].map(
+      (control) => control.textContent?.trim(),
+    )).toEqual(["Create a menu", "Paste a page you already have"]);
+
+    const more = summary("More ways to start");
+    expect(more.open).toBe(false);
+    expect([...more.querySelectorAll("button")].map((control) => control.textContent?.trim()))
+      .toContain("Answer a few questions");
+    expect([...more.querySelectorAll("button")].map((control) => control.textContent?.trim()))
+      .toContain("See an example page");
+    expect(more.querySelector(".starters > summary")?.textContent).toBe("Start from a template");
+
+    const title = document.querySelector<HTMLInputElement>("#surface .field input");
+    expect(title?.labels?.[0]?.textContent).toBe("Page title (optional)");
+    expect(title?.closest("details")).toBe(summary("Private page title"));
+  });
+
+  it("keeps other section types behind a named disclosure on a blank page and a menu", () => {
+    live();
+
+    const other = summary("Add a different section");
+    expect(other.open).toBe(false);
+    expect(other.classList.contains("section-additions-sticky")).toBe(false);
+    expect([...other.querySelectorAll(".adders button")].map((control) => control.textContent?.trim()))
+      .toEqual(["About you", "Prices", "Gallery", "Text", "Heading", "Divider"]);
+
+    const start = document.querySelector<HTMLButtonElement>("#surface .empty-starts > button");
+    start?.click();
+    const duringMenu = summary("Add a different section");
+    expect(duringMenu.open).toBe(false);
+    expect(duringMenu.classList.contains("section-additions-sticky")).toBe(true);
+    expect(duringMenu.querySelectorAll(".adders button")).toHaveLength(6);
+    duringMenu.open = true;
+    (duringMenu.querySelector("button:nth-child(3)") as HTMLButtonElement | null)?.click();
+    expect(getState().doc.blocks.map((block) => block.kind)).toEqual(["menu", "gallery"]);
+    expect(summary("Add a different section").open).toBe(false);
+  });
+
+  it("keeps the private title editable before and after starting a menu", () => {
+    live();
+    summary("Private page title").open = true;
+    const title = document.querySelector<HTMLInputElement>("#surface .field input");
+    if (title === null) throw new Error("missing private title");
+    title.value = "Weekend market";
+    title.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(getState().doc.title).toBe("Weekend market");
+
+    document.querySelector<HTMLButtonElement>("#surface .empty-starts > button")?.click();
+    const editorTitle = document.querySelector<HTMLInputElement>("#surface .stack > .field input");
+    expect(editorTitle?.value).toBe("Weekend market");
+  });
+
+  it("moves keyboard focus to a section added from the secondary choices", () => {
+    live();
+    document.querySelector<HTMLButtonElement>("#surface .empty-starts > button")?.click();
+    const other = summary("Add a different section");
+    other.open = true;
+    const text = [...other.querySelectorAll<HTMLButtonElement>("button")].find(
+      (control) => control.textContent?.trim() === "Text",
+    );
+    if (text === undefined) throw new Error("missing Text choice");
+    text.focus();
+    text.click();
+
+    const added = getState().doc.blocks.at(-1);
+    if (added === undefined) throw new Error("section was not added");
+    expect(document.activeElement?.getAttribute("aria-controls")).toBe(`editor-${added.id}`);
+    expect(summary("Add a different section").open).toBe(false);
+  });
+});
+
 describe("a blank price row", () => {
   it("asks for what it is and what it costs, and nothing else", () => {
     live();
