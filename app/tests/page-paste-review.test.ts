@@ -199,6 +199,29 @@ it("offers exact preceding source lines and never consumes a matching typed valu
   expect(chosen.coverage.map((line) => line.sourceLine)).toEqual([1, 3, 5, 6, 7, 8]);
 });
 
+it("uses the last line of a prose section as a name while retaining an earlier note", () => {
+  const text = "# Figures\n\nMaker note\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |";
+  expect(findPagePasteSourceCandidates(text, 2)).toEqual({
+    name: { sourceLine: 4, sectionIndex: 1, value: "Arrow Orb" },
+    category: { sourceLine: 1, sectionIndex: 0, value: "Figures" },
+  });
+  const base = { text, dropped: [], swapped: [], mappings: { 2: { product: 0, size: 1, price: 2 } } };
+  const chosen = buildPagePasteReview({ ...base, sourceUses: {
+    1: { role: "category" as const, rowKeys: ["2:8:0", "2:9:0"] },
+    4: { role: "name" as const, rowKeys: ["2:8:0", "2:9:0"] },
+  }, corrections: {
+    "2:8:0": { name: "Arrow Orb", destinationId: "source:1" },
+    "2:9:0": { name: "Arrow Orb", destinationId: "source:1" },
+  } });
+  expect(chosen.blocks.map((block) => block.kind)).toEqual(["prose", "menu"]);
+  expect(chosen.blocks[0]?.kind === "prose" ? chosen.blocks[0].text : "").toContain("Maker note");
+  expect(chosen.blocks[0]?.kind === "prose" ? chosen.blocks[0].text : "").not.toContain("Arrow Orb");
+  expect(chosen.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("text");
+  expect(chosen.coverage.find((line) => line.sourceLine === 4)?.kind).toBe("usedName");
+  const undone = buildPagePasteReview({ ...base });
+  expect(undone.blocks[1]?.kind === "prose" ? undone.blocks[1].text : "").toContain("Maker note\nArrow Orb");
+});
+
 it("restores source output after excluding or editing every linked offer and keeps notes", () => {
   const text = "# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |\n\nRemember the glaze";
   const base = { text, dropped: [], swapped: [], mappings: { 2: { product: 0, size: 1, price: 2 } },

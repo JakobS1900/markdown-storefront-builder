@@ -50,9 +50,11 @@ function sourceCandidates(sections: readonly ProposedSection[], tableIndex: numb
   const previousLines = previous === undefined ? [] : readLines(previous.source)
     .map((line, offset) => ({ line, sourceLine: previous.from + offset + 1 }))
     .filter(({ line }) => line.text.trim() !== "");
-  const standalone = currentHeading < 0 && previous?.kind === "prose" && previousLines.length === 1 && previousLines[0]?.line.kind === "text"
-    ? { sourceLine: previousLines[0].sourceLine, sectionIndex: tableIndex - 1,
-      value: previousLines[0].line.text.trim() } : undefined;
+  const nearest = previousLines.at(-1);
+  const standalone = currentHeading < 0 && previous?.kind === "prose" && nearest?.line.kind === "text" &&
+    previousLines.every(({ line }) => line.kind === "text")
+    ? { sourceLine: nearest.sourceLine, sectionIndex: tableIndex - 1,
+      value: nearest.line.text.trim() } : undefined;
   let category: PagePasteSourceCandidate | undefined;
   for (let index = currentHeading >= 0 ? tableIndex : tableIndex - 1; index >= 0; index -= 1) {
     const section = sections[index];
@@ -437,9 +439,17 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
     const usedHeading = lines.some((line, offset) => line.kind === "heading" &&
       activeUses.get(section.source.from + offset + 1) === "category");
     if (usedName === undefined && !usedHeading) return section;
-    const blocks = section.blocks.filter((block) =>
-      !(usedName !== undefined && block.kind === "prose" && block.text.trim() === usedName.text.trim()) &&
-      !(usedHeading && block.kind === "heading"));
+    let proseIndex = -1;
+    if (usedName !== undefined) section.blocks.forEach((block, index) => {
+      if (block.kind === "prose" && block.text.split("\n").includes(usedName.text)) proseIndex = index;
+    });
+    const blocks = section.blocks.flatMap((block, index): ProposedBlock[] => {
+      if (usedHeading && block.kind === "heading") return [];
+      if (index !== proseIndex || block.kind !== "prose" || usedName === undefined) return [block];
+      const retained = block.text.split("\n");
+      retained.splice(retained.lastIndexOf(usedName.text), 1);
+      return retained.some((line) => line.trim() !== "") ? [{ ...block, text: retained.join("\n") }] : [];
+    });
     const next = { ...section, blocks };
     if (next.issue === "Unselected source lines remain Text." && !blocks.some((block) => block.kind === "prose"))
       delete next.issue;

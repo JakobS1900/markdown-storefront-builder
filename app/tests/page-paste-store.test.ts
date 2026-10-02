@@ -217,6 +217,84 @@ it("dropping a used category line restores row destinations and excludes the hea
   expect(store.getState().doc.blocks).toMatchObject(reviewed?.blocks ?? []);
 });
 
+it("discarding a remap clears source use and mapping Undo restores it", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Arrow Orb\n\n| Item | Alternate | Amount | Price |\n| --- | --- | --- | --- |\n| | Arrow Orb | 12 oz | $25 |");
+  store.setPagePasteTableMapping(1, { product: 0, size: 2, price: 3 });
+  expect(store.usePagePasteSourceLine(1, 1, "name")).toBe(1);
+  expect(store.getPagePasteReview()?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedName");
+  store.setPagePasteTableMapping(1, { product: 1, size: 2, price: 3 });
+  store.resolvePagePasteMapping("discard");
+  const discarded = store.getPagePasteReview();
+  expect(discarded?.rows[0]?.name).toBe("Arrow Orb");
+  expect(discarded?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("text");
+  expect(discarded?.blocks.map((block) => block.kind)).toEqual(["prose", "menu"]);
+  expect(store.getState().pastingPage?.sourceUses?.[1]).toBeUndefined();
+  store.undoPagePasteTableMapping();
+  const restored = store.getPagePasteReview();
+  expect(restored?.rows[0]?.name).toBe("Arrow Orb");
+  expect(restored?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedName");
+  expect(restored?.blocks.map((block) => block.kind)).toEqual(["menu"]);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject(restored?.blocks ?? []);
+});
+
+it("saves a discarded remap with its detached Text line still present", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("Arrow Orb\n\n| Item | Alternate | Amount | Price |\n| --- | --- | --- | --- |\n| | Arrow Orb | 12 oz | $25 |");
+  store.setPagePasteTableMapping(1, { product: 0, size: 2, price: 3 });
+  store.usePagePasteSourceLine(1, 1, "name");
+  store.setPagePasteTableMapping(1, { product: 1, size: 2, price: 3 });
+  store.resolvePagePasteMapping("discard");
+  const reviewed = store.getPagePasteReview();
+  expect(reviewed?.blocks.map((block) => block.kind)).toEqual(["prose", "menu"]);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject(reviewed?.blocks ?? []);
+});
+
+it("discarding one table's remap keeps a shared source heading used by another table", () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Figures\n\nArrow Orb\n\n| Item | Alternate | Amount | Price |\n| --- | --- | --- | --- |\n| | Arrow Orb | 12 oz | $25 |\n\nComet\n\n| Item | Alternate | Amount | Price |\n| --- | --- | --- | --- |\n| | Comet | 16 oz | $32 |");
+  store.setPagePasteTableMapping(2, { product: 0, size: 2, price: 3 });
+  store.setPagePasteTableMapping(4, { product: 0, size: 2, price: 3 });
+  expect(store.usePagePasteSourceLine(3, 2, "name")).toBe(1);
+  expect(store.usePagePasteSourceLine(1, 2, "category")).toBe(1);
+  expect(store.usePagePasteSourceLine(9, 4, "name")).toBe(1);
+  expect(store.usePagePasteSourceLine(1, 4, "category")).toBe(1);
+  store.setPagePasteTableMapping(2, { product: 1, size: 2, price: 3 });
+  store.resolvePagePasteMapping("discard");
+  expect(store.getState().pastingPage?.sourceUses?.[1]?.rowKeys).toEqual(["4:13:0"]);
+  expect(store.getPagePasteReview()?.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedCategory");
+  expect(store.getPagePasteReview()?.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("text");
+  expect(store.getPagePasteReview()?.rows.find((row) => row.key === "4:13:0")?.destinationId).toBe("source:1");
+  store.undoPagePasteTableMapping();
+  expect(store.getState().pastingPage?.sourceUses?.[1]?.rowKeys).toEqual(["2:7:0", "4:13:0"]);
+  expect(store.getPagePasteReview()?.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("usedName");
+  expect(store.getPagePasteReview()?.rows.find((row) => row.key === "4:13:0")?.destinationId).toBe("source:1");
+});
+
+it("uses one line in multi-line prose and Undo restores the full source section", async () => {
+  store.startPastingPage();
+  store.setPagePasteText("# Figures\n\nMaker note\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |");
+  store.setPagePasteTableMapping(2, { product: 0, size: 1, price: 2 });
+  expect(store.usePagePasteSourceLine(4, 2, "name")).toBe(2);
+  expect(store.usePagePasteSourceLine(1, 2, "category")).toBe(2);
+  let review = store.getPagePasteReview();
+  expect(review?.blocks.map((block) => block.kind)).toEqual(["prose", "menu"]);
+  expect(review?.blocks[0]?.kind === "prose" ? review.blocks[0].text : "").toContain("Maker note");
+  expect(review?.blocks[0]?.kind === "prose" ? review.blocks[0].text : "").not.toContain("Arrow Orb");
+  store.undoPagePasteSourceLine(4);
+  review = store.getPagePasteReview();
+  expect(review?.sections[1]?.blocks[0]?.kind === "prose" ? review.sections[1].blocks[0].text : "")
+    .toContain("Maker note\nArrow Orb");
+  expect(review?.coverage.find((line) => line.sourceLine === 4)?.kind).toBe("text");
+  expect(store.usePagePasteSourceLine(4, 2, "name")).toBe(2);
+  review = store.getPagePasteReview();
+  expect(review?.canConfirm).toBe(true);
+  await store.confirmPagePaste();
+  expect(store.getState().doc.blocks).toMatchObject(review?.blocks ?? []);
+});
+
 it("waits for an untouched blank price before saving corrected mapped rows", async () => {
   const before = await db.listPages();
   const original = store.getState().doc;

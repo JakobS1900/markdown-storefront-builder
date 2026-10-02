@@ -225,6 +225,7 @@ export interface State {
       readonly mapping?: PagePasteTableMapping;
       readonly corrections?: Readonly<Record<string, PagePasteRowCorrection>>;
       readonly selectedRowKeys?: readonly string[];
+      readonly sourceUses?: Readonly<Record<number, PagePasteSourceUse>>;
     };
     readonly sourceBuffer?: string;
     readonly sourceDiscardPrompt?: boolean;
@@ -934,7 +935,8 @@ function changePagePasteMapping(index: number, mapping?: PagePasteTableMapping):
   else mappings[index] = mapping;
   set({ pastingPage: { ...current, mappings, mappingUndo: { index, ...(previous === undefined ? {} : { mapping: previous }),
     ...(current.corrections === undefined ? {} : { corrections: current.corrections }),
-    ...(current.selectedRowKeys === undefined ? {} : { selectedRowKeys: current.selectedRowKeys }) } } });
+    ...(current.selectedRowKeys === undefined ? {} : { selectedRowKeys: current.selectedRowKeys }),
+    ...(current.sourceUses === undefined ? {} : { sourceUses: current.sourceUses }) } } });
 }
 
 export function setPagePasteTableMapping(index: number, mapping: PagePasteTableMapping): void {
@@ -967,10 +969,20 @@ export function resolvePagePasteMapping(choice: "keep" | "discard" | "cancel"): 
   else mappings[pending.index] = pending.mapping;
   const corrections = choice === "discard" ? Object.fromEntries(Object.entries(current.corrections ?? {})
     .filter(([key]) => !key.startsWith(`${String(pending.index)}:`))) : current.corrections;
+  const sourceUses = choice === "discard" && current.sourceUses !== undefined
+    ? Object.fromEntries(Object.entries(current.sourceUses).flatMap(([line, use]) => {
+      const retained = [...new Set([...use.rowKeys.filter((key) => !key.startsWith(`${String(pending.index)}:`)),
+        ...(use.role === "category" ? getPagePasteReview()?.rows.filter((row) => row.sectionIndex !== pending.index &&
+          row.destinationId === `source:${line}`).map((row) => row.key) ?? [] : [])])];
+      return retained.length === 0 ? [] : [[line, { ...use, rowKeys: retained,
+        previous: Object.fromEntries(Object.entries(use.previous ?? {}).filter(([key]) => retained.includes(key))) }]];
+    })) : current.sourceUses;
   set({ pastingPage: { ...next, mappings, ...(corrections === undefined ? {} : { corrections }),
+    ...(sourceUses === undefined ? {} : { sourceUses }),
     mappingUndo: { index: pending.index, ...(previous === undefined ? {} : { mapping: previous }),
       ...(current.corrections === undefined ? {} : { corrections: current.corrections }),
-      ...(current.selectedRowKeys === undefined ? {} : { selectedRowKeys: current.selectedRowKeys }) } } });
+      ...(current.selectedRowKeys === undefined ? {} : { selectedRowKeys: current.selectedRowKeys }),
+      ...(current.sourceUses === undefined ? {} : { sourceUses: current.sourceUses }) } } });
 }
 
 export function undoPagePasteTableMapping(): void {
@@ -982,7 +994,9 @@ export function undoPagePasteTableMapping(): void {
   else mappings[undo.index] = undo.mapping;
   const next = { ...current, mappings,
     ...(undo.corrections === undefined ? {} : { corrections: undo.corrections }),
-    ...(undo.selectedRowKeys === undefined ? {} : { selectedRowKeys: undo.selectedRowKeys }) };
+    ...(undo.selectedRowKeys === undefined ? {} : { selectedRowKeys: undo.selectedRowKeys }),
+    ...(undo.sourceUses === undefined ? {} : { sourceUses: undo.sourceUses }) };
+  if (undo.sourceUses === undefined) delete next.sourceUses;
   delete next.mappingUndo;
   delete next.pendingMapping;
   set({ pastingPage: next });
