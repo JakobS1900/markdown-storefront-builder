@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { buildPagePasteReview } from "../src/page-paste-review.js";
+import { buildPagePasteReview, findPagePasteSourceCandidates } from "../src/page-paste-review.js";
 
 it.each([
   ["Item", "Amount", "Price"], ["Item", "Price", "Amount"],
@@ -171,6 +171,180 @@ it("connects detached names to selected amount and price rows without consuming 
   ]);
   expect(review.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("text");
   expect(review.coverage.filter((line) => line.kind === "item").map((line) => line.sourceLine)).toEqual([5, 6]);
+});
+
+it("offers exact preceding source lines and never consumes a matching typed value", () => {
+  const text = "# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |";
+  expect(findPagePasteSourceCandidates(text, 2)).toEqual({
+    name: { sourceLine: 3, sectionIndex: 1, value: "Arrow Orb" },
+    category: { sourceLine: 1, sectionIndex: 0, value: "Figures" },
+  });
+  const base = { text, dropped: [], swapped: [], mappings: { 2: { product: 0, size: 1, price: 2 } },
+    corrections: { "2:7:0": { name: "Arrow Orb" }, "2:8:0": { name: "Arrow Orb" } } };
+  const typed = buildPagePasteReview(base);
+  expect(typed.blocks.map((block) => block.kind)).toEqual(["heading", "prose", "menu"]);
+  expect(typed.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("text");
+  const chosen = buildPagePasteReview({ ...base, sourceUses: {
+    1: { role: "category" as const, rowKeys: ["2:7:0", "2:8:0"] },
+    3: { role: "name" as const, rowKeys: ["2:7:0", "2:8:0"] },
+  }, corrections: { "2:7:0": { name: "Arrow Orb", destinationId: "source:1" },
+    "2:8:0": { name: "Arrow Orb", destinationId: "source:1" } } });
+  expect(chosen.blocks).toEqual([{ kind: "menu", heading: "Figures", tiers: [
+    { name: "Arrow Orb", price: "", quantities: [
+      { amount: "12 oz", price: "$25" }, { amount: "16 oz", price: "$32" },
+    ] },
+  ] }]);
+  expect(chosen.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedCategory");
+  expect(chosen.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("usedName");
+  expect(chosen.coverage.map((line) => line.sourceLine)).toEqual([1, 3, 5, 6, 7, 8]);
+});
+
+it("restores source output after excluding or editing every linked offer and keeps notes", () => {
+  const text = "# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n| | 16 oz | $32 |\n\nRemember the glaze";
+  const base = { text, dropped: [], swapped: [], mappings: { 2: { product: 0, size: 1, price: 2 } },
+    sourceUses: { 1: { role: "category" as const, rowKeys: ["2:7:0", "2:8:0"] },
+      3: { role: "name" as const, rowKeys: ["2:7:0", "2:8:0"] } } };
+  const active = buildPagePasteReview({ ...base, corrections: {
+    "2:7:0": { name: "Arrow Orb", destinationId: "source:1" },
+    "2:8:0": { name: "Arrow Orb", destinationId: "source:1" },
+  } });
+  expect(active.blocks.map((block) => block.kind)).toEqual(["menu", "prose"]);
+  expect(active.blocks[1]?.kind === "prose" ? active.blocks[1].text : "").toContain("Remember the glaze");
+  const changed = buildPagePasteReview({ ...base, corrections: {
+    "2:7:0": { name: "Other", destinationId: "section:2" },
+    "2:8:0": { included: false, destinationId: "section:2" },
+  } });
+  expect(changed.blocks.map((block) => block.kind)).toEqual(["heading", "prose", "menu", "prose"]);
+  expect(changed.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("heading");
+  expect(changed.coverage.find((line) => line.sourceLine === 3)?.kind).toBe("text");
+});
+
+it("rejects a text name across an intervening heading or table", () => {
+  const table = "| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |";
+  const afterHeading = `Arrow Orb\n\n# Figures\n\n${table}`;
+  expect(findPagePasteSourceCandidates(afterHeading, 2).name).toBeUndefined();
+  const afterTable = `Arrow Orb\n\n${table}\n\n${table}`;
+  expect(findPagePasteSourceCandidates(afterTable, 2).name).toBeUndefined();
+});
+
+it("uses the heading attached to the current table instead of an older heading or name", () => {
+  const text = "# Old\n\nArrow\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n\n# New\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 16 oz | $32 |";
+  expect(findPagePasteSourceCandidates(text, 3)).toEqual({
+    category: { sourceLine: 9, sectionIndex: 3, value: "New" },
+  });
+});
+
+it("recognizes detached source above a two-column quantity table", () => {
+  const text = "# Figures\n\nHandmade\n\n| Arrow Orb | Price |\n| --- | --- |\n| 12 oz | $25 |";
+  expect(findPagePasteSourceCandidates(text, 2)).toEqual({
+    name: { sourceLine: 3, sectionIndex: 1, value: "Handmade" },
+    category: { sourceLine: 1, sectionIndex: 0, value: "Figures" },
+  });
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], sourceUses: {
+    1: { role: "category", rowKeys: ["2:7:0"] }, 3: { role: "name", rowKeys: ["2:7:0"] },
+  }, corrections: { "2:7:0": { name: "Handmade", destinationId: "source:1" } } });
+  expect(review.blocks).toEqual([{ kind: "menu", heading: "Figures", tiers: [
+    { name: "Handmade", price: "", quantities: [{ amount: "12 oz", price: "$25" }] },
+  ] }]);
+});
+
+it("suppresses a used Setext heading while retaining its underline as furniture", () => {
+  const text = "Figures\n=======\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [],
+    mappings: { 2: { product: 0, size: 1, price: 2 } }, sourceUses: {
+      1: { role: "category", rowKeys: ["2:8:0"] }, 4: { role: "name", rowKeys: ["2:8:0"] },
+    }, corrections: { "2:8:0": { name: "Arrow Orb", destinationId: "source:1" } } });
+  expect(review.blocks).toEqual([{ kind: "menu", heading: "Figures", tiers: [
+    { name: "Arrow Orb", unit: "12 oz", price: "$25" },
+  ] }]);
+  expect(review.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedCategory");
+  expect(review.coverage.find((line) => line.sourceLine === 2)?.kind).toBe("furniture");
+});
+
+it("keeps a heading consumed while another included row uses its destination", () => {
+  const text = "# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n\nRemember\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Vase | 16 oz | $32 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings: {
+    2: { product: 0, size: 1, price: 2 }, 4: { product: 0, size: 1, price: 2 },
+  }, sourceUses: { 1: { role: "category", rowKeys: ["2:7:0"] } }, corrections: {
+    "2:7:0": { included: false, destinationId: "source:1" },
+    "4:13:0": { destinationId: "source:1" },
+  } });
+  expect(review.blocks.map((block) => block.kind)).toEqual(["prose", "prose", "menu"]);
+  expect(review.blocks.at(-1)).toMatchObject({ kind: "menu", heading: "Figures", tiers: [{ name: "Vase" }] });
+  expect(review.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedCategory");
+});
+
+it("uses four exact names under two headings once and merges only across used lines", () => {
+  const table = (first: string, second: string) => ["| Item | Amount | Price |", "| --- | --- | --- |",
+    `| | 12 oz | ${first} |`, `| | 16 oz | ${second} |`].join("\n");
+  const text = ["# Figures", "", "Arrow Orb", "", table("$25", "$32"), "", "Comet", "",
+    table("$28", "$35"), "", "# Ceramics", "", "Blue Bowl", "", table("$40", "$45"),
+    "", "Red Bowl", "", table("$50", "$55")].join("\n");
+  const cases = [
+    { tableIndex: 2, nameLine: 3, headingLine: 1, rowLines: [7, 8], name: "Arrow Orb", heading: "Figures" },
+    { tableIndex: 4, nameLine: 10, headingLine: 1, rowLines: [14, 15], name: "Comet", heading: "Figures" },
+    { tableIndex: 7, nameLine: 19, headingLine: 17, rowLines: [23, 24], name: "Blue Bowl", heading: "Ceramics" },
+    { tableIndex: 9, nameLine: 26, headingLine: 17, rowLines: [30, 31], name: "Red Bowl", heading: "Ceramics" },
+  ];
+  const mappings: Record<number, { product: number; size: number; price: number }> = {};
+  const corrections: Record<string, { name: string; destinationId: string }> = {};
+  const sourceUses: Record<number, { role: "name" | "category"; rowKeys: string[] }> = {};
+  for (const item of cases) {
+    const candidate = findPagePasteSourceCandidates(text, item.tableIndex);
+    expect(candidate.name).toMatchObject({ sourceLine: item.nameLine, value: item.name });
+    expect(candidate.category).toMatchObject({ sourceLine: item.headingLine, value: item.heading });
+    mappings[item.tableIndex] = { product: 0, size: 1, price: 2 };
+    const rowKeys = item.rowLines.map((line) => `${String(item.tableIndex)}:${String(line)}:0`);
+    for (const key of rowKeys) corrections[key] = { name: item.name, destinationId: `source:${String(item.headingLine)}` };
+    sourceUses[item.nameLine] = { role: "name", rowKeys };
+    const category = sourceUses[item.headingLine];
+    sourceUses[item.headingLine] = { role: "category", rowKeys: [...(category?.rowKeys ?? []), ...rowKeys] };
+  }
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [], mappings, corrections, sourceUses });
+  expect(review.canConfirm).toBe(true);
+  expect(review.blocks).toHaveLength(2);
+  expect(review.blocks.map((block) => block.kind === "menu" ? [block.heading, block.tiers.map((tier) => tier.name)] : [])).toEqual([
+    ["Figures", ["Arrow Orb", "Comet"]], ["Ceramics", ["Blue Bowl", "Red Bowl"]],
+  ]);
+  expect(review.coverage.filter((line) => line.kind === "usedName")).toHaveLength(4);
+  expect(review.coverage.filter((line) => line.kind === "usedCategory")).toHaveLength(2);
+  expect(review.coverage.filter((line) => line.kind === "item")).toHaveLength(8);
+  expect(review.coverage.map((line) => line.sourceLine)).toEqual(text.split("\n").flatMap((line, index) =>
+    line.trim() === "" ? [] : [index + 1]));
+});
+
+it("reuses a heading embedded in a prior menu without dropping its offers", () => {
+  const text = "# Figures\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| Comet | 12 oz | $25 |\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 16 oz | $32 |";
+  expect(findPagePasteSourceCandidates(text, 2)).toEqual({
+    name: { sourceLine: 7, sectionIndex: 1, value: "Arrow Orb" },
+    category: { sourceLine: 1, sectionIndex: 0, value: "Figures" },
+  });
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [],
+    mappings: { 0: { product: 0, size: 1, price: 2 }, 2: { product: 0, size: 1, price: 2 } },
+    sourceUses: { 1: { role: "category", rowKeys: ["2:11:0"] },
+      7: { role: "name", rowKeys: ["2:11:0"] } },
+    corrections: { "2:11:0": { name: "Arrow Orb", destinationId: "source:1" } },
+  });
+  expect(review.blocks).toEqual([{ kind: "menu", heading: "Figures", tiers: [
+    { name: "Comet", unit: "12 oz", price: "$25" },
+    { name: "Arrow Orb", unit: "16 oz", price: "$32" },
+  ] }]);
+  expect(review.coverage.find((line) => line.sourceLine === 1)?.kind).toBe("usedCategory");
+  expect(review.coverage.find((line) => line.sourceLine === 5)?.kind).toBe("item");
+});
+
+it("keeps a retained note between menus in the same reused category", () => {
+  const text = "# Figures\n\nArrow Orb\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 12 oz | $25 |\n\nRemember the glaze\n\nComet\n\n| Item | Amount | Price |\n| --- | --- | --- |\n| | 16 oz | $32 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [],
+    mappings: { 2: { product: 0, size: 1, price: 2 }, 5: { product: 0, size: 1, price: 2 } },
+    sourceUses: { 1: { role: "category", rowKeys: ["2:7:0", "5:15:0"] },
+      3: { role: "name", rowKeys: ["2:7:0"] }, 11: { role: "name", rowKeys: ["5:15:0"] } },
+    corrections: { "2:7:0": { name: "Arrow Orb", destinationId: "source:1" },
+      "5:15:0": { name: "Comet", destinationId: "source:1" } },
+  });
+  expect(review.blocks.map((block) => block.kind)).toEqual(["menu", "prose", "menu"]);
+  expect(review.blocks[1]?.kind === "prose" ? review.blocks[1].text : "").toContain("Remember the glaze");
+  expect(review.coverage.find((line) => line.sourceLine === 9)?.kind).toBe("text");
 });
 
 it("moves offers to distinct destinations with the same visible name and retains intervening notes", () => {

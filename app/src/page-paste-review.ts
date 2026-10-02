@@ -14,9 +14,62 @@ export interface PagePasteReviewDraft {
   readonly manualSections?: readonly number[];
   readonly categories?: readonly PagePasteCategory[];
   readonly selectedRowKeys?: readonly string[];
+  readonly sourceUses?: Readonly<Record<number, PagePasteSourceUse>>;
   readonly emptyHeadingChoices?: Readonly<Record<number, "keep" | "remove">>;
   readonly addedItems?: Readonly<Record<number, { readonly name: string; readonly amount: string; readonly price: string;
     readonly allowBlankPrice?: boolean }>>;
+}
+
+export interface PagePasteSourceUse {
+  readonly role: "name" | "category";
+  readonly rowKeys: readonly string[];
+  readonly previous?: Readonly<Record<string, PagePasteRowCorrection>>;
+}
+
+export interface PagePasteSourceCandidate {
+  readonly sourceLine: number;
+  readonly sectionIndex: number;
+  readonly value: string;
+}
+
+export interface PagePasteSourceCandidates {
+  readonly name?: PagePasteSourceCandidate;
+  readonly category?: PagePasteSourceCandidate;
+}
+
+/** Exact preceding source, independent of any words typed into a correction. */
+function sourceCandidates(sections: readonly ProposedSection[], tableIndex: number): PagePasteSourceCandidates {
+  const table = sections[tableIndex];
+  if (table === undefined) return {};
+  const block = buildProposedBlock(table);
+  if (readPagePasteTable(table) === undefined &&
+    !(block.kind === "menu" && block.tiers.some((tier) => tier.quantities !== undefined))) return {};
+  const currentLines = readLines(table.source);
+  const currentHeading = currentLines.findIndex((line) => line.kind === "heading");
+  const previous = sections[tableIndex - 1];
+  const previousLines = previous === undefined ? [] : readLines(previous.source)
+    .map((line, offset) => ({ line, sourceLine: previous.from + offset + 1 }))
+    .filter(({ line }) => line.text.trim() !== "");
+  const standalone = currentHeading < 0 && previous?.kind === "prose" && previousLines.length === 1 && previousLines[0]?.line.kind === "text"
+    ? { sourceLine: previousLines[0].sourceLine, sectionIndex: tableIndex - 1,
+      value: previousLines[0].line.text.trim() } : undefined;
+  let category: PagePasteSourceCandidate | undefined;
+  for (let index = currentHeading >= 0 ? tableIndex : tableIndex - 1; index >= 0; index -= 1) {
+    const section = sections[index];
+    if (section === undefined) continue;
+    const offset = readLines(section.source).findIndex((line) => line.kind === "heading");
+    if (offset < 0) continue;
+    const sourceLine = section.from + offset + 1;
+    const heading = buildProposedBlock({ ...section, kind: "heading", source: readLines(section.source)[offset]?.text ?? "" });
+    if (heading.kind === "heading" && heading.text !== "") category = { sourceLine, sectionIndex: index, value: heading.text };
+    break;
+  }
+  return { ...(standalone === undefined ? {} : { name: standalone }),
+    ...(category === undefined ? {} : { category }) };
+}
+
+export function findPagePasteSourceCandidates(text: string, tableIndex: number): PagePasteSourceCandidates {
+  return sourceCandidates(readProposal(text).sections, tableIndex);
 }
 
 export interface PagePasteCategory {
@@ -68,7 +121,7 @@ export interface PagePasteReviewSection {
 export interface PagePasteSourceCoverage {
   readonly sectionIndex: number;
   readonly sourceLine: number;
-  readonly kind: "item" | "furniture" | "heading" | "text" | "excluded";
+  readonly kind: "item" | "furniture" | "heading" | "text" | "excluded" | "usedName" | "usedCategory";
 }
 
 export interface PagePasteReview {
@@ -135,11 +188,14 @@ function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteRevi
     menuRows = [];
   };
   const originalHeading = categories.find((category) => category.id === `section:${String(sectionIndex)}`)?.heading;
+  const headingOffset = lines.findIndex((line) => line.kind === "heading");
+  const sourceHeadingId = headingOffset < 0 ? undefined : `source:${String(section.from + headingOffset + 1)}`;
   const firstIncluded = rows.find((row) => row.included === true);
   const firstRowLine = firstIncluded?.sourceLine ?? Infinity;
   const firstRetainedLine = lines.findIndex((line, offset) => line.kind === "text" && !byLine.has(section.from + offset + 1) && line.text.trim() !== "");
   if (!manual && originalHeading !== undefined &&
-    (firstIncluded !== undefined && (firstIncluded.destinationId !== `section:${String(sectionIndex)}` ||
+    (firstIncluded !== undefined && (firstIncluded.destinationId !== `section:${String(sectionIndex)}` &&
+      firstIncluded.destinationId !== sourceHeadingId ||
       firstRetainedLine >= 0 && section.from + firstRetainedLine + 1 < firstRowLine) ||
       firstIncluded === undefined)) {
     const headingLine = lines.find((line) => line.kind === "heading");
@@ -234,6 +290,7 @@ function menuSource(section: ProposedSection, block: ProposedBlock): { blocks: r
 /** One calculation supplies the visible review and the document saved by Add. */
 export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteReview {
   const proposal = readProposal(draft.text);
+  const sourceLines = readLines(draft.text);
   const prepared = proposal.sections.map((source, index) => {
     const proposed = draft.swapped.includes(index) ? swapProposalKind(source) : source;
     const mapping = draft.mappings?.[index];
@@ -250,6 +307,14 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
         : headingBlock?.kind === "heading" ? headingBlock.text : undefined;
       return [{ id: `section:${String(index)}`, name: heading ?? `Prices section ${String(index + 1)}`,
         ...(heading === undefined ? {} : { heading }) }];
+    }),
+    ...Object.entries(draft.sourceUses ?? {}).flatMap(([sourceLine, use]) => {
+      if (use.role !== "category") return [];
+      const line = sourceLines[Number(sourceLine) - 1];
+      if (line?.kind !== "heading") return [];
+      const heading = buildProposedBlock({ kind: "heading", source: line.text,
+        from: Number(sourceLine) - 1, to: Number(sourceLine) - 1, swappable: false });
+      return heading.kind === "heading" ? [{ id: `source:${sourceLine}`, name: heading.text, heading: heading.text }] : [];
     }),
     ...(draft.categories ?? []),
   ];
@@ -340,13 +405,64 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       ...(headingRecovery ? { headingRecovery: true } : {}), ...(issue === undefined ? {} : { issue }) };
   });
 
-  const coverage = sections.flatMap((section): PagePasteSourceCoverage[] => {
+  const activeUses = new Map<number, PagePasteSourceUse["role"]>();
+  const rowOwners = new Map(sections.flatMap((section) => section.rows.map((row) => [row.key, { section, row }] as const)));
+  const candidateCache = new Map<number, PagePasteSourceCandidates>();
+  const usedDestinations = new Set(sections.flatMap((section) => section.included
+    ? section.rows.filter((row) => row.included === true).map((row) => row.destinationId) : []));
+  for (const [key, use] of Object.entries(draft.sourceUses ?? {})) {
+    const sourceLine = Number(key);
+    const sourceSection = sections.find((section) => sourceLine > section.source.from && sourceLine <= section.source.to + 1);
+    if (sourceSection === undefined || !sourceSection.included ||
+      sourceSection.rows.some((row) => row.sourceLine === sourceLine && row.included === true) ||
+      use.role === "category" && sourceLines[sourceLine - 1]?.kind !== "heading" ||
+      use.role === "name" && sourceSection.block.kind !== "prose") continue;
+    const active = use.role === "category" ? usedDestinations.has(`source:${key}`) : use.rowKeys.some((rowKey) => {
+      const owner = rowOwners.get(rowKey);
+      if (owner === undefined || !owner.section.included || owner.row.included !== true) return false;
+      let candidates = candidateCache.get(owner.row.sectionIndex);
+      if (candidates === undefined) {
+        candidates = sourceCandidates(proposal.sections, owner.row.sectionIndex);
+        candidateCache.set(owner.row.sectionIndex, candidates);
+      }
+      const candidate = candidates[use.role];
+      return candidate?.sourceLine === sourceLine && owner.row.name === candidate.value;
+    });
+    if (active) activeUses.set(sourceLine, use.role);
+  }
+  const reviewedSections = sections.map((section) => {
+    const lines = readLines(section.source.source);
+    const usedName = lines.find((line, offset) => line.kind === "text" &&
+      activeUses.get(section.source.from + offset + 1) === "name");
+    const usedHeading = lines.some((line, offset) => line.kind === "heading" &&
+      activeUses.get(section.source.from + offset + 1) === "category");
+    if (usedName === undefined && !usedHeading) return section;
+    const blocks = section.blocks.filter((block) =>
+      !(usedName !== undefined && block.kind === "prose" && block.text.trim() === usedName.text.trim()) &&
+      !(usedHeading && block.kind === "heading"));
+    const next = { ...section, blocks };
+    if (next.issue === "Unselected source lines remain Text." && !blocks.some((block) => block.kind === "prose"))
+      delete next.issue;
+    if (usedHeading && section.headingRecovery === true && blocks.every((block) => block.kind !== "heading") &&
+      draft.addedItems?.[section.index] === undefined) {
+      delete next.blocked;
+      delete next.issue;
+    }
+    return next;
+  });
+  const coverage = reviewedSections.flatMap((section): PagePasteSourceCoverage[] => {
     const itemLines = new Set(section.consumedSourceLines);
     const manual = draft.manualSections?.includes(section.index) === true;
+    const usedHeading = readLines(section.source.source).some((line, offset) => line.kind === "heading" &&
+      activeUses.get(section.source.from + offset + 1) === "category");
     return readLines(section.source.source).flatMap((line, offset) => {
       if (line.text.trim() === "") return [];
       const sourceLine = section.source.from + offset + 1;
-      const kind = !section.included || section.blocks.length === 0 ||
+      const used = section.included ? activeUses.get(sourceLine) : undefined;
+      const kind = used === "name" ? "usedName" : used === "category" ? "usedCategory"
+        : !section.included ? "excluded"
+        : line.kind === "headingUnderline" && usedHeading ? "furniture"
+        : section.blocks.length === 0 ||
         (line.kind === "heading" && section.headingRecovery === true && draft.emptyHeadingChoices?.[section.index] === "remove") ||
         (!manual && section.rows.some((row) => row.sourceLine === sourceLine && row.included === false)) ? "excluded"
         : manual ? itemLines.has(sourceLine) ? "item" : "text"
@@ -359,9 +475,36 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       return [{ sectionIndex: section.index, sourceLine, kind }];
     });
   });
-  const blocks = sections.flatMap((section) => section.included ? section.blocks : []);
-  const rows = sections.flatMap((section) => section.rows);
-  return { ...(proposal.title === undefined ? {} : { title: proposal.title }), categories, sections, blocks, rows, coverage,
-    canConfirm: !sections.some((section) => section.included && (section.blocked === true ||
+  const blocks: ProposedBlock[] = [];
+  let previousDestination: string | undefined;
+  let usedGap = false;
+  const destinationKey = (id: string): string => {
+    if (!id.startsWith("section:")) return id;
+    const section = reviewedSections[Number(id.slice(8))];
+    if (section === undefined) return id;
+    const headingOffset = readLines(section.source.source).findIndex((line) => line.kind === "heading");
+    const sourceLine = section.source.from + headingOffset + 1;
+    return headingOffset >= 0 && activeUses.get(sourceLine) === "category" ? `source:${String(sourceLine)}` : id;
+  };
+  for (const section of reviewedSections) {
+    if (!section.included) { usedGap = false; continue; }
+    if (section.blocks.length === 0 && readLines(section.source.source).some((_, offset) =>
+      activeUses.has(section.source.from + offset + 1))) { usedGap = true; continue; }
+    for (const block of section.blocks) {
+      const destinations = [...new Set(section.rows.filter((row) => row.included === true).map((row) => row.destinationId))];
+      const destination = block.kind === "menu" && section.blocks.length === 1 && destinations.length === 1 && destinations[0] !== undefined
+        ? destinationKey(destinations[0]) : undefined;
+      const previous = blocks.at(-1);
+      if (usedGap && previous?.kind === "menu" && block.kind === "menu" &&
+        previousDestination !== undefined && previousDestination === destination && previous.heading === block.heading) {
+        blocks[blocks.length - 1] = { ...previous, tiers: [...previous.tiers, ...block.tiers] };
+      } else blocks.push(block);
+      previousDestination = destination;
+      usedGap = false;
+    }
+  }
+  const rows = reviewedSections.flatMap((section) => section.rows);
+  return { ...(proposal.title === undefined ? {} : { title: proposal.title }), categories, sections: reviewedSections, blocks, rows, coverage,
+    canConfirm: !reviewedSections.some((section) => section.included && (section.blocked === true ||
       section.rows.some((row) => row.included !== false && row.issue !== undefined))) };
 }

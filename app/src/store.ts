@@ -19,7 +19,8 @@ import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
 import { backupOpening, openBackup, waitForOpenBackups } from "./import.js";
-import { buildPagePasteReview, type PagePasteReview, type PagePasteRowCorrection } from "./page-paste-review.js";
+import { buildPagePasteReview, findPagePasteSourceCandidates, type PagePasteReview,
+  type PagePasteRowCorrection, type PagePasteSourceUse } from "./page-paste-review.js";
 import { pagePasteConversionIssue, readPagePasteTable, readProposal, type PagePasteTableMapping } from "./page-text.js";
 import { canAddReviewedProduct, canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 // A type, and only a type. The answer set is defined beside the pure function
@@ -216,6 +217,7 @@ export interface State {
     readonly corrections?: Readonly<Record<string, PagePasteRowCorrection>>;
     readonly categories?: readonly { readonly id: string; readonly name: string }[];
     readonly selectedRowKeys?: readonly string[];
+    readonly sourceUses?: Readonly<Record<number, PagePasteSourceUse>>;
     readonly manualSections?: readonly number[];
     readonly pendingMapping?: { readonly index: number; readonly mapping?: PagePasteTableMapping };
     readonly mappingUndo?: {
@@ -843,6 +845,7 @@ export function pagePasteSourceHasChoices(): boolean {
     Object.keys(draft.mappings ?? {}).length > 0 || draft.dropped.length > 0 || draft.swapped.length > 0 ||
     (draft.manualSections?.length ?? 0) > 0 || (draft.categories?.length ?? 0) > 0 ||
     (draft.selectedRowKeys?.length ?? 0) > 0 ||
+    Object.keys(draft.sourceUses ?? {}).length > 0 ||
     Object.keys(draft.emptyHeadingChoices ?? {}).length > 0 || Object.keys(draft.addedItems ?? {}).length > 0);
 }
 
@@ -1027,14 +1030,85 @@ export function applyPagePasteSharedName(name: string): void {
   set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections } });
 }
 
+/** Links one exact source line to included table offers, all rows unless a subset is selected. */
+export function usePagePasteSourceLine(sourceLine: number, tableIndex: number, role: "name" | "category"): number {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.sourceBuffer !== undefined ||
+    current.pendingMapping !== undefined || !Number.isInteger(sourceLine) || sourceLine < 1) return 0;
+  const candidate = findPagePasteSourceCandidates(current.text, tableIndex)[role];
+  const review = getPagePasteReview();
+  const table = review?.sections[tableIndex];
+  const source = candidate === undefined ? undefined : review?.sections[candidate.sectionIndex];
+  if (candidate?.sourceLine !== sourceLine || table === undefined || !table.included ||
+    source === undefined || !source.included || role === "name" && source.block.kind !== "prose" ||
+    source.rows.some((row) => row.sourceLine === sourceLine && row.included === true)) return 0;
+  const included = table.rows.filter((row) => row.included === true);
+  const selected = included.filter((row) => current.selectedRowKeys?.includes(row.key));
+  const rows = selected.length > 0 ? selected : included;
+  if (rows.length === 0) return 0;
+  const existing = current.sourceUses?.[sourceLine];
+  if (existing !== undefined && existing.role !== role) return 0;
+  const corrections = { ...current.corrections };
+  const previous = { ...existing?.previous };
+  for (const row of rows) {
+    if (!existing?.rowKeys.includes(row.key)) previous[row.key] = current.corrections?.[row.key] ?? {};
+    corrections[row.key] = role === "name"
+      ? { ...corrections[row.key], name: candidate.value, acceptedNumericName: false }
+      : { ...corrections[row.key], destinationId: `source:${String(sourceLine)}` };
+  }
+  const sourceUses = { ...current.sourceUses, [sourceLine]: { role,
+    rowKeys: [...new Set([...(existing?.rowKeys ?? []), ...rows.map((row) => row.key)])], previous } };
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections, sourceUses } });
+  return rows.length;
+}
+
+export function undoPagePasteSourceLine(sourceLine: number): void {
+  const current = state.pastingPage;
+  const use = current?.sourceUses?.[sourceLine];
+  if (current === undefined || use === undefined || confirmingPagePaste) return;
+  const corrections = { ...current.corrections };
+  const keys = use.role === "category" ? [...new Set([...use.rowKeys,
+    ...(getPagePasteReview()?.rows.filter((row) => row.destinationId === `source:${String(sourceLine)}`).map((row) => row.key) ?? [])])]
+    : use.rowKeys;
+  const line = findPagePasteSourceCandidates(current.text,
+    Number(use.rowKeys[0]?.split(":")[0]))[use.role];
+  for (const key of keys) {
+    const correction = { ...corrections[key] };
+    const previous = use.previous?.[key] ?? {};
+    if (use.role === "name" && line !== undefined && correction.name === line.value) {
+      if (previous.name === undefined) delete correction.name;
+      else correction.name = previous.name;
+      if (previous.acceptedNumericName === undefined) delete correction.acceptedNumericName;
+      else correction.acceptedNumericName = previous.acceptedNumericName;
+    } else if (use.role === "category" && correction.destinationId === `source:${String(sourceLine)}`) {
+      if (previous.destinationId === undefined) delete correction.destinationId;
+      else correction.destinationId = previous.destinationId;
+    }
+    if (Object.keys(correction).length === 0) delete corrections[key];
+    else corrections[key] = correction;
+  }
+  const sourceUses = { ...current.sourceUses };
+  delete sourceUses[sourceLine];
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections, sourceUses } });
+}
+
 export function moveSelectedPagePasteRows(destinationId: string): void {
   const current = state.pastingPage;
   const keys = current?.selectedRowKeys ?? [];
   if (current === undefined || confirmingPagePaste || keys.length === 0 ||
     !getPagePasteReview()?.categories.some((category) => category.id === destinationId)) return;
   const corrections = { ...current.corrections };
+  const sourceLine = destinationId.startsWith("source:") ? Number(destinationId.slice(7)) : NaN;
+  const sourceUse = current.sourceUses?.[sourceLine];
+  const previous = { ...sourceUse?.previous };
+  if (sourceUse?.role === "category") for (const key of keys)
+    if (!sourceUse.rowKeys.includes(key)) previous[key] = current.corrections?.[key] ?? {};
   for (const key of keys) corrections[key] = { ...corrections[key], destinationId };
-  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections } });
+  const sourceUses = sourceUse?.role === "category" ? { ...current.sourceUses,
+    [sourceLine]: { ...sourceUse, rowKeys: [...new Set([...sourceUse.rowKeys, ...keys])], previous } }
+    : current.sourceUses;
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections,
+    ...(sourceUses === undefined ? {} : { sourceUses }) } });
 }
 
 export function createPagePasteCategoryForSelected(name: string): void {
@@ -1075,8 +1149,12 @@ export function startManualPagePasteSection(index: number): void {
 
 export function dropPagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste || readProposal(current.text).sections[index] === undefined || current.dropped.includes(index)) return;
-  set({ pastingPage: { ...current, dropped: [...current.dropped, index] } });
+  const section = current === undefined ? undefined : readProposal(current.text).sections[index];
+  if (current === undefined || confirmingPagePaste || section === undefined || current.dropped.includes(index)) return;
+  for (const line of Object.keys(current.sourceUses ?? {}).map(Number))
+    if (line > section.from && line <= section.to + 1) undoPagePasteSourceLine(line);
+  const updated = state.pastingPage;
+  if (updated !== undefined) set({ pastingPage: { ...updated, dropped: [...updated.dropped, index] } });
 }
 
 export function restorePagePasteSection(index: number): void {
