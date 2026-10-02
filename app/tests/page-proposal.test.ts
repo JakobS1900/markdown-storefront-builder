@@ -137,18 +137,10 @@ describe("proposing sections from a pasted page", () => {
     expect(menu.tiers.map((tier) => tier.price)).toEqual(["DM me", "from 45", "45+"]);
   });
 
-  it("drops supplier cost on this path and never invents device picture fields", () => {
-    const menu = onlyMenu("Bananas, 12, per lb, 4\nApples, 8, each, 2");
-
-    expect(menu.tiers).toEqual([
-      { name: "Bananas", price: "12", unit: "per lb" },
-      { name: "Apples", price: "8", unit: "each" },
-    ]);
-    for (const tier of menu.tiers) {
-      expect("cost" in tier).toBe(false);
-      expect("localImageIds" in tier).toBe(false);
-    }
-    expect(JSON.stringify(menu)).not.toContain("localAvatarId");
+  it("keeps supplier-shaped rows as public Text until their columns are assigned", () => {
+    const text = "Bananas, 12, per lb, 4\nApples, 8, each, 2";
+    // A whole-page paste cannot infer that a public fourth cell is private Cost.
+    expect(firstBlock(text)).toEqual({ kind: "prose", text });
   });
 
   it("keeps a public extra numeric column as Text rather than guessing it is private cost", () => {

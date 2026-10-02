@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { defineConfig, type Plugin } from "vite";
+import legacy from "@vitejs/plugin-legacy";
 
 /**
  * Stamps the service worker with an identifier derived from the build output.
@@ -46,7 +47,7 @@ export default defineConfig({
   // looks exactly like not having configured one at all.
   envDir: fileURLToPath(new URL(".", import.meta.url)),
   base: "./",
-  plugins: [stampServiceWorker()],
+  plugins: [legacy({ targets: ["Chrome >= 60"] }), stampServiceWorker()],
   resolve: {
     alias: {
       "@mdsb/engine": fileURLToPath(new URL("./engine/src/index.ts", import.meta.url)),
@@ -55,6 +56,5 @@ export default defineConfig({
   build: {
     outDir: fileURLToPath(new URL("./app/dist", import.meta.url)),
     emptyOutDir: true,
-    target: "es2022",
   },
 });

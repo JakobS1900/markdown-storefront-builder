@@ -91,6 +91,15 @@ function typeInto(control: HTMLTextAreaElement, value: string): void {
   control.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function reviewField(label: string): HTMLInputElement {
+  const found = [...document.querySelectorAll("#surface .paste-lines label")].find(
+    (node) => node.textContent?.trim() === label,
+  );
+  const control = document.getElementById(found?.getAttribute("for") ?? "");
+  if (!(control instanceof HTMLInputElement)) throw new Error(`no review field ${label}`);
+  return control;
+}
+
 function ticks(): HTMLInputElement[] {
   return [...document.querySelectorAll<HTMLInputElement>("#surface .paste-lines input[type=checkbox]")];
 }
@@ -189,6 +198,92 @@ describe("ticking the lines", () => {
 });
 
 describe("pasting with the box focused, which is the only way it happens", () => {
+  it("lets a seller correct one row while the keyboard and caret stay in that field", () => {
+    const source = "Woven basket, $24\nHand-dyed scarf: from $35\nCotton tote | $18";
+    pasteWhileFocused(source);
+    expect(reviewField("Item, line 2").value).toBe("Hand-dyed scarf");
+    expect(reviewField("Price, line 2").value).toBe("from $35");
+    expect(document.querySelector("#surface .paste-lines")?.textContent).toContain("Hand-dyed scarf: from $35");
+
+    const name = reviewField("Item, line 2");
+    name.focus();
+    name.value = "Indigo scarf";
+    name.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.activeElement).toBe(name);
+    expect(name.isConnected).toBe(true);
+    expect(reviewField("Item, line 1").value).toBe("Woven basket");
+
+    const price = reviewField("Price, line 2");
+    price.focus();
+    price.value = "from $42";
+    price.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.activeElement).toBe(price);
+    expect(price.isConnected).toBe(true);
+    expect(getState().pasting?.corrections?.[1]).toEqual({ name: "Indigo scarf", price: "from $42" });
+
+    press("Add 3 items");
+    expect(menuBlock().tiers.map(({ name, price: savedPrice }) => [name, savedPrice])).toEqual([
+      ["Bust", "45"],
+      ["Woven basket", "$24"],
+      ["Indigo scarf", "from $42"],
+      ["Cotton tote", "$18"],
+    ]);
+  });
+
+  it("drops an old row correction when the source box is replaced", () => {
+    pasteWhileFocused("Woven basket, $24");
+    const name = reviewField("Item, line 1");
+    name.value = "Edited basket";
+    name.dispatchEvent(new Event("input", { bubbles: true }));
+    typeInto(pasteBox(), "Cotton tote | $18");
+    expect(reviewField("Item, line 1").value).toBe("Cotton tote");
+    expect(getState().pasting?.corrections).toEqual({});
+  });
+
+  it("disables Add while a reviewed item name is empty and restores it as typed", () => {
+    pasteWhileFocused("Basket, $24");
+    const name = reviewField("Item, line 1");
+    name.focus();
+    name.value = "";
+    name.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(has("Add 0 items")).toBe(true);
+    const add = [...document.querySelectorAll<HTMLButtonElement>("#surface button")].find((button) => button.textContent?.trim() === "Add 0 items");
+    expect(add?.disabled).toBe(true);
+    expect(document.activeElement).toBe(name);
+
+    name.value = "Blue basket";
+    name.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(has("Add 1 item")).toBe(true);
+    expect(name.isConnected).toBe(true);
+  });
+
+  it("requires a checked unnamed row to be corrected or unticked before adding other rows", () => {
+    pasteWhileFocused("Basket, $24\nTote, $18");
+    const name = reviewField("Item, line 1");
+    name.focus();
+    name.value = "";
+    name.dispatchEvent(new Event("input", { bubbles: true }));
+    const add = [...document.querySelectorAll<HTMLButtonElement>("#surface button")].find(
+      (control) => control.textContent?.trim() === "Add 1 item",
+    );
+    expect(add?.disabled).toBe(true);
+    expect(document.querySelector("#surface .paste-body")?.textContent).toContain("line 1");
+    ticks()[0]?.focus();
+    ticks()[0]?.click();
+    expect([...document.querySelectorAll<HTMLButtonElement>("#surface button")].find(
+      (control) => control.textContent?.trim() === "Add 1 item",
+    )?.disabled).toBe(false);
+  });
+
+  it("makes later price-list lines reachable for correction", () => {
+    pasteWhileFocused(Array.from({ length: 101 }, (_, i) => `Item ${String(i + 1)}, $${String(i + 1)}`).join("\n"));
+    expect(reviewField("Item, line 1").value).toBe("Item 1");
+    expect(document.querySelector("#surface .paste-body")?.textContent).toContain("Showing lines 1 to 100 of 101");
+    press("Next 100 lines");
+    expect(reviewField("Item, line 101").value).toBe("Item 101");
+    expect(document.querySelector("#surface .paste-body")?.textContent).toContain("Showing lines 101 to 101 of 101");
+  });
+
   it("shows the lines without waiting for the seller to tap somewhere else", async () => {
     // On a phone the keyboard is up and the box holds focus. `typing()` is
     // true for any focused textarea, and `repaint` defers while it is, so a
@@ -211,7 +306,7 @@ describe("a paste far larger than any real price list", () => {
     const many = Array.from({ length: 900 }, (_, i) => `Item ${String(i)}, ${String(i)}`).join("\n");
     openPaste(many);
 
-    expect(ticks()).toHaveLength(500);
+    expect(ticks()).toHaveLength(100);
     expect(document.querySelector("#surface .paste-capped")?.textContent ?? "").toContain("900");
   });
 
@@ -287,6 +382,39 @@ describe("converting", () => {
 });
 
 describe("opening a file instead of pasting", () => {
+  it("reads the chosen file after a line is unticked", async () => {
+    openPaste("Original, $10");
+    const picker = document.getElementById("price-list-file");
+    if (!(picker instanceof HTMLInputElement)) throw new Error("no picker");
+    let finishRead: ((value: string) => void) | undefined;
+    const file = { text: () => new Promise<string>((resolve) => { finishRead = resolve; }) };
+    Object.defineProperty(picker, "files", { value: [file], configurable: true });
+    picker.dispatchEvent(new Event("change", { bubbles: true }));
+    ticks()[0]?.focus();
+    ticks()[0]?.click();
+    finishRead?.("New item, $22");
+    for (let i = 0; i < 10; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getState().pasting?.text).toBe("New item, $22");
+  });
+
+  it("ignores a file read that finishes after the seller starts a different paste", async () => {
+    shop();
+    press("Paste a price list");
+    const picker = document.getElementById("price-list-file");
+    if (!(picker instanceof HTMLInputElement)) throw new Error("no picker");
+    let finishRead: ((value: string) => void) | undefined;
+    const file = { text: () => new Promise<string>((resolve) => { finishRead = resolve; }) };
+    Object.defineProperty(picker, "files", { value: [file], configurable: true });
+    picker.dispatchEvent(new Event("change", { bubbles: true }));
+
+    press("Done pasting");
+    press("Paste a price list");
+    finishRead?.("Old basket, $24");
+    for (let i = 0; i < 10; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getState().pasting?.text).toBe("");
+    expect(pasteBox().value).toBe("");
+  });
+
   it("offers a real button in front of a hidden picker, the pairing the a11y gate wants", () => {
     shop();
     press("Paste a price list");

@@ -11,8 +11,8 @@ and a home screen presence that does not depend on the browser.
 
 ## Building it
 
-Needs a JDK 17 or newer and the Android SDK. Both were already installed here;
-JDK 8 is also on this machine and Gradle will refuse it.
+Needs JDK 21 and the Android SDK. JDK 8 is also on this machine and Gradle will
+refuse it.
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
@@ -24,6 +24,11 @@ npm run android:open    # opens the project in Android Studio
 
 The APK lands at `android/app/build/outputs/apk/debug/app-debug.apk`. Copy it to
 a phone and install it, or use `adb install`.
+
+The app installs on Android 6.0, API 23, or newer. Android 6 also needs an
+updated Android System WebView with Chrome 60 or newer. The tablet check and the
+WebView update used there are recorded in
+`docs/research/2026-10-01-android-6-check.md`.
 
 ## What is verified and what is not
 

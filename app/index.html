@@ -27,6 +27,11 @@
 
     <div id="app"></div>
 
+    <main id="old-webview" hidden>
+      <h1>Update Android System WebView</h1>
+      <p>This device can install the app, but its web engine is too old to run it. Update Android System WebView, then reopen the app.</p>
+    </main>
+
     <!--
       Announcements for assistive technology. Saving, a section moving, and a
       warning appearing all happen away from where the user is looking, and are
@@ -41,6 +46,16 @@
       </p>
     </noscript>
 
+    <script>
+      (function () {
+        var agent = navigator.userAgent;
+        var chrome = /Chrome\/(\d+)/.exec(agent);
+        if (/Android/.test(agent) && chrome && Number(chrome[1]) < 60) {
+          document.getElementById("app").hidden = true;
+          document.getElementById("old-webview").hidden = false;
+        }
+      })();
+    </script>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

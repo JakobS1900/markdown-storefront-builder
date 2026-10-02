@@ -38,6 +38,44 @@ describe("inferring what separates a name from a price", () => {
 });
 
 describe("turning lines into candidate products", () => {
+  it("reads clear mixed separators per line without changing source or prices", () => {
+    const source = "Woven basket, $24\nHand-dyed scarf: from $35\nCotton tote | $18";
+    const rows = readCandidates(source);
+    expect(rows.map(({ line, name, price }) => ({ line, name, price }))).toEqual([
+      { line: "Woven basket, $24", name: "Woven basket", price: "$24" },
+      { line: "Hand-dyed scarf: from $35", name: "Hand-dyed scarf", price: "from $35" },
+      { line: "Cotton tote | $18", name: "Cotton tote", price: "$18" },
+    ]);
+    expect(rows.every((row) => row.suggested)).toBe(true);
+  });
+
+  it("keeps punctuation in a name when a later separator clearly marks the price", () => {
+    const rows = readCandidates("Art print, $12\nSmall, woven basket | $24\nCard, $5");
+    expect(rows[1]).toMatchObject({ name: "Small, woven basket", price: "$24" });
+    const colonRows = readCandidates("Mug, $24\nScarf, hand-dyed: $35\nTote | $18");
+    expect(colonRows[1]).toMatchObject({ name: "Scarf, hand-dyed", price: "$35" });
+  });
+
+  it("keeps a public size separate from a later selling price in a mixed row", () => {
+    const rows = readCandidates("Mug, $24\nPlate | 12 oz | $28\nTote: $18");
+    expect(rows[1]).toMatchObject({ name: "Plate", unit: "12 oz", price: "$28" });
+    expect(rows[1]?.cost).toBeUndefined();
+  });
+
+  it("recognizes a clear free-text price when neighboring rows use another separator", () => {
+    const rows = readCandidates("Custom plaque, DM me\nCotton tote | $18");
+    expect(rows.map(({ name, price }) => [name, price])).toEqual([
+      ["Custom plaque", "DM me"],
+      ["Cotton tote", "$18"],
+    ]);
+  });
+
+  it("keeps an ambiguous extra separator visible rather than guessing a new price", () => {
+    const [row] = readCandidates("Basket, woven, ask me");
+    expect(row?.line).toBe("Basket, woven, ask me");
+    expect([row?.name, row?.price, row?.unit, row?.blurb].join(" ")).toContain("woven");
+  });
+
   it("splits a comma separated line into a name and a price", () => {
     const [row] = readCandidates("Bananas, 4");
     expect(row?.name).toBe("Bananas");

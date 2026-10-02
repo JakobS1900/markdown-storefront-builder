@@ -42,7 +42,7 @@
  */
 import type { Block } from "@mdsb/engine";
 
-import { isTableRule, readCandidates, toProducts, type NewProduct } from "./price-list-text.js";
+import { inferDelimiter, isTableRule, readCandidates, toProducts, type NewProduct } from "./price-list-text.js";
 
 /**
  * What one line looks like, before anything reads meaning into a group of them.
@@ -416,8 +416,35 @@ function textRunIsContactBlock(lines: readonly Line[]): boolean {
   return lines.length > 0 && lines.every((line) => CONTACT_LINE.test(line.text));
 }
 
-function hasAmbiguousPublicNumber(candidate: ReturnType<typeof readCandidates>[number]): boolean {
-  return candidate.suggested && candidate.cost !== undefined && candidate.unit === undefined;
+function runHasUnmappedColumns(run: Run): boolean {
+  return run.kind === "text" && inferDelimiter(run.lines.map((line) => line.text)) !== "none"
+    && (run.lines.some((line) => /^[^|]+\|[^|]+\|\s*$/.test(line.text.trim()))
+      || candidatesForRun(run).some((candidate) =>
+        candidate.unit !== undefined || candidate.cost !== undefined || candidate.blurb !== undefined));
+}
+
+function runHasSizeAsPrice(run: Run): boolean {
+  return run.kind === "text" && candidatesForRun(run).some((candidate) => QUANTITY_LABEL.test(candidate.price.trim()));
+}
+
+export interface PagePasteTableMapping {
+  readonly product: number;
+  readonly price: number;
+  readonly size?: number;
+}
+
+export interface PagePasteTable {
+  readonly headers: readonly string[];
+  readonly rows: readonly { readonly line: number; readonly cells: readonly string[] }[];
+}
+
+function runHasUnmappedHeader(run: Run): boolean {
+  if (run.kind !== "text") return false;
+  const first = candidatesForRun(run)[0];
+  if (first === undefined || !/^(?:product|item|name)$/i.test(first.name.trim())) return false;
+  const label = first.price.trim();
+  if (run.lines[1]?.kind === "tableRule") return !/^price$/i.test(label);
+  return /^(?:price|size|notes?|unit|quantity|amount|cost)$/i.test(label);
 }
 
 function textRunIsMenu(run: Run): boolean {
@@ -429,9 +456,9 @@ function textRunIsMenu(run: Run): boolean {
     return false;
   }
   if (textRunIsContactBlock(nonBlankLines)) return false;
+  if (runHasWideTable(run) || runHasUnmappedColumns(run) || runHasUnmappedHeader(run) || runHasSizeAsPrice(run)) return false;
 
   const candidates = candidatesForRun(run);
-  if (candidates.some(hasAmbiguousPublicNumber)) return false;
 
   if (run.lines.some((line) => line.kind === "tableRule")) {
     const hasQuantities = run.lines.some((line) => line.kind === "text" && QUANTITY_LABEL.test(tableCells(line.text)[0] ?? ""));
@@ -457,6 +484,67 @@ function sourceFromRuns(runs: readonly Run[], startRun: number, endRun: number):
 
 function tableCells(text: string): readonly string[] {
   return text.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
+
+/** A narrow, complete pipe table. An irregular row leaves the whole source as Text. */
+export function readPagePasteTable(section: ProposedSection): PagePasteTable | undefined {
+  const runs = readRuns(section.source).filter((run) => run.kind !== "blank");
+  const tableRun = runs[0]?.kind === "heading" ? runs[1] : runs[0];
+  if (tableRun?.kind !== "text" || runs.at(-1) !== tableRun) return undefined;
+  const lines = tableRun.lines;
+  if (lines[0]?.kind !== "tableHeader" || lines[1]?.kind !== "tableRule") return undefined;
+  const headers = tableCells(lines[0].text);
+  if (headers.length < 3 || headers.some((cell) => cell === "") || tableCells(lines[1].text).length !== headers.length) return undefined;
+  const rows: { line: number; cells: readonly string[] }[] = [];
+  for (let i = 2; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (line === undefined || !line.text.includes("|")) return undefined;
+    const cells = tableCells(line.text);
+    if (cells.length !== headers.length) return undefined;
+    if (cells.every((cell, index) => cell.toLowerCase() === headers[index]?.toLowerCase())) {
+      if (lines[i + 1]?.kind === "tableRule") i += 1;
+      continue;
+    }
+    if (line.kind === "tableRule" || cells.every((cell) => cell === "")) return undefined;
+    rows.push({ line: section.from + tableRun.from + i + 1, cells });
+  }
+  return rows.length === 0 ? undefined : { headers, rows };
+}
+
+export function mapPagePasteTable(section: ProposedSection, mapping: PagePasteTableMapping): MenuBlockWithoutIds | undefined {
+  const table = readPagePasteTable(section);
+  if (table === undefined) return undefined;
+  const roles = [mapping.product, mapping.price, ...(mapping.size === undefined ? [] : [mapping.size])];
+  if (roles.some((index) => !Number.isInteger(index) || index < 0 || index >= table.headers.length) || new Set(roles).size !== roles.length) return undefined;
+  const tiers: ProposedMenuTier[] = [];
+  for (const row of table.rows) {
+    const name = row.cells[mapping.product] ?? "";
+    const price = row.cells[mapping.price] ?? "";
+    const unit = mapping.size === undefined ? "" : row.cells[mapping.size] ?? "";
+    const extras = row.cells.flatMap((value, index) => value !== "" && !roles.includes(index)
+      ? [`${table.headers[index] ?? `Column ${String(index + 1)}`}: ${value}`] : []);
+    if ((name === "" && price === "") || (price === "" && unit !== "")) return undefined;
+    tiers.push({ name, price, ...(unit === "" ? {} : { unit }), ...(extras.length === 0 ? {} : { blurb: extras.join("; ") }) });
+  }
+  const heading = readRuns(section.source).find((run) => run.kind === "heading");
+  return heading === undefined ? { kind: "menu", tiers } : { kind: "menu", heading: headingTextFromRun(heading), tiers };
+}
+
+function runHasWideTable(run: Run): boolean {
+  return run.kind === "text" && run.lines.some((line) => line.kind === "tableRule")
+    && run.lines.some((line) => tableCells(line.text).length > 2);
+}
+
+export function pagePasteConversionIssue(section: ProposedSection): string | undefined {
+  const runs = readRuns(section.source);
+  if (runs.some(runHasWideTable)) {
+    return readPagePasteTable(section) === undefined
+      ? "This table remains Text. Mapping supports a Markdown pipe table with a header, separator, and consistent rows."
+      : "This table has three or more columns. Choose which column holds each price before making it Prices. It will stay Text for now.";
+  }
+  return runs.some((run) => runHasUnmappedHeader(run) || runHasUnmappedColumns(run) || runHasSizeAsPrice(run))
+    ? "This table remains Text. Mapping supports a Markdown pipe table with a header, separator, and consistent rows."
+    : undefined;
 }
 
 const QUANTITY_LABEL = /^\d+(?:\.\d+)?\s*(?:qty|g|kg|mg|oz|lb|lbs|pcs|pieces?)$/i;
@@ -526,8 +614,12 @@ export function readProposal(text: string): Proposal {
       while (cursor < runs.length) {
         const candidate = runs[cursor];
         if (candidate?.kind === "blank") { cursor += 1; continue; }
-        if (candidate?.kind !== "text" || quantityTables(candidate) === undefined) break;
+        if (candidate?.kind !== "text") break;
+        const quantity = quantityTables(candidate);
+        const wide = readPagePasteTable({ kind: "menu", source: runText(candidate), from: candidate.from, to: candidate.to, swappable: true });
+        if (quantity === undefined && wide === undefined) break;
         endRun = cursor;
+        if (wide !== undefined) break;
         cursor += 1;
       }
       if (endRun > i) {
@@ -627,9 +719,15 @@ function buildMenuBlock(section: ProposedSection): MenuBlockWithoutIds {
   return parts?.heading === undefined ? { kind: "menu", tiers } : { kind: "menu", heading: parts.heading, tiers };
 }
 
+export function buildMappedPagePasteBlock(section: ProposedSection, mapping: PagePasteTableMapping): ProposedBlock {
+  return mapPagePasteTable(section, mapping) ?? { kind: "prose", text: section.source };
+}
+
 export function buildProposedBlock(section: ProposedSection): ProposedBlock {
   if (section.kind === "divider") return { kind: "divider" };
-  if (section.kind === "menu") return buildMenuBlock(section);
+  if (section.kind === "menu") return pagePasteConversionIssue(section) === undefined
+    ? buildMenuBlock(section)
+    : { kind: "prose", text: section.source };
   if (section.kind === "heading") {
     const heading = readLines(section.source).find((line) => line.kind === "heading");
     return { kind: "heading", text: heading === undefined ? section.source.trim() : headingTextFromLine(heading), level: heading?.level ?? 1 };
