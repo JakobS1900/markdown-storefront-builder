@@ -163,7 +163,10 @@ describe("the starting point picker", () => {
     const first = starterButtons()[0];
     expect(first).toBeDefined();
     first?.click();
-    await settleUntil(() => getState().pageId !== before);
+    // The page id changes before the click handler closes the sidebar.
+    // Wait for its final announcement so no callback runs after jsdom tears down.
+    await settleUntil(() => (document.getElementById("live-region")?.textContent ?? "")
+      .includes("Started a new page from"));
     renderShell(root);
 
     expect(getState().pageId).not.toBe(before);
