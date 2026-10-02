@@ -189,7 +189,7 @@ function emptyState(state: State, title: HTMLElement): HTMLElement[] {
     el("p", { class: "empty" }, [
       "Make a menu from scratch or paste a page you already have.",
     ]),
-    el("div", { class: "adders empty-starts" }, [
+    ...(state.pastingPage === undefined ? [el("div", { class: "adders empty-starts" }, [
       button({
         label: "Create a menu",
         variant: "primary",
@@ -202,15 +202,24 @@ function emptyState(state: State, title: HTMLElement): HTMLElement[] {
         },
       }),
       button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
-    ]),
+    ])] : []),
     ...pagePastePanel(),
     disclosure({
       id: "build-more-starts",
       summary: "More ways to start",
       children: [el("div", { class: "adders" }, [wizard, load]), starterPicker("starters-group-empty")],
     }),
-    disclosure({ id: "build-private-title", summary: "Private page title", children: [title] }),
+    privateTitle(state, title),
   ];
+}
+
+function privateTitle(state: State, title: HTMLElement): HTMLElement {
+  const name = state.doc.title?.trim();
+  return disclosure({
+    id: "build-private-title",
+    summary: name ? `Private page title: ${name}` : "Private page title",
+    children: [title],
+  });
 }
 
 function pagePasteStart(): HTMLElement {
@@ -392,7 +401,11 @@ export function buildSurface(container: HTMLElement): void {
       // this one, which is feature 025 and FR-106: there is exactly one of it.
       ...(showsEmptyState(state)
         ? emptyState(state, title)
-        : [title, pagePasteStart(), ...pagePastePanel(), list]),
+        : [
+            privateTitle(state, title),
+            ...(state.pastingPage === undefined ? [pagePasteStart()] : []),
+            ...pagePastePanel(), list,
+          ]),
       disclosure({
         id: "build-other-sections",
         className: `section-additions${blocks.length === 0 ? "" : " section-additions-sticky"}`,

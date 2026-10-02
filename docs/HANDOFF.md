@@ -85,10 +85,20 @@ both Android builds passed. Signed `0.13.0-test.3`, versionCode 21, installed
 over the existing app with saved pages intact. On the tablet, the real file
 button opened DocumentsUI, a PNG selection left the draft empty with an explanation, and cancelling
 and reopening worked twice. The [picker check](research/2026-10-02-android6-document-picker-check.md)
-records the APK hash and screenshots. ADB-copied files were not indexed by the
-tablet's Downloads provider, so a complete downloaded `.md` read is still
+records the APK hash and screenshots. A complete downloaded `.md` read remains
 unverified. Capacitor 7 still needs WebView 60 or newer; WebView 49 is outside
 its supported runtime.
+
+A 2026-10-02 [compact Build check](research/2026-10-02-compact-build-tablet-check.md)
+folded the optional private title on existing menus while keeping a saved title
+visible in the disclosure label. It removed the inactive paste start while the
+paste panel is open. Full `npm run verify` passed with 90 files, 1,889 tests and
+65 accessibility tests. Signed `0.13.0-test.4`, versionCode 22, installed as an
+update on the SM_T700; the prior saved section remained. The tablet showed the
+compact Build and active paste states, and Done pasting restored the start action.
+The media scanner indexed two fictional files, but Android 6 DocumentsUI still
+showed an empty Downloads list, so file content selection is still unverified.
+USB stay-awake was restored to setting `0`.
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build. The
