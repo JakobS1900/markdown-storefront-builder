@@ -100,6 +100,8 @@ Arrow Orb
 Stop after both results or 8 minutes. Record whether the seller discovers a
 direct way to use the nearby name and heading, removes duplicate source sections
 by hand, publishes duplicates, or gives up. Check both amount and price pairs.
+Record whether they choose `Adjust as prices` on the standalone name before
+finding the table's `Review section` control, and what they expected each to do.
 Ask what they thought would happen to the original name and heading before Add.
 Do not show them the source-use control during the task.
 
