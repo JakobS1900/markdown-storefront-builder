@@ -107,6 +107,17 @@ tests and 65 accessibility tests. Signed `0.13.0-test.5`, versionCode 23,
 installed in place on the SM_T700. The saved section and Copy output remained;
 the start action disappeared while the panel was active and returned after Done.
 USB stay-awake was restored to setting `0`.
+
+A later 2026-10-02 [local file import check](research/2026-10-02-android6-file-import-complete.md)
+resolved the earlier `.md` selection gap on the SM_T700. Android 6 DocumentsUI's
+virtual Downloads root remained empty, but `Show SD card > Device storage >
+Download` listed the ADB-copied fictional `.md`. Selecting it filled the app's
+source field. Explicit column, name, and category choices saved a new Figures
+page with one Arrow Orb item and both `12 oz / $25` and `16 oz / $32`. Preview,
+Copy, cold launch, and the page drawer confirmed the result and all three prior
+pages. This verifies local `.md` reading with WebView 106; a browser-managed
+download entry and WebView 49 remain untested. USB stay-awake returned to `0`.
+
 [Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
 tracks this branch against feature 032. Keep it and feature 032's draft PR #1
 in draft until five real seller sessions exercise the combined build. The
