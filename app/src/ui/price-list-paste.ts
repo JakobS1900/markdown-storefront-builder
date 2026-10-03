@@ -276,10 +276,20 @@ function fileControl(refresh: () => void): Node[] {
     label: "Open a price list from this device",
     onClick: () => picker.click(),
   });
+  const error = el("p", { class: "paste-file-error" }) as HTMLParagraphElement;
+  error.hidden = true;
 
   picker.addEventListener("change", () => {
     const file = picker.files?.[0];
     if (file === undefined) return;
+    if (file.name && !/\.(csv|tsv|txt|md)$/i.test(file.name) && !file.type.startsWith("text/")) {
+      error.textContent = "Choose a text or price list file. Nothing has been changed.";
+      error.hidden = false;
+      announce(error.textContent);
+      picker.value = "";
+      return;
+    }
+    error.hidden = true;
     const draft = getState().pasting;
     open.disabled = true;
 
@@ -295,7 +305,9 @@ function fileControl(refresh: () => void): Node[] {
         // Nothing has been changed, and saying so is the point: a file that
         // could not be read must not leave the seller wondering whether it
         // half worked.
-        announce("That file could not be read. Nothing has been changed.");
+        error.textContent = "That file could not be read. Nothing has been changed.";
+        error.hidden = false;
+        announce(error.textContent);
       })
       .finally(() => {
         open.disabled = false;
@@ -303,5 +315,5 @@ function fileControl(refresh: () => void): Node[] {
       });
   });
 
-  return [open, picker];
+  return [open, picker, error];
 }

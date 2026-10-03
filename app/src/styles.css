@@ -1752,12 +1752,131 @@ fieldset.item > .btn.icon.danger {
   max-width: 100%;
 }
 
+.page-paste-source-choices,
+.page-paste-source-choice {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.page-paste-source-choice {
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.page-paste-source-choice p {
+  margin: 0;
+}
+
+.page-paste-source-choice button {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  width: 100%;
+}
+
+.page-paste-source-buffer,
+.page-paste-mapping-choice,
+.page-paste-empty-table,
+.page-paste-empty-heading,
+.page-paste-added-item {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.page-paste-source-buffer textarea,
+.page-paste-added-item input {
+  width: 100%;
+  min-width: 0;
+}
+
+.page-paste-mapping-choice button,
+.page-paste-source-buffer button,
+.page-paste-empty-table button,
+.page-paste-empty-heading button,
+.page-paste-added-item button {
+  min-height: var(--tap);
+  min-width: var(--tap);
+}
+
 .page-paste-rows {
   padding-left: 1.5rem;
 }
 
 .page-paste-rows li {
   overflow-wrap: anywhere;
+}
+
+.page-paste-corrections {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  margin-top: 0.75rem;
+}
+
+  .page-paste-card {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+    background: var(--panel);
+  }
+
+  .page-paste-batch {
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+  }
+
+  .page-paste-batch .field,
+  .page-paste-batch input,
+  .page-paste-batch select,
+  .page-paste-batch button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .page-paste-destination {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+.page-paste-card .field,
+.page-paste-card input {
+  width: 100%;
+  min-width: 0;
+}
+
+.page-paste-card .checkbox input {
+  width: auto;
+}
+
+.page-paste-card [hidden] {
+  display: none;
+}
+
+.page-paste-row-source,
+.page-paste-row-result,
+.page-paste-row-issue {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.page-paste-row-source {
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--t-sm);
 }
 
 /*

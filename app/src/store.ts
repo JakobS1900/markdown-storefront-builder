@@ -18,8 +18,10 @@ import {
 import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
-import { openBackup } from "./import.js";
-import { buildMappedPagePasteBlock, buildProposedBlock, pagePasteConversionIssue, readPagePasteTable, readProposal, swapProposalKind, type PagePasteTableMapping } from "./page-text.js";
+import { backupOpening, openBackup, waitForOpenBackups } from "./import.js";
+import { buildPagePasteReview, findPagePasteSourceCandidates, type PagePasteReview,
+  type PagePasteRowCorrection, type PagePasteSourceUse } from "./page-paste-review.js";
+import { pagePasteConversionIssue, readPagePasteTable, readProposal, type PagePasteTableMapping } from "./page-text.js";
 import { canAddReviewedProduct, canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 // A type, and only a type. The answer set is defined beside the pure function
 // that turns it into a page, because that is what gives it its shape; the store
@@ -202,12 +204,34 @@ export interface State {
   // Separate from `pasting`: its blockId and seven actions edit an existing
   // price list. A page paste has no destination block and writes a new page.
   readonly pastingPage?: {
+    readonly originPageId: string;
+    readonly target: Document["target"];
     readonly text: string;
     readonly sourceRevision: number;
     readonly reviewStart: number;
+    readonly rowStarts?: Readonly<Record<number, number>>;
+    readonly adjustingSection?: number;
     readonly dropped: readonly number[];
     readonly swapped: readonly number[];
     readonly mappings?: Readonly<Record<number, PagePasteTableMapping>>;
+    readonly corrections?: Readonly<Record<string, PagePasteRowCorrection>>;
+    readonly categories?: readonly { readonly id: string; readonly name: string }[];
+    readonly selectedRowKeys?: readonly string[];
+    readonly sourceUses?: Readonly<Record<number, PagePasteSourceUse>>;
+    readonly manualSections?: readonly number[];
+    readonly pendingMapping?: { readonly index: number; readonly mapping?: PagePasteTableMapping };
+    readonly mappingUndo?: {
+      readonly index: number;
+      readonly mapping?: PagePasteTableMapping;
+      readonly corrections?: Readonly<Record<string, PagePasteRowCorrection>>;
+      readonly selectedRowKeys?: readonly string[];
+      readonly sourceUses?: Readonly<Record<number, PagePasteSourceUse>>;
+    };
+    readonly sourceBuffer?: string;
+    readonly sourceDiscardPrompt?: boolean;
+    readonly emptyHeadingChoices?: Readonly<Record<number, "keep" | "remove">>;
+    readonly addedItems?: Readonly<Record<number, { readonly name: string; readonly amount: string; readonly price: string;
+      readonly allowBlankPrice?: boolean }>>;
     readonly confirming?: boolean;
   };
   readonly status: Status;
@@ -802,12 +826,68 @@ export function stopPasting(): void {
 
 export function startPastingPage(): void {
   if (state.pastingPage !== undefined) return;
-  set({ pastingPage: { text: "", sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+  set({ pastingPage: { originPageId: state.pageId, target: state.doc.target, text: "", sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+}
+
+let cachedPagePasteReview: { draft: NonNullable<State["pastingPage"]>; review: PagePasteReview } | undefined;
+
+export function getPagePasteReview(): PagePasteReview | undefined {
+  const draft = state.pastingPage;
+  if (draft === undefined) { cachedPagePasteReview = undefined; return undefined; }
+  if (cachedPagePasteReview?.draft === draft) return cachedPagePasteReview.review;
+  const review = buildPagePasteReview(draft);
+  cachedPagePasteReview = { draft, review };
+  return review;
+}
+
+export function pagePasteSourceHasChoices(): boolean {
+  const draft = state.pastingPage;
+  return draft !== undefined && (Object.keys(draft.corrections ?? {}).length > 0 ||
+    Object.keys(draft.mappings ?? {}).length > 0 || draft.dropped.length > 0 || draft.swapped.length > 0 ||
+    (draft.manualSections?.length ?? 0) > 0 || (draft.categories?.length ?? 0) > 0 ||
+    (draft.selectedRowKeys?.length ?? 0) > 0 ||
+    Object.keys(draft.sourceUses ?? {}).length > 0 ||
+    Object.keys(draft.emptyHeadingChoices ?? {}).length > 0 || Object.keys(draft.addedItems ?? {}).length > 0);
 }
 
 export function setPagePasteText(text: string): void {
-  if (state.pastingPage === undefined || confirmingPagePaste) return;
-  set({ pastingPage: { text, sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.sourceBuffer !== undefined || pagePasteSourceHasChoices()) return;
+  set({ pastingPage: { originPageId: current.originPageId, target: current.target, text, sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+}
+
+export function startPagePasteSourceEdit(text?: string): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste) return;
+  set({ pastingPage: { ...current, sourceBuffer: text ?? current.text } });
+}
+
+export function setPagePasteSourceBuffer(text: string): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.sourceBuffer === undefined) return;
+  set({ pastingPage: { ...current, sourceBuffer: text, sourceDiscardPrompt: false } });
+}
+
+export function cancelPagePasteSourceEdit(): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.sourceBuffer === undefined) return;
+  const next = { ...current };
+  delete next.sourceBuffer;
+  delete next.sourceDiscardPrompt;
+  set({ pastingPage: next });
+}
+
+export function applyPagePasteSourceEdit(discard = false): boolean {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.sourceBuffer === undefined) return false;
+  if (current.sourceBuffer === current.text) { cancelPagePasteSourceEdit(); return true; }
+  if (pagePasteSourceHasChoices() && !discard) {
+    set({ pastingPage: { ...current, sourceDiscardPrompt: true } });
+    return false;
+  }
+  set({ pastingPage: { originPageId: current.originPageId, target: current.target,
+    text: current.sourceBuffer, sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+  return true;
 }
 
 let pasteSourceRevision = 0;
@@ -819,31 +899,279 @@ export function setPagePasteReviewStart(start: number): void {
   set({ pastingPage: { ...current, reviewStart: start } });
 }
 
+export function setPagePasteRowStart(index: number, start: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || !Number.isInteger(start) || start < 0 ||
+    getPagePasteReview()?.sections[index] === undefined) return;
+  set({ pastingPage: { ...current, rowStarts: { ...current.rowStarts, [index]: start } } });
+}
+
+export function setPagePasteAdjustingSection(index: number | undefined): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || index !== undefined && getPagePasteReview()?.sections[index] === undefined) return;
+  if (index === undefined) {
+    const next = { ...current };
+    delete next.adjustingSection;
+    set({ pastingPage: next });
+  } else set({ pastingPage: { ...current, adjustingSection: index } });
+}
+
+export function pagePasteMappingLocked(index: number): boolean {
+  const draft = state.pastingPage;
+  return draft?.manualSections?.includes(index) === true;
+}
+
+function changePagePasteMapping(index: number, mapping?: PagePasteTableMapping): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || pagePasteMappingLocked(index)) return;
+  const previous = current.mappings?.[index];
+  if (JSON.stringify(previous) === JSON.stringify(mapping)) return;
+  if (Object.keys(current.corrections ?? {}).some((key) => key.startsWith(`${String(index)}:`))) {
+    set({ pastingPage: { ...current, pendingMapping: { index, ...(mapping === undefined ? {} : { mapping }) } } });
+    return;
+  }
+  const mappings = { ...current.mappings };
+  if (mapping === undefined) delete mappings[index];
+  else mappings[index] = mapping;
+  set({ pastingPage: { ...current, mappings, mappingUndo: { index, ...(previous === undefined ? {} : { mapping: previous }),
+    ...(current.corrections === undefined ? {} : { corrections: current.corrections }),
+    ...(current.selectedRowKeys === undefined ? {} : { selectedRowKeys: current.selectedRowKeys }),
+    ...(current.sourceUses === undefined ? {} : { sourceUses: current.sourceUses }) } } });
+}
+
 export function setPagePasteTableMapping(index: number, mapping: PagePasteTableMapping): void {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste) return;
+  if (current === undefined || confirmingPagePaste || pagePasteMappingLocked(index)) return;
   const section = readProposal(current.text).sections[index];
   const table = section === undefined ? undefined : readPagePasteTable(section);
   if (table === undefined) return;
   const roles = [mapping.product, mapping.price, ...(mapping.size === undefined ? [] : [mapping.size])];
   if (roles.some((role) => !Number.isInteger(role) || role < 0 || role >= table.headers.length) || new Set(roles).size !== roles.length) return;
-  set({ pastingPage: { ...current, mappings: { ...current.mappings, [index]: mapping } } });
+  changePagePasteMapping(index, mapping);
 }
 
 export function clearPagePasteTableMapping(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste || current.mappings?.[index] === undefined) return;
+  if (current === undefined || confirmingPagePaste || pagePasteMappingLocked(index) || current.mappings?.[index] === undefined) return;
+  changePagePasteMapping(index);
+}
+
+export function resolvePagePasteMapping(choice: "keep" | "discard" | "cancel"): void {
+  const current = state.pastingPage;
+  const pending = current?.pendingMapping;
+  if (current === undefined || pending === undefined || confirmingPagePaste) return;
+  const next = { ...current };
+  delete next.pendingMapping;
+  if (choice === "cancel") { set({ pastingPage: next }); return; }
   const mappings = { ...current.mappings };
-  delete mappings[index];
-  const rest = { ...current };
-  delete rest.mappings;
-  set({ pastingPage: Object.keys(mappings).length === 0 ? rest : { ...rest, mappings } });
+  const previous = mappings[pending.index];
+  if (pending.mapping === undefined) delete mappings[pending.index];
+  else mappings[pending.index] = pending.mapping;
+  const corrections = choice === "discard" ? Object.fromEntries(Object.entries(current.corrections ?? {})
+    .filter(([key]) => !key.startsWith(`${String(pending.index)}:`))) : current.corrections;
+  const sourceUses = choice === "discard" && current.sourceUses !== undefined
+    ? Object.fromEntries(Object.entries(current.sourceUses).flatMap(([line, use]) => {
+      const retained = [...new Set([...use.rowKeys.filter((key) => !key.startsWith(`${String(pending.index)}:`)),
+        ...(use.role === "category" ? getPagePasteReview()?.rows.filter((row) => row.sectionIndex !== pending.index &&
+          row.destinationId === `source:${line}`).map((row) => row.key) ?? [] : [])])];
+      return retained.length === 0 ? [] : [[line, { ...use, rowKeys: retained,
+        previous: Object.fromEntries(Object.entries(use.previous ?? {}).filter(([key]) => retained.includes(key))) }]];
+    })) : current.sourceUses;
+  set({ pastingPage: { ...next, mappings, ...(corrections === undefined ? {} : { corrections }),
+    ...(sourceUses === undefined ? {} : { sourceUses }),
+    mappingUndo: { index: pending.index, ...(previous === undefined ? {} : { mapping: previous }),
+      ...(current.corrections === undefined ? {} : { corrections: current.corrections }),
+      ...(current.selectedRowKeys === undefined ? {} : { selectedRowKeys: current.selectedRowKeys }),
+      ...(current.sourceUses === undefined ? {} : { sourceUses: current.sourceUses }) } } });
+}
+
+export function undoPagePasteTableMapping(): void {
+  const current = state.pastingPage;
+  const undo = current?.mappingUndo;
+  if (current === undefined || undo === undefined || confirmingPagePaste) return;
+  const mappings = { ...current.mappings };
+  if (undo.mapping === undefined) delete mappings[undo.index];
+  else mappings[undo.index] = undo.mapping;
+  const next = { ...current, mappings,
+    ...(undo.corrections === undefined ? {} : { corrections: undo.corrections }),
+    ...(undo.selectedRowKeys === undefined ? {} : { selectedRowKeys: undo.selectedRowKeys }),
+    ...(undo.sourceUses === undefined ? {} : { sourceUses: undo.sourceUses }) };
+  if (undo.sourceUses === undefined) delete next.sourceUses;
+  delete next.mappingUndo;
+  delete next.pendingMapping;
+  set({ pastingPage: next });
+}
+
+export function correctPagePasteRow(key: string, correction: PagePasteRowCorrection): void {
+  const current = state.pastingPage;
+  const review = getPagePasteReview();
+  if (current === undefined || confirmingPagePaste || review === undefined || !review.rows.some((row) => row.key === key)) return;
+  const previous = current.corrections?.[key] ?? {};
+  const next = { ...current };
+  delete next.mappingUndo;
+  set({ pastingPage: { ...next,
+    corrections: { ...current.corrections, [key]: { ...previous, ...correction } },
+    ...(correction.included === false ? { selectedRowKeys: current.selectedRowKeys?.filter((selected) => selected !== key) ?? [] } : {}) } });
+}
+
+function withoutPagePasteMappingUndo(current: NonNullable<State["pastingPage"]>): NonNullable<State["pastingPage"]> {
+  const next = { ...current };
+  delete next.mappingUndo;
+  return next;
+}
+
+export function togglePagePasteRowSelection(key: string, selected: boolean): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || !getPagePasteReview()?.rows.some((row) =>
+    row.key === key && (selected === false || row.included === true))) return;
+  const keys = current.selectedRowKeys ?? [];
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), selectedRowKeys: selected ? [...new Set([...keys, key])]
+    : keys.filter((candidate) => candidate !== key) } });
+}
+
+export function clearPagePasteRowSelection(): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || (current.selectedRowKeys?.length ?? 0) === 0) return;
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), selectedRowKeys: [] } });
+}
+
+export function applyPagePasteSharedName(name: string): void {
+  const current = state.pastingPage;
+  const keys = current?.selectedRowKeys ?? [];
+  if (current === undefined || confirmingPagePaste || keys.length === 0 || name.trim() === "") return;
+  const corrections = { ...current.corrections };
+  for (const key of keys) corrections[key] = { ...corrections[key], name, acceptedNumericName: false };
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections } });
+}
+
+/** Links one exact source line to included table offers, all rows unless a subset is selected. */
+export function usePagePasteSourceLine(sourceLine: number, tableIndex: number, role: "name" | "category"): number {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.sourceBuffer !== undefined ||
+    current.pendingMapping !== undefined || !Number.isInteger(sourceLine) || sourceLine < 1) return 0;
+  const candidate = findPagePasteSourceCandidates(current.text, tableIndex)[role];
+  const review = getPagePasteReview();
+  const table = review?.sections[tableIndex];
+  const source = candidate === undefined ? undefined : review?.sections[candidate.sectionIndex];
+  if (candidate?.sourceLine !== sourceLine || table === undefined || !table.included ||
+    source === undefined || !source.included || role === "name" && source.block.kind !== "prose" ||
+    source.rows.some((row) => row.sourceLine === sourceLine && row.included === true)) return 0;
+  const included = table.rows.filter((row) => row.included === true);
+  const selected = included.filter((row) => current.selectedRowKeys?.includes(row.key));
+  const rows = selected.length > 0 ? selected : included;
+  if (rows.length === 0) return 0;
+  const existing = current.sourceUses?.[sourceLine];
+  if (existing !== undefined && existing.role !== role) return 0;
+  const corrections = { ...current.corrections };
+  const previous = { ...existing?.previous };
+  for (const row of rows) {
+    const stillUsing = role === "name" ? row.name === candidate.value
+      : row.destinationId === `source:${String(sourceLine)}`;
+    if (!existing?.rowKeys.includes(row.key) || !stillUsing) previous[row.key] = current.corrections?.[row.key] ?? {};
+    corrections[row.key] = role === "name"
+      ? { ...corrections[row.key], name: candidate.value, acceptedNumericName: false }
+      : { ...corrections[row.key], destinationId: `source:${String(sourceLine)}` };
+  }
+  const sourceUses = { ...current.sourceUses, [sourceLine]: { role,
+    rowKeys: [...new Set([...(existing?.rowKeys ?? []), ...rows.map((row) => row.key)])], previous } };
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections, sourceUses } });
+  return rows.length;
+}
+
+export function undoPagePasteSourceLine(sourceLine: number): void {
+  const current = state.pastingPage;
+  const use = current?.sourceUses?.[sourceLine];
+  if (current === undefined || use === undefined || confirmingPagePaste) return;
+  const corrections = { ...current.corrections };
+  const keys = use.role === "category" ? [...new Set([...use.rowKeys,
+    ...(getPagePasteReview()?.rows.filter((row) => row.destinationId === `source:${String(sourceLine)}`).map((row) => row.key) ?? [])])]
+    : use.rowKeys;
+  const line = findPagePasteSourceCandidates(current.text,
+    Number(use.rowKeys[0]?.split(":")[0]))[use.role];
+  for (const key of keys) {
+    const correction = { ...corrections[key] };
+    const previous = use.previous?.[key] ?? {};
+    if (use.role === "name" && line !== undefined && correction.name === line.value) {
+      if (previous.name === undefined) delete correction.name;
+      else correction.name = previous.name;
+      if (previous.acceptedNumericName === undefined) delete correction.acceptedNumericName;
+      else correction.acceptedNumericName = previous.acceptedNumericName;
+    } else if (use.role === "category" && correction.destinationId === `source:${String(sourceLine)}`) {
+      if (previous.destinationId === undefined) delete correction.destinationId;
+      else correction.destinationId = previous.destinationId;
+    }
+    if (Object.keys(correction).length === 0) delete corrections[key];
+    else corrections[key] = correction;
+  }
+  const sourceUses = { ...current.sourceUses };
+  delete sourceUses[sourceLine];
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections, sourceUses } });
+}
+
+export function moveSelectedPagePasteRows(destinationId: string): void {
+  const current = state.pastingPage;
+  const keys = current?.selectedRowKeys ?? [];
+  if (current === undefined || confirmingPagePaste || keys.length === 0 ||
+    !getPagePasteReview()?.categories.some((category) => category.id === destinationId)) return;
+  const corrections = { ...current.corrections };
+  const sourceLine = destinationId.startsWith("source:") ? Number(destinationId.slice(7)) : NaN;
+  const sourceUse = current.sourceUses?.[sourceLine];
+  const previous = { ...sourceUse?.previous };
+  if (sourceUse?.role === "category") for (const key of keys)
+    if (!sourceUse.rowKeys.includes(key) || current.corrections?.[key]?.destinationId !== destinationId)
+      previous[key] = current.corrections?.[key] ?? {};
+  for (const key of keys) corrections[key] = { ...corrections[key], destinationId };
+  const sourceUses = sourceUse?.role === "category" ? { ...current.sourceUses,
+    [sourceLine]: { ...sourceUse, rowKeys: [...new Set([...sourceUse.rowKeys, ...keys])], previous } }
+    : current.sourceUses;
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), corrections,
+    ...(sourceUses === undefined ? {} : { sourceUses }) } });
+}
+
+export function createPagePasteCategoryForSelected(name: string): void {
+  const current = state.pastingPage;
+  const keys = current?.selectedRowKeys ?? [];
+  const trimmed = name.trim();
+  if (current === undefined || confirmingPagePaste || keys.length === 0 || trimmed === "") return;
+  const id = `new:${String(current.categories?.length ?? 0)}`;
+  const corrections = { ...current.corrections };
+  for (const key of keys) corrections[key] = { ...corrections[key], destinationId: id };
+  set({ pastingPage: { ...withoutPagePasteMappingUndo(current), categories: [...(current.categories ?? []), { id, name: trimmed }], corrections } });
+}
+
+export function setPagePasteEmptyHeadingChoice(index: number, choice: "keep" | "remove"): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || getPagePasteReview()?.sections[index] === undefined) return;
+  set({ pastingPage: { ...current, emptyHeadingChoices: { ...current.emptyHeadingChoices, [index]: choice } } });
+}
+
+export function setPagePasteAddedItem(index: number,
+  item: { readonly name: string; readonly amount: string; readonly price: string;
+    readonly allowBlankPrice?: boolean } | undefined): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || getPagePasteReview()?.sections[index] === undefined) return;
+  const addedItems = { ...current.addedItems };
+  if (item === undefined) delete addedItems[index];
+  else addedItems[index] = item;
+  set({ pastingPage: { ...current, addedItems } });
+}
+
+export function startManualPagePasteSection(index: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.manualSections?.includes(index)) return;
+  const section = getPagePasteReview()?.sections[index];
+  if (section === undefined || section.block.kind !== "prose") return;
+  set({ pastingPage: { ...current, manualSections: [...(current.manualSections ?? []), index] } });
 }
 
 export function dropPagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste || readProposal(current.text).sections[index] === undefined || current.dropped.includes(index)) return;
-  set({ pastingPage: { ...current, dropped: [...current.dropped, index] } });
+  const section = current === undefined ? undefined : readProposal(current.text).sections[index];
+  if (current === undefined || confirmingPagePaste || section === undefined || current.dropped.includes(index)) return;
+  for (const line of Object.keys(current.sourceUses ?? {}).map(Number))
+    if (line > section.from && line <= section.to + 1) undoPagePasteSourceLine(line);
+  const updated = state.pastingPage;
+  if (updated !== undefined) set({ pastingPage: { ...updated, dropped: [...updated.dropped, index] } });
 }
 
 export function restorePagePasteSection(index: number): void {
@@ -871,28 +1199,53 @@ export function stopPastingPage(): void {
 // Covers callers outside the UI too: a second submit cannot create another
 // page while the first storage transaction is still pending.
 let confirmingPagePaste = false;
+let preparingPagePaste = false;
+let adoptingConfirmedPage = false;
+
+export function pagePasteConfirmationActive(): boolean {
+  return confirmingPagePaste;
+}
 
 export async function confirmPagePaste(): Promise<void> {
   const current = state.pastingPage;
-  if (current === undefined || confirmingPagePaste) return;
+  if (current === undefined || confirmingPagePaste || preparingPagePaste) return;
+  preparingPagePaste = true;
+  try {
+    while (backupOpening()) await waitForOpenBackups();
+  } finally {
+    preparingPagePaste = false;
+  }
+  if (state.pastingPage !== current || confirmingPagePaste) return;
+  if (state.pageId !== current.originPageId || state.doc.target !== current.target) {
+    set({ status: { kind: "error", message: "Return to the page where you started this paste before adding it. Your pasted text is still here." } });
+    return;
+  }
+  if (current.sourceBuffer !== undefined || current.pendingMapping !== undefined) {
+    set({ status: { kind: "error", message: "Finish or cancel the source or column change before adding this page. Your review is unchanged." } });
+    return;
+  }
+  const review = getPagePasteReview();
+  if (review === undefined) return;
+  if (!review.canConfirm) {
+    set({ status: { kind: "error", message: "Resolve the named price rows in this review before adding the page. Nothing has been changed." } });
+    return;
+  }
   confirmingPagePaste = true;
   const frozen = { ...current, confirming: true };
   set({ pastingPage: frozen });
   try {
-    const proposal = readProposal(current.text);
-    const blocks = proposal.sections.flatMap((section, index): Block[] => {
-      if (current.dropped.includes(index)) return [];
-      const reviewed = current.swapped.includes(index) ? swapProposalKind(section) : section;
-      const mapping = current.mappings?.[index];
-      const block = mapping === undefined ? buildProposedBlock(reviewed) : buildMappedPagePasteBlock(reviewed, mapping);
+    const blocks = review.blocks.flatMap((block): Block[] => {
       if (block.kind === "menu") return [{ id: newId(), ...block, tiers: block.tiers.map((tier) => ({ id: newId(), ...tier })) }];
       return [{ id: newId(), ...block }];
     });
     if (blocks.length === 0) return;
-    const doc: Document = { ...emptyDocument(state.doc.target), blocks, ...(proposal.title === undefined ? {} : { title: proposal.title }) };
+    const doc: Document = { ...emptyDocument(current.target), blocks, ...(review.title === undefined ? {} : { title: review.title }) };
     // openBackup owns validation and persistence. JSON.stringify lets its
     // parser refuse a faulty builder result before any stored page changes.
-    const result = await openBackup(JSON.stringify(doc));
+    const result = await openBackup(JSON.stringify(doc), (pageId, opened) => {
+      adoptingConfirmedPage = true;
+      try { adopt(pageId, opened); } finally { adoptingConfirmedPage = false; }
+    });
     if (state.pastingPage !== frozen) return;
     if (!result.ok) {
       set({ status: { kind: "error", message: "This paste could not be made into a page. Nothing has been changed. Your pasted text is still here." } });
@@ -1297,6 +1650,7 @@ function isStorageFull(error: unknown): boolean {
  * losing it.
  */
 export async function openPage(id: string): Promise<void> {
+  if (confirmingPagePaste) return;
   // Before anything else, and on every path out of here including the two
   // failures. Switching away from a page is the moment its stored title stops
   // being the one on screen, so it is the moment the list has to catch up.
@@ -1309,6 +1663,7 @@ export async function openPage(id: string): Promise<void> {
   }
 
   const result = parseDocument(stored.json);
+  if (confirmingPagePaste) return;
   if (!result.ok) {
     set({
       status: {
@@ -1353,6 +1708,7 @@ export async function openPage(id: string): Promise<void> {
  * mean a page could be written before anyone had checked it parses.
  */
 export function adopt(pageId: string, doc: Document): void {
+  if (confirmingPagePaste && !adoptingConfirmedPage) return;
   // The selection and the pricing inputs go too. See `openPage`'s comment:
   // block and tier ids survive a reopen, so a stale selection can go on
   // matching rows in a document the seller never touched.
@@ -1381,6 +1737,7 @@ export function adopt(pageId: string, doc: Document): void {
  * look like the button had not worked.
  */
 export async function newPage(target: string): Promise<void> {
+  if (confirmingPagePaste) return;
   // The selection and the pricing inputs go too, for the reason `openPage`'s
   // comment gives: a fresh document starts from a starter template whose
   // block and tier ids can match the ones a stale selection was still naming.

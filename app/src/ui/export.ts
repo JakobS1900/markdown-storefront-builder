@@ -171,7 +171,7 @@ export function exportSurface(container: HTMLElement): void {
           "There is nothing to copy yet. Paste a page you already have, add a section on the Build tab, or open a backup you saved earlier.",
         ]),
         el("div", { class: "adders" }, [
-          button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
+          ...(state.pastingPage === undefined ? [button({ label: "Paste a page you already have", onClick: () => startPastingPage() })] : []),
           ...openBackupControl(),
         ]),
         ...pagePastePanel(),
@@ -251,7 +251,7 @@ export function exportSurface(container: HTMLElement): void {
           onClick: () => save("page-backup.json", serializeDocument(state.doc), "application/json"),
         }),
         ...openBackupControl(),
-        button({ label: "Paste a page you already have", onClick: () => startPastingPage() }),
+        ...(state.pastingPage === undefined ? [button({ label: "Paste a page you already have", onClick: () => startPastingPage() })] : []),
       ]),
 
       ...pagePastePanel(),

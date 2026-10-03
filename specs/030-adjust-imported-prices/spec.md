@@ -1,8 +1,8 @@
 # Feature Specification: Adjust imported prices
 
-**Feature Branch**: `codex/030-adjust-imported-prices`
+**Feature Branch**: `030-adjust-imported-prices` (based on `032-menu-first-workflow`)
 **Created**: 2026-09-14
-**Status**: Scoped, not implemented
+**Status**: Implementation started on 2026-10-01. The earlier quantity-table fix shipped separately.
 **Input**: The seller cannot share their private source menu and requests a section to adjust discrepancies in imported prices. Earlier feedback described quantities becoming item names, item names detached from their price rows, incorrect categories, wide tables, and misleading empty Prices warnings.
 
 ## User Scenarios & Testing
@@ -51,6 +51,21 @@ A seller reviews the result on a phone, sees which rows still need attention, an
 3. **Given** a section has corrected publishable items, **when** the result is previewed, **then** it does not receive an empty-section warning. A truly empty selected Prices section instead offers removal, Text preservation, or item entry before confirmation.
 4. **Given** a narrow phone screen, **when** reviewing an item, **then** its name, amount and price can be read without horizontal scrolling through the correction form. The final preview remains faithful to the published output.
 
+### User Story 4 - Use detached source once (Priority: P1)
+
+A seller brings in a menu where a category heading and item name appear on their own lines before an amount-and-price table. During review, they choose to use those source lines as the category and shared item name. The final page shows each once.
+
+**Why this priority**: A 320 CSS pixel browser run of the Phase 3 draft required the seller to create a matching category and shared name, then manually remove the original Heading and Text sections. Without those extra steps, Preview showed both names twice. See [the browser audit](../../docs/research/2026-10-02-detached-name-browser-audit.md).
+
+**Independent Test**: Import two fictional categories with four detached item names and eight amount-price rows. Use each preceding name and heading through explicit review controls. Add the page and check that Build, Preview and Copy show each intended category and item name once, with every amount and price still attached.
+
+**Acceptance Scenarios**:
+
+1. **Given** a standalone name immediately before a table, **when** the seller chooses that source line as the table rows' shared name, **then** its included rows use the name without requiring individual row selection and the original line does not also appear as a separate Text section. A seller can narrow the action to selected rows when needed.
+2. **Given** a heading before one or more tables, **when** the seller chooses it as their Prices category, **then** the saved page uses the heading for those offers and does not also publish a duplicate standalone Heading section.
+3. **Given** a source line that could be an item, heading or note, **when** the seller keeps it as Text or undoes a source-use choice, **then** its original content remains visible in review and in the saved result unless they explicitly exclude it.
+4. **Given** a source-use choice and later edits, moves or exclusions, **when** no included offer still uses that source line, **then** the line returns to its original reviewed role before Add.
+
 ### Edge Cases
 
 - A header-only table, blank name cells, repeated headers and missing prices.
@@ -60,6 +75,7 @@ A seller reviews the result on a phone, sees which rows still need attention, an
 - Notes, highlighting markers and image URLs between price rows: retain their original text and keep them available as Text when not mapped.
 - Long imports beyond the current review pagination limit; corrections remain attached to the right rows.
 - Replacing the pasted source after corrections: warn before discarding corrections and allow keeping the current draft.
+- A detached name or heading that matches a typed correction: matching words alone do not consume a source line. The seller chooses its use explicitly.
 - Switching the destination page or closing the import: follow existing draft lifecycle rules; never apply corrections to a different page.
 
 ## Requirements
@@ -79,6 +95,9 @@ A seller reviews the result on a phone, sees which rows still need attention, an
 - **FR-011**: Corrections MUST remain local to the import draft until confirmation. Cancel MUST leave the saved document unchanged. Original source MUST not be sent to external analysis services, telemetry or debugging logs.
 - **FR-012**: Correction fields MUST have visible labels and accessible names identifying their item, support keyboard operation and phone touch targets, and fit a 320 CSS pixel viewport without horizontal form scrolling.
 - **FR-013**: Source replacement and interpretation changes MUST not silently destroy edits. Preserving ambiguous content as Text MUST remain available.
+- **FR-014**: Review MUST offer an explicit, source-identified action for using the nearest preceding standalone text line as shared item name, when no other table or heading intervenes, and for using the nearest preceding heading before the next heading as destination Prices category. Each action MUST state how many included table rows it will change and apply to the whole table by default, with a selected-row subset available for exceptions. Typing the same words alone MUST NOT silently consume the source line.
+- **FR-015**: A source line chosen for an item name or category MUST be represented once in the reviewed and saved result. Undoing the choice or leaving no included offer that uses it MUST restore its original Text or Heading output unless the seller separately excluded it.
+- **FR-016**: Source-use choices MUST preserve notes and unrelated lines in their original order, remain attached to exact source lines across review pagination, and remain local to the draft until Add.
 
 ### Key Entities
 
@@ -97,13 +116,16 @@ A seller reviews the result on a phone, sees which rows still need attention, an
 - **SC-004**: At 320 and 390 CSS pixels, every correction field is reachable without horizontal form scrolling and has an accessible name.
 - **SC-005**: A draft exceeding 100 sections retains corrections across review pagination. Cancel, source replacement cancellation and undo each preserve the documented prior state.
 - **SC-006**: Corrected populated Prices sections produce zero false empty-section warnings in the acceptance corpus; truly empty proposals receive actionable feedback before saving.
+- **SC-007**: A two-category, four-item detached-name browser and saved-output example shows each category and name once in Build, Preview and Copy, with all eight amount-price pairs intact. No Heading or Text copy of a used source line remains.
+- **SC-008**: In tests of undo, row exclusion and an unrelated note, each nonempty source line remains visible exactly once as used content, retained Text or Heading, or an explicitly excluded line.
 
 ## Assumptions
 
-- The present request is to scope the correction section. Implementation, planning and release remain subsequent work.
+- The original request scoped the correction section. Jakob subsequently asked to keep improving usability, so planning and implementation are now in progress. A release still requires verified behavior and the seller evaluation gate.
 - No private menu or sanitized sample is required. Fictional examples exercise structural variations without claiming to reproduce the exact private source.
 - This extends feature 029's existing review step. It does not introduce a second import entry point or change existing saved pages automatically.
 - Existing item editing remains the recovery path for pages already imported. Reconstructing missing relationships in saved documents without their original source is outside this scope.
 - Quantity or weight is a public descriptive value, not inventory tracking. Existing item and quantity-pricing behavior should be reused wherever it can represent the confirmed result.
 - Earlier reports about image rendering, highlight fidelity, arrow syntax and the final preview's wide tables remain open follow-ups. This correction section preserves their source text but does not claim to fix those rendering behaviors. The phone layout requirement here applies to the correction form.
+- The detached-source action uses exact source associations, not a global search for matching words. No particular arrow syntax is presumed.
 - Depends on existing whole-page proposals, Text preservation, Prices editing and publication diagnostics. Unknown cases remain correctable by the seller rather than requiring a more confident automatic guess.
