@@ -1,8 +1,8 @@
 # Tasks
 
 - [x] T001 Review spec, plan and requirements coverage; close material gaps before logic changes.
-- [ ] T002 US1: failing regressions, minimal classification/source-name fixes, focused tests.
-- [ ] T003 US1: fresh spec review and fresh code-quality review; fix findings.
+- [x] T002 US1: failing regressions, minimal classification/source-name fixes, focused tests.
+- [x] T003 US1: independent spec review and code-quality review; fix findings. Fresh-thread capacity exhausted, separate existing reviewers used.
 - [ ] T004 US3: failing regressions, validated missing-MIME input and byte-read refusal fix.
 - [ ] T005 US3: storage/preview/export evidence, fresh spec and quality reviews.
 - [ ] T006 US2: tokenizer and table metadata tests, then conservative detection implementation.

@@ -382,7 +382,7 @@ export function runText(run: Run): string {
   return run.lines.map((line) => line.text).join("\n");
 }
 
-function headingTextFromLine(line: Line): string {
+export function headingTextFromLine(line: Line): string {
   const text = line.text.trim();
   return (QUOTED_CATEGORY.exec(text)?.[1] ?? text.replace(/^#{1,6}(?:\s|$)/, "")).trim();
 }
@@ -421,6 +421,13 @@ function runHasUnmappedColumns(run: Run): boolean {
     && (run.lines.some((line) => /^[^|]+\|[^|]+\|\s*$/.test(line.text.trim()))
       || candidatesForRun(run).some((candidate) =>
         candidate.unit !== undefined || candidate.cost !== undefined || candidate.blurb !== undefined));
+}
+
+export function isStandaloneBoldLabel(name: string): boolean {
+  const text = name.trim();
+  const marker = text.slice(0, 2);
+  return (marker === "**" || marker === "__") && text.length > 4 && text.endsWith(marker)
+    && !text.slice(2, -2).includes(marker);
 }
 
 function runHasSizeAsPrice(run: Run): boolean {
@@ -540,11 +547,17 @@ function runHasWideTable(run: Run): boolean {
     && run.lines.some((line) => tableCells(line.text).length > 2);
 }
 
+const RESERVED_TABLE_LABEL = /^(?:price|cost|size|unit|quantity|amount|duration|notes?)$/i;
+
+function tableLabel(text: string): string {
+  return text.trim().replace(/^([*_]{1,3})(.+)\1$/, "$2").trim();
+}
+
 function runHasUnsafeTable(run: Run): boolean {
   if (run.kind !== "text" || !run.lines.some((line) => line.kind === "tableRule") || quantityTables(run) !== undefined) return false;
   const table = readCompleteTable({ kind: "prose", source: runText(run), from: run.from, to: run.to, swappable: true });
   return table === undefined || table.headers.length !== 2 || !/^price$/i.test(table.headers[1] ?? "")
-    || /^(?:price|cost|size|unit|quantity|amount|duration|notes?)$/i.test(table.headers[0] ?? "")
+    || RESERVED_TABLE_LABEL.test(tableLabel(table.headers[0] ?? ""))
     // The mapping reader skips repeated headers even without another separator.
     || table.rows.length !== run.lines.filter((line) => line.kind === "text").length;
 }
@@ -576,7 +589,7 @@ function quantityTables(run: Run): readonly ProposedMenuTier[] | undefined {
     if (header?.kind !== "tableHeader" || run.lines[i + 1]?.kind !== "tableRule") return undefined;
     const cells = tableCells(header.text);
     const name = cells[0];
-    if (cells.length !== 2 || !name || !/^price$/i.test(cells[1] ?? "")) return undefined;
+    if (cells.length !== 2 || !name || RESERVED_TABLE_LABEL.test(tableLabel(name)) || !/^price$/i.test(cells[1] ?? "")) return undefined;
     const quantities: { amount: string; price: string }[] = [];
     i += 2;
     while (i < run.lines.length && run.lines[i]?.kind !== "tableHeader") {
@@ -728,7 +741,8 @@ function buildMenuBlock(section: ProposedSection): MenuBlockWithoutIds {
   const productText = parts === undefined ? section.source : runText(parts.run);
   const candidates = readCandidates(productText);
   const ticked = candidates.flatMap((candidate, i) =>
-    candidate.suggested || (candidate.price === "" && candidate.name.trim() !== "") ? [i] : [],
+    !isStandaloneBoldLabel(candidate.line) && (candidate.suggested ||
+      (candidate.price === "" && candidate.name.trim() !== "")) ? [i] : [],
   );
   const tiers = toProducts(candidates, ticked).map(tierFrom);
 

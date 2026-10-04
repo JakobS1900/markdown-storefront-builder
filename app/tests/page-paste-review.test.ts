@@ -2,6 +2,61 @@ import { expect, it } from "vitest";
 
 import { buildPagePasteReview, findPagePasteSourceCandidates } from "../src/page-paste-review.js";
 
+it.each(["Amount", "Quantity", "Size", "Unit", "Price", "Cost", "Notes", "**Amount**", "_Quantity_"])(
+  "keeps a quantity table headed %s as Text instead of creating a product", (label) => {
+    const text = `> **Blue Bowl**\n| ${label} | Price |\n| --- | --- |\n| 1 pcs | $20 |\n| 2 pcs | $35 |`;
+    const review = buildPagePasteReview({ text, dropped: [], swapped: [] });
+    expect(review.rows).toEqual([]);
+    expect(review.blocks.some((block) => block.kind === "menu")).toBe(false);
+    expect(review.blocks.map((block) => block.kind === "prose" ? block.text : "").join("\n")).toContain(`| ${label} | Price |`);
+  },
+);
+
+it("reuses a recognized quoted heading with its clean category name", () => {
+  const text = "> **Ceramics**\n| Blue Bowl | Price |\n| --- | --- |\n| 1 pcs | $20 |\n| 2 pcs | $35 |";
+  expect(findPagePasteSourceCandidates(text, 0).category).toEqual({ sourceLine: 1, sectionIndex: 0, value: "Ceramics" });
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [],
+    sourceUses: { 1: { role: "category", rowKeys: ["0:4:0", "0:5:0"] } },
+    corrections: { "0:4:0": { destinationId: "source:1" }, "0:5:0": { destinationId: "source:1" } },
+  });
+  expect(review.blocks).toEqual([{ kind: "menu", heading: "Ceramics", tiers: [
+    { name: "Blue Bowl", price: "", quantities: [{ amount: "1 pcs", price: "$20" }, { amount: "2 pcs", price: "$35" }] },
+  ] }]);
+});
+
+it("keeps a quoted source heading clean when its offers move away", () => {
+  const text = "> **Ceramics**\n| Blue Bowl | Price |\n| --- | --- |\n| 1 pcs | $20 |\n| 2 pcs | $35 |";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [],
+    categories: [{ id: "new:Prints", name: "Prints" }], emptyHeadingChoices: { 0: "keep" },
+    corrections: { "0:4:0": { destinationId: "new:Prints" }, "0:5:0": { destinationId: "new:Prints" } },
+  });
+  expect(review.blocks.find((block) => block.kind === "heading")).toMatchObject({ kind: "heading", text: "Ceramics" });
+});
+
+it.each(["**Prints**", "__Prints__", "**Prints 2026**", "**Fine *art***"])("retains standalone label %s as Text in a dense price list", (label) => {
+  const text = `${label}\nA3 print - $30\nA4 print - $20\n**Stickers**\nMoon - $5\nStar - $4`;
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [] });
+  expect(review.rows.map((row) => row.name)).toEqual(["A3 print", "A4 print", "Moon", "Star"]);
+  expect(review.blocks.filter((block) => block.kind === "prose").map((block) => block.text)).toEqual([label, "**Stickers**"]);
+  expect(review.blocks.filter((block) => block.kind === "menu").flatMap((block) => block.tiers.map((tier) => tier.name)))
+    .toEqual(["A3 print", "A4 print", "Moon", "Star"]);
+});
+
+it("keeps an explicitly priced bold item", () => {
+  const review = buildPagePasteReview({ text: "**Blue Bowl** - $20\nRed Bowl - $25", dropped: [], swapped: [] });
+  expect(review.rows.map(({ name, price }) => ({ name, price }))).toEqual([
+    { name: "**Blue Bowl**", price: "$20" }, { name: "Red Bowl", price: "$25" },
+  ]);
+});
+
+it("allows a seller to select a real blank-price item explicitly", () => {
+  const text = "**Blue Bowl**\nA3 print - $30\nA4 print - $20";
+  const review = buildPagePasteReview({ text, dropped: [], swapped: [0], manualSections: [0],
+    corrections: { "0:1:0": { included: true, name: "Blue Bowl" } } });
+  expect(review.rows[0]).toMatchObject({ name: "Blue Bowl", price: "", included: true });
+  expect(review.blocks.some((block) => block.kind === "menu" && block.tiers.some((tier) => tier.name === "Blue Bowl" && tier.price === ""))).toBe(true);
+});
+
 it.each([
   ["Item", "Amount", "Price"], ["Item", "Price", "Amount"],
   ["Amount", "Item", "Price"], ["Amount", "Price", "Item"],

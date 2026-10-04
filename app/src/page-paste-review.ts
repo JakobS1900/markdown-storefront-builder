@@ -1,5 +1,5 @@
 import {
-  buildMappedPagePasteBlock, buildProposedBlock, pagePasteConversionIssue, readLines,
+  buildMappedPagePasteBlock, buildProposedBlock, headingTextFromLine, isStandaloneBoldLabel, pagePasteConversionIssue, readLines,
   readPagePasteTable, readProposal, readRuns, runText, swapProposalKind,
   type PagePasteTableMapping, type ProposedBlock, type ProposedSection,
 } from "./page-text.js";
@@ -59,11 +59,14 @@ function sourceCandidates(sections: readonly ProposedSection[], tableIndex: numb
   for (let index = currentHeading >= 0 ? tableIndex : tableIndex - 1; index >= 0; index -= 1) {
     const section = sections[index];
     if (section === undefined) continue;
-    const offset = readLines(section.source).findIndex((line) => line.kind === "heading");
+    const lines = readLines(section.source);
+    const offset = lines.findIndex((line) => line.kind === "heading");
     if (offset < 0) continue;
     const sourceLine = section.from + offset + 1;
-    const heading = buildProposedBlock({ ...section, kind: "heading", source: readLines(section.source)[offset]?.text ?? "" });
-    if (heading.kind === "heading" && heading.text !== "") category = { sourceLine, sectionIndex: index, value: heading.text };
+    const line = lines[offset];
+    if (line === undefined) continue;
+    const heading = headingTextFromLine(line);
+    if (heading !== "") category = { sourceLine, sectionIndex: index, value: heading };
     break;
   }
   return { ...(standalone === undefined ? {} : { name: standalone }),
@@ -204,7 +207,8 @@ function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteRevi
       firstRetainedLine >= 0 && section.from + firstRetainedLine + 1 < firstRowLine) ||
       firstIncluded === undefined)) {
     const headingLine = lines.find((line) => line.kind === "heading");
-    if (headingLine !== undefined) blocks.push(buildProposedBlock({ ...section, kind: "heading", source: headingLine.text }));
+    if (headingLine !== undefined) blocks.push({ kind: "heading", text: headingTextFromLine(headingLine),
+      level: headingLine.level ?? 1 });
   }
   lines.forEach((line, offset) => {
     const sourceLine = section.from + offset + 1;
@@ -256,7 +260,8 @@ function menuSource(section: ProposedSection, block: ProposedBlock): { blocks: r
   const run = runs[0];
   if (run === undefined) return { blocks: [block], consumedSourceLines: [] };
   const candidates = readCandidates(runText(run));
-  const chosen = candidates.map((candidate) => (candidate.suggested || (candidate.price === "" && candidate.name.trim() !== "")) && canBeProduct(candidate));
+  const chosen = candidates.map((candidate) => !isStandaloneBoldLabel(candidate.line) &&
+    (candidate.suggested || (candidate.price === "" && candidate.name.trim() !== "")) && canBeProduct(candidate));
   const consumedSourceLines = chosen.flatMap((selected, offset) => selected ? [section.from + run.from + offset + 1] : []);
   if (consumedSourceLines.length !== block.tiers.length) {
     return { blocks: [{ kind: "prose", text: section.source }], consumedSourceLines: [], issue: "Unmatched source lines remain Text so nothing is lost." };
@@ -306,10 +311,9 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
     ...prepared.flatMap(({ index, proposed, mapping, block }) => {
       if (block.kind !== "menu" && mapping === undefined && !draft.manualSections?.includes(index)) return [];
       const sourceHeading = readRuns(proposed.source).find((run) => run.kind === "heading");
-      const headingBlock = sourceHeading === undefined ? undefined
-        : buildProposedBlock({ ...proposed, kind: "heading", source: runText(sourceHeading) });
+      const headingLine = sourceHeading?.lines.find((line) => line.kind === "heading");
       const heading = block.kind === "menu" ? block.heading
-        : headingBlock?.kind === "heading" ? headingBlock.text : undefined;
+        : headingLine === undefined ? undefined : headingTextFromLine(headingLine);
       return [{ id: `section:${String(index)}`, name: heading ?? `Prices section ${String(index + 1)}`,
         ...(heading === undefined ? {} : { heading }) }];
     }),
@@ -317,9 +321,8 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       if (use.role !== "category") return [];
       const line = sourceLines[Number(sourceLine) - 1];
       if (line?.kind !== "heading") return [];
-      const heading = buildProposedBlock({ kind: "heading", source: line.text,
-        from: Number(sourceLine) - 1, to: Number(sourceLine) - 1, swappable: false });
-      return heading.kind === "heading" ? [{ id: `source:${sourceLine}`, name: heading.text, heading: heading.text }] : [];
+      const heading = headingTextFromLine(line);
+      return [{ id: `source:${sourceLine}`, name: heading, heading }];
     }),
     ...(draft.categories ?? []),
   ];
