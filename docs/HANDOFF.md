@@ -6,6 +6,12 @@ happening right now and what to do next.
 
 ## IMPORT COMPATIBILITY CORRECTIONS, 2026-10-04
 
+Follow-up in progress on `033-flexible-table-import`: [spec and plan](../specs/033-flexible-table-import/).
+Jakob approved bounded table compatibility work and clarified tester failures in
+item/category organization and local pictures. Reproduce and correct those failures
+first, then reuse existing controls for conservative pasted CSV/TSV support.
+No new options or saved schema are planned. The tablet remains unavailable.
+
 Jakob asked to prioritize varied menu conversion and correct unusable interpretations while the tablet is unavailable. The [compatibility audit](research/2026-10-04-import-compatibility-audit.md) records fictional reproductions and bounded fixes on `030-adjust-imported-prices`.
 
 Plain imports now preserve complete `from` prices, currency spacing, price ranges, service rates such as `$60 / 30 min`, and currency-marked decimal-comma prices. Amounts such as `12 oz` no longer become private supplier cost. Existing supplier column assignments and public contact notes are regression protected.

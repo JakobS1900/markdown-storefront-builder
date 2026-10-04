@@ -54,6 +54,7 @@ answerable without reading fifty commit messages.
 | [029 paste a page](029-paste-a-page/) | 2026-09-14 | **before** | yes | 63/64 | no | **yes** |
 | [030 adjust imported prices](030-adjust-imported-prices/) | Correction and compatibility fixes verified, seller sessions pending | **before** | yes | yes | plan review | **yes** |
 | [032 menu-first workflow](032-menu-first-workflow/) | Prototype and usability iteration verified, seller sessions pending | **before** | yes | yes | yes | yes |
+| [033 reliable imports and local pictures](033-flexible-table-import/) | In progress | **before** | yes | yes | plan review | pending |
 
 **028's holistic review column said `owed` for part of 2026-09-11**, because two
 attempts at it died on the account session limit, and a required step that has
