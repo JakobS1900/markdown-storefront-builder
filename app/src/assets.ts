@@ -229,7 +229,8 @@ async function refusalForRoom(bytes: number): Promise<string | undefined> {
  * available: paste a web address instead.
  */
 export async function addAsset(file: File): Promise<AddOutcome> {
-  if (!(ACCEPTED_PICTURE_TYPES as readonly string[]).includes(file.type)) {
+  if (file.type !== "" && file.type !== "application/octet-stream" &&
+    !(ACCEPTED_PICTURE_TYPES as readonly string[]).includes(file.type)) {
     return {
       ok: false,
       message:
@@ -242,13 +243,21 @@ export async function addAsset(file: File): Promise<AddOutcome> {
   // only about pixels, so the location and camera information a phone wrote
   // into the file does not survive. Nothing is written to storage yet.
   let blob: Blob;
+  let data: ArrayBuffer;
   try {
-    blob = await normalise(file);
+    const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    const starts = (signature: readonly number[]): boolean => signature.every((byte, index) => bytes[index] === byte);
+    const mime = starts([137, 80, 78, 71, 13, 10, 26, 10]) ? "image/png"
+      : starts([255, 216, 255]) ? "image/jpeg"
+      : starts([71, 73, 70, 56, 55, 97]) || starts([71, 73, 70, 56, 57, 97]) ? "image/gif"
+      : starts([82, 73, 70, 70]) && bytes[8] === 87 && bytes[9] === 69 && bytes[10] === 66 && bytes[11] === 80
+        ? "image/webp" : undefined;
+    if (mime === undefined) throw new Error("unsupported picture signature");
+    blob = await normalise(new File([file], file.name, { type: mime }));
+    data = await blob.arrayBuffer();
   } catch {
     return { ok: false, message: "That file could not be read as a picture. PNG, JPEG, GIF and WebP work." };
   }
-
-  const data = await blob.arrayBuffer();
 
   const refusal = await refusalForRoom(data.byteLength);
   if (refusal !== undefined) return { ok: false, message: refusal };

@@ -3,8 +3,8 @@
 - [x] T001 Review spec, plan and requirements coverage; close material gaps before logic changes.
 - [x] T002 US1: failing regressions, minimal classification/source-name fixes, focused tests.
 - [x] T003 US1: independent spec review and code-quality review; fix findings. Fresh-thread capacity exhausted, separate existing reviewers used.
-- [ ] T004 US3: failing regressions, validated missing-MIME input and byte-read refusal fix.
-- [ ] T005 US3: storage/preview/export evidence, fresh spec and quality reviews.
+- [x] T004 US3: failing regressions, validated missing-MIME input and byte-read refusal fix.
+- [x] T005 US3: storage/preview/export evidence, independent spec and quality reviews. Thread-capacity substitution as in T003.
 - [ ] T006 US2: tokenizer and table metadata tests, then conservative detection implementation.
 - [ ] T007 US2: source-span/furniture integration and real review/save regression tests.
 - [ ] T008 US2: fresh spec and quality reviews, large fictional table smoke test.

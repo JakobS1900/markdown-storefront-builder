@@ -14,7 +14,7 @@
 import { compile, findTarget, type CompileDiagnostic } from "@mdsb/engine";
 
 import { getState, selectBlock, setSurface } from "../store.js";
-import { heldAsset } from "../assets.js";
+import { assetIds, heldAsset } from "../assets.js";
 import { menuFileBody } from "../menu-file.js";
 import { button, disclosure, el, render } from "./dom.js";
 import { KIND_LABEL } from "./forms.js";
@@ -121,8 +121,8 @@ export function previewSurface(container: HTMLElement): void {
     // function the saved file is built by, from the same compiled output, so
     // the two cannot show different things.
     //
-    // Folded, because it is the whole page a second time and the seller came
-    // here to look at the first one. Web pictures are not read in here: that
+    // Folded for web-only pages; open for local pictures the first preview
+    // cannot show. Web pictures are not read in here: that
     // needs the network, it happens at the point of saving, and doing it on
     // every repaint would fetch a photograph per keystroke.
     //
@@ -139,6 +139,7 @@ export function previewSurface(container: HTMLElement): void {
     parts.push(
       disclosure({
         id: "menu-file-preview",
+        open: assetIds(state.doc).length > 0,
         summary: "The menu file you can save",
         className: "menu-file",
         children: [
