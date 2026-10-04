@@ -4,6 +4,16 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## IMPORT COMPATIBILITY CORRECTIONS, 2026-10-04
+
+Jakob asked to prioritize varied menu conversion and correct unusable interpretations while the tablet is unavailable. The [compatibility audit](research/2026-10-04-import-compatibility-audit.md) records fictional reproductions and bounded fixes on `030-adjust-imported-prices`.
+
+Plain imports now preserve complete `from` prices, currency spacing, price ranges, service rates such as `$60 / 30 min`, and currency-marked decimal-comma prices. Amounts such as `12 oz` no longer become private supplier cost. Existing supplier column assignments and public contact notes are regression protected.
+
+Reversed two-column tables use the existing explicit column-review controls. Duration and Notes tables stay Text instead of inventing selling prices. Notes immediately below a price table stay with the original source as Text instead of becoming extra products. Repeated unruled headers require mapping and never become offers; their original header line remains Text after mapping.
+
+Fresh spec and quality reviews passed after fixes. Full `npm run verify` exited 0 on 2026-10-04: 93 test files, 1,917 tests, 65 accessibility tests, clean secret and dash scans, zero light and dark contrast failures, and passing menu-file and PWA update gates. The tablet is unavailable and the installed `0.13.0-test.5` predates these changes. Keep both PRs draft until the seller sessions are reviewed. No normal release is authorized by a solo conversion audit. Follow-up conversion priorities and unverified formats are listed in the audit.
+
 ## FEATURE 030 IMPORT CORRECTION PANEL VERIFIED, SELLER SESSIONS PENDING
 
 On 2026-10-01, work started on branch `030-adjust-imported-prices`, based on

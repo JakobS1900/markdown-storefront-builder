@@ -239,6 +239,20 @@ function readLine(line: string, delimiter: Delimiter): Omit<Candidate, "suggeste
   let parts = cells(line, delimiter);
   const bare = line.replace(DECORATION, "").trim();
 
+  // Recognize the whole public price before commas or range hyphens can split
+  // it. A duration in "$60 / 30 min" is not a second selling price.
+  const expression = /^([^\t|]+?)\s+((?:from\s+[$€£¥]?\s*|[$€£¥]\s*)\d[\d.,]*(?:\s*(?:-|to)\s*[$€£¥]?\s*\d[\d.,]*)?\+?(?:\s*(?:\/|per\b)[^,|\t]+)?)$/i.exec(bare);
+  if (expression?.[1] !== undefined && expression[2] !== undefined) {
+    const name = expression[1].replace(/(?:[, :]\s*|\s+-\s*)$/, "").trim();
+    // A preceding numeric column is a separate value, not part of the name.
+    const precedingColumns = /[,:]$/.test(expression[1]) && cells(name, "comma").length > 1
+      || / -$/.test(expression[1]) && cells(name, "dash").length > 1;
+    if (name !== "" && !precedingColumns && !/[$€£¥]\s*\d/.test(name)
+      && !cells(name, "comma").slice(1).some(clearPrice) && !cells(name, "dash").slice(1).some(clearPrice)) {
+      return { line, name, price: expression[2] };
+    }
+  }
+
   // The paste's separator did not appear on this line, so this line gets the
   // fallback rather than being left as one undivided name. Mixed lists are the
   // normal case: a heading, some comma separated items, and one item somebody
@@ -259,7 +273,7 @@ function readLine(line: string, delimiter: Delimiter): Omit<Candidate, "suggeste
   const clearAt = rest.findIndex(clearPrice);
   const moneyAt = clearAt === -1 ? rest.findIndex((cell) => parseMoney(cell) !== undefined) : clearAt;
   const priceAt = moneyAt === -1 ? 0 : moneyAt;
-  const costAt = rest.findIndex((cell, i) => i > priceAt && parseMoney(cell) !== undefined);
+  const costAt = rest.findIndex((cell, i) => i > priceAt && clearPrice(cell) && parseMoney(cell) !== undefined);
   const unitAt = rest.findIndex((cell, i) => i !== priceAt && i !== costAt && cell !== "");
 
   const price = rest[priceAt] ?? "";
