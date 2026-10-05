@@ -17,6 +17,14 @@ Independent spec and quality reviews passed, as did full `npm run verify`
 [device evidence](research/2026-10-05-native-picture-picker.md) and feature 033
 T011. The five seller sessions remain the release gate. Keep all three PRs draft.
 
+Commit `d02278d` is pushed. Its
+[CI run](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37311364018)
+passed verification, app build and service-worker stamping. The
+[seller-task script](research/2026-10-01-seller-task-script.md) now identifies
+test.7 and explains how to preserve this tablet's data when arranging the baseline
+comparison. Next: observe the first available seller or review supplied session
+results. No real seller-session results have been recorded in this follow-up.
+
 ## FEATURE 033 VERIFIED, SELLER SESSIONS PENDING, 2026-10-04
 
 Feature 033 is implemented on `033-flexible-table-import` in
