@@ -74,7 +74,14 @@ testing instruction. Their descriptions were corrected and they merged normally
 into master. After each merge, git diff confirmed that master's tree matched the
 already verified feature head. Branches and original history were preserved.
 Feature 035 starts from d5f36e9, whose tree matches the prior 3484712 baseline.
-The full feature is verified below; GitHub integration and publication follow.
+The full feature shipped through [PR #5](https://github.com/JakobS1900/markdown-storefront-builder/pull/5). Implementation
+commit 0ba5fae passed [clean-checkout CI](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37330430392).
+Normal merge ac074aa has the same tree as the verified branch.
+[Master verification](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37331153330) and
+[deployment](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37331512501) passed.
+The [normal v0.13.0 release](https://github.com/JakobS1900/markdown-storefront-builder/releases/tag/v0.13.0) has the signed APK.
+GitHub reports the same SHA256 digest as the locally verified and installed file.
+All five pull requests are merged; original branches and history are retained.
 
 ## Signed release and native checks
 

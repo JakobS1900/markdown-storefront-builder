@@ -55,7 +55,7 @@ The three implementation phases are the project chunks. Complete each phase with
 - [x] T023 Run `npm run verify` in PowerShell and read its full exit status, including browser gates. Do not use `--no-verify` on any hook.
 - [x] T024 Capture phone-width screenshots for Tasks A and B and record exact Build, Preview, and Copy results in `docs/research/`.
 - [x] T025 Superseded by the owner's 2026-10-05 instruction to use the tablet because testers are unavailable. Four scripted workflows passed; see docs/research/2026-10-05-tablet-workflows.md. No independent seller research or measured usability success is claimed.
-- [ ] T026 Update `specs/README.md`, `docs/HANDOFF.md`, and release documentation with actual status. Commit without AI attribution. Ship only after T025 and the normal signed APK and device checks.
+- [x] T026 Update `specs/README.md`, `docs/HANDOFF.md`, and release documentation with actual status. Commit without AI attribution. Ship only after T025 and the normal signed APK and device checks.
 
 ## Phase 5: Usability iteration from the phone audit
 

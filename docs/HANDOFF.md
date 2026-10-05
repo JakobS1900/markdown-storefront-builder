@@ -4,7 +4,7 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## CLEAR IMPORT CHOICES AND PAGE NAMING VERIFIED, 2026-10-05
+## V0.13.0 SHIPPED, 2026-10-05
 
 Jakob approved the remaining two bounded usability improvements and pushing to
 GitHub. Feature 035 on `035-clear-import-and-page-names` is based on d5f36e9.
@@ -22,8 +22,14 @@ unchanged output, Back, source choices/undo, Preview/Copy and cold launch passed
 All ten baseline pages remain; one QA page was renamed and one fictional Figures
 page added, for eleven total. Original keyboard and USB stay-awake restored.
 PRs 1 through 4 are merged normally into master and deployment passed. Feature
-035 still needs its verified commit pushed, normal merge and v0.13.0 Release
-with the signed APK. Do not stop at another prerelease or request seller testing.
+035 shipped through [PR #5](https://github.com/JakobS1900/markdown-storefront-builder/pull/5), implementation 0ba5fae,
+normal merge ac074aa. [Master verification](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37331153330)
+and [deployment](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37331512501) passed.
+[v0.13.0](https://github.com/JakobS1900/markdown-storefront-builder/releases/tag/v0.13.0) is a normal release with the signed APK;
+the published asset digest matches the installed build. All five pull requests
+are merged and no implementation or release gate remains for these features.
+No new feature is in progress. Future work should follow observed problems,
+without asking for unavailable seller testers or reopening the completed stack.
 
 ## COMPACT IMPORT REVIEW VERIFIED, 2026-10-05
 

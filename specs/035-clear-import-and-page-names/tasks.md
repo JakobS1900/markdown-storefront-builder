@@ -7,7 +7,7 @@
 - [x] T005 US2 fresh spec and quality reviews; fix findings.
 - [x] T006 Whole-diff review, full verification and real browser widths.
 - [x] T007 Signed in-place tablet update and native flows; preserve saved pages.
-- [ ] T008 Evidence, handoff, index, commit, push, release and passing CI.
+- [x] T008 Evidence, handoff, index, commit, push, release and passing CI.
 
 Coverage: FR001/002 and SC001 -> T002/T003/T007. FR003/004 and SC002 ->
 T004/T005/T007. FR005/006 -> both chunks and T006. SC003 -> T006/T007/T008.

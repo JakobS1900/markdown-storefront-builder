@@ -8,13 +8,13 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
-**Feature 035 is implemented and verified:** `specs/035-clear-import-and-page-names/`.
-Jakob approved clearer import choices, easier page naming and GitHub delivery.
-Read its tasks and the live handoff for implementation and integration status.
+**Nothing is in progress. Feature 035 shipped in v0.13.0 on 2026-10-05.**
+Clear import choices and page naming are verified on the tablet, merged through
+PR #5 and published with the signed APK. See `docs/HANDOFF.md` for evidence.
 
 **Features 030, 032, 033 and 034 are merged into master.** Their four pull
 requests passed verification and merged normally on 2026-10-05. Master's
-deployment passed. Feature 035 completes the normal v0.13.0 release, including
+deployment passed. The normal v0.13.0 release is published, including
 the previously verified correction panel, menu-first workflow, flexible table
 imports, local pictures and compact tablet fields.
 

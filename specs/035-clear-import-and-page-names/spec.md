@@ -1,7 +1,8 @@
 # Clear import choices and saved-page names
 
-Status: approved bounded follow-up, 2026-10-05. User requested both remaining
-usability improvements and pushing to GitHub. Based on the recorded tablet audit.
+Status: shipped as v0.13.0 on 2026-10-05 through PR #5. Both bounded
+usability improvements passed full verification and signed tablet checks.
+Based on the recorded tablet audit and explicit GitHub delivery approval.
 
 ## User scenarios and testing
 
