@@ -4,6 +4,17 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## USABILITY FOLLOW-UP INVESTIGATED, 2026-10-05
+
+Jakob requested further usability improvements after the tablet workflow pass.
+The [follow-up audit](research/2026-10-05-usability-follow-up.md) ranks three
+bounded opportunities: compact imported-row fields, seller-facing source-choice
+labels, and easier saved-page naming. The recommended first change is a responsive
+correction layout preserving visible source, warnings, field labels and all review
+safeguards. No application code changed in the audit and no new defect was
+established. Continue from its acceptance criteria through the project pipeline.
+The tablet remains on verified test.7; stay-awake is restored to 0.
+
 ## TABLET WORKFLOW CHECKS PASSED, TESTING REQUIREMENT CHANGED, 2026-10-05
 
 Jakob said testers are no longer available and directed us to use the tablet.
