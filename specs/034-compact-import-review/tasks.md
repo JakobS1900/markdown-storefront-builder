@@ -15,7 +15,7 @@
 ## Delivery
 
 - [x] T007 Run npm run verify; increment android/app/build.gradle test version, build, sign, install and inspect tablet.
-- [ ] T008 Update docs/HANDOFF.md, CLAUDE.md and specs/README.md; commit, push stacked PR and inspect CI.
+- [x] T008 Update docs/HANDOFF.md, CLAUDE.md and specs/README.md; commit, push stacked PR and inspect CI.
 
 Dependencies: T001/T002 -> T003 -> T004 -> T005 -> T006 -> T007 -> T008.
 One tightly scoped implementation chunk; no parallel product edits.

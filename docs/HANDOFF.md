@@ -21,8 +21,13 @@ The tablet runs `0.13.0-test.8`, versionCode 26. Samsung keyboard editing,
 mapping cancellation, Preview, Copy and cold-launch persistence passed. All
 nine original pages remain, plus one new Ceramics test page. Original IME is
 restored and USB stay-awake is 0. The other usability recommendations remain
-outside this change. Deliver as a stacked PR on 033 and a signed prerelease;
-normal integration of the existing stack remains pending, with no seller gate.
+outside this change. Implementation commit `c4a48ee` is pushed in
+[PR #4](https://github.com/JakobS1900/markdown-storefront-builder/pull/4),
+stacked on 033. Its clean-checkout
+[CI run](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37321161631)
+passed. The signed APK is published in
+[v0.13.0-test.8](https://github.com/JakobS1900/markdown-storefront-builder/releases/tag/v0.13.0-test.8).
+Normal integration of the existing stack remains pending, with no seller gate.
 
 ## USABILITY FOLLOW-UP INVESTIGATED, 2026-10-05
 

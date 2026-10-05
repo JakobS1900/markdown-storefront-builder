@@ -95,3 +95,9 @@ phone layouts were checked in real desktop Chrome at 320px and 390px.
 Nonblocking build warnings remain: existing Gradle deprecations and flatDir
 configuration, plus the apksigner warning for unsigned META-INF build metadata.
 Signature verification itself passed.
+
+Delivery: implementation `c4a48ee`, [PR #4](https://github.com/JakobS1900/markdown-storefront-builder/pull/4),
+[passing CI](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37321161631),
+and [signed test.8 prerelease](https://github.com/JakobS1900/markdown-storefront-builder/releases/tag/v0.13.0-test.8).
+The feature is distributed as a prerelease; integration of the stacked PRs into
+master is still pending.
