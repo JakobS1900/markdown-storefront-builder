@@ -177,9 +177,12 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
           checked: row.included === true,
           onChange: (included) => { correctPagePasteRow(row.key, { included }); refresh(); focusSection(index, `.page-paste-card[data-row-key="${row.key}"] input[type=checkbox]`); } }),
         ...(row.included === true ? [selectRow] : []),
-        field({ label: `Item, source row ${String(row.sourceLine)}`, value: row.name, onInput: (value) => edit("name", value) }),
-        field({ label: `Amount, source row ${String(row.sourceLine)}`, value: row.amount, onInput: (value) => edit("amount", value) }),
-        field({ label: `Price, source row ${String(row.sourceLine)}`, value: row.price, onInput: (value) => edit("price", value) }),
+        el("div", { class: "page-paste-fields" }, [
+          field({ label: `Item, source row ${String(row.sourceLine)}`, value: row.name, onInput: (value) => edit("name", value) }),
+          field({ label: `Price, source row ${String(row.sourceLine)}`, value: row.price, onInput: (value) => edit("price", value) }),
+          field({ label: `Amount, source row ${String(row.sourceLine)}`, value: row.amount, onInput: (value) => edit("amount", value) }),
+          field({ label: `Details, source row ${String(row.sourceLine)}`, value: row.details, onInput: (value) => edit("details", value) }),
+        ]),
         ...(reviewed.block.kind === "prose" && getState().pastingPage?.mappings?.[index] !== undefined &&
           row.included === true && row.amount.trim() !== "" && row.price.trim() === "" &&
           getState().pastingPage?.corrections?.[row.key]?.price === undefined
@@ -189,7 +192,6 @@ function correctionCards(reviewed: PagePasteReviewSection, page: SectionPage, re
             [...(card?.querySelectorAll<HTMLInputElement>("input[type=text]") ?? [])]
               .find((input) => input.labels?.[0]?.textContent === `Price, source row ${String(row.sourceLine)}`)?.focus();
           } })] : []),
-        field({ label: `Details, source row ${String(row.sourceLine)}`, value: row.details, onInput: (value) => edit("details", value) }),
         numeric,
         issue,
         result,

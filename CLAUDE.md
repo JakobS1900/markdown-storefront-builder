@@ -8,6 +8,11 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
+**Feature 034 is implemented and verified:** `specs/034-compact-import-review/`.
+Compact import-correction fields passed full verification and native tablet checks
+on signed test.8. Branch `034-compact-import-review` is stacked on 033.
+Read the handoff for delivery status and pending stack integration.
+
 **Feature 033 is implemented and verified:** `specs/033-flexible-table-import/`. It corrects
 menu organization and local-picture failures, then extends pasted table support
 through existing review controls. The branch is `033-flexible-table-import`.
@@ -17,7 +22,7 @@ passed on 2026-10-05, along with all four scripted menu workflows.
 Features 030 and 032 are implemented and verified as draft prototypes. Jakob
 replaced the seller-session gate with tablet checks on 2026-10-05 because testers
 are unavailable. Do not ask him to recruit testers. The compatibility fix `bea8b0f` on 030 was
-verified on 2026-10-04. The tablet now runs signed `0.13.0-test.7`, including
+verified on 2026-10-04. The tablet now runs signed `0.13.0-test.8`, including
 these fixes. Read the handoff for exact verification evidence.
 
 **028 was NOT the paste import.** It was earmarked for that and Jakob chose the
