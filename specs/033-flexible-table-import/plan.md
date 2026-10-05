@@ -18,4 +18,16 @@ For each chunk use one fresh implementer, then separate fresh spec and quality r
 
 ## Performance and scope
 
+### Native follow-up, 2026-10-05
+
+The tablet is available again. Test.6 preserved the four existing pages and
+completed native CSV import, review, save, Preview and Copy. Local-image selection
+instead launched Samsung Gallery, which returned without an image when its
+location, contacts and calendar prompts were declined. Extend the existing
+document-picker route to ordinary images, preserving capture and fallback.
+One implementation chunk gets independent spec and quality reviews, followed by
+the full verification gate and signed tablet update. Record a failing native
+picker assertion before changing code and rerun it after installation; do not
+substitute a source-string test for the device boundary.
+
 Scan records linearly and reuse parsed results within a pass. Do not parse every suffix or add caching with invalidation complexity. Existing correction pagination remains the UI limit. Check a large fictional table as a bounded smoke test; do not claim a device benchmark.

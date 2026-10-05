@@ -4,6 +4,19 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## NATIVE PICTURE PICKER VERIFIED ON TABLET, 2026-10-05
+
+The SM_T700 now runs signed `0.13.0-test.7`, versionCode 25. Native CSV import,
+review, save, Preview and Copy passed. Ordinary image selection now uses the
+existing Android document picker, fixing the Samsung Gallery permission detour.
+PNG selection, cancellation, preview, embedded HTML export and cold-launch
+persistence passed. All four prior pages remain; the separate Tablet CSV check
+page is retained for inspection. USB stay-awake was restored to 0.
+Independent spec and quality reviews passed, as did full `npm run verify`
+(1,968 tests and 65 accessibility tests). See the
+[device evidence](research/2026-10-05-native-picture-picker.md) and feature 033
+T011. The five seller sessions remain the release gate. Keep all three PRs draft.
+
 ## FEATURE 033 VERIFIED, SELLER SESSIONS PENDING, 2026-10-04
 
 Feature 033 is implemented on `033-flexible-table-import` in

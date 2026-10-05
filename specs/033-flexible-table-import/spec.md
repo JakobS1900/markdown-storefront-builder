@@ -31,6 +31,7 @@ A seller pastes headed comma-separated or tab-separated spreadsheet text using t
 - FR-011: A failed byte read must return a refusal and leave the picker reusable, never hang at Adding the picture or create an unhandled rejection. Existing page and picture references remain unchanged on failure.
 - FR-012: Verify local pictures through storage, thumbnail, menu-file preview and export. Device pictures remain distinct from public web image addresses; no upload is implied or performed.
 - FR-013: When a page carries a local picture, open the existing menu-file preview disclosure so the seller can see it without discovering a second hidden preview. Web-only pages retain their existing default.
+- FR-014: On Android, ordinary local-image selection must use the existing document-picker path so it does not depend on a gallery app's sign-in or unrelated permissions. Preserve camera capture and the existing fallback when no document provider is available. The web layer still validates and decodes the selected bytes. Added after the Android 6 reproduction on 2026-10-05.
 
 ## Scope and success criteria
 

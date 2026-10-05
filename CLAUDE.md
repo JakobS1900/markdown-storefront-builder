@@ -11,13 +11,13 @@ by whoever last did the work.
 **Feature 033 is implemented and verified:** `specs/033-flexible-table-import/`. It corrects
 menu organization and local-picture failures, then extends pasted table support
 through existing review controls. The branch is `033-flexible-table-import`.
-Draft PR #3 is stacked on 030. Seller sessions and a native tablet-picker check
-remain pending; read the handoff for the verified scope and release gate.
+Draft PR #3 is stacked on 030. Native tablet selection, export and persistence
+passed on 2026-10-05. Seller sessions remain pending; read the handoff for scope.
 
 Features 030 and 032 are implemented and verified as draft prototypes; seller
 sessions remain the release gate. The compatibility fix `bea8b0f` on 030 was
-verified on 2026-10-04. The current tablet APK predates these desktop fixes and
-the tablet is unavailable today. Read the handoff for exact verification evidence.
+verified on 2026-10-04. The tablet now runs signed `0.13.0-test.7`, including
+these fixes. Read the handoff for exact verification evidence.
 
 **028 was NOT the paste import.** It was earmarked for that and Jakob chose the
 formatting buttons instead on 2026-09-11, after a tester reported bold, italics
