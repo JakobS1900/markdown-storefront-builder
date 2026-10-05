@@ -4,6 +4,31 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## COMPACT IMPORT REVIEW VERIFIED, 2026-10-05
+
+Jakob approved implementing the first usability recommendation. Feature 034 is
+on `034-compact-import-review`, based on `1338afd` on 033. Its
+[spec](../specs/034-compact-import-review/spec.md),
+[plan](../specs/034-compact-import-review/plan.md) and
+[tasks](../specs/034-compact-import-review/tasks.md) cover a two-column tablet
+correction layout with narrow-phone stacking. The one implementation chunk,
+fresh spec and quality reviews, full verification and signed in-place tablet
+update are complete. Both wide browser cards shrink by 164.125 CSS pixels;
+the tablet field area shrinks from 642 to 314 physical pixels. Phone layouts
+remain stacked. See [verification evidence](research/2026-10-05-compact-import-review.md).
+
+The tablet runs `0.13.0-test.8`, versionCode 26. Samsung keyboard editing,
+mapping cancellation, Preview, Copy and cold-launch persistence passed. All
+nine original pages remain, plus one new Ceramics test page. Original IME is
+restored and USB stay-awake is 0. The other usability recommendations remain
+outside this change. Implementation commit `c4a48ee` is pushed in
+[PR #4](https://github.com/JakobS1900/markdown-storefront-builder/pull/4),
+stacked on 033. Its clean-checkout
+[CI run](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37321161631)
+passed. The signed APK is published in
+[v0.13.0-test.8](https://github.com/JakobS1900/markdown-storefront-builder/releases/tag/v0.13.0-test.8).
+Normal integration of the existing stack remains pending, with no seller gate.
+
 ## USABILITY FOLLOW-UP INVESTIGATED, 2026-10-05
 
 Jakob requested further usability improvements after the tablet workflow pass.

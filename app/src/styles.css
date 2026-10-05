@@ -1857,6 +1857,19 @@ fieldset.item > .btn.icon.danger {
   min-width: 0;
 }
 
+.page-paste-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .page-paste-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .page-paste-card .checkbox input {
   width: auto;
 }
