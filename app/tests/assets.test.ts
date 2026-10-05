@@ -46,6 +46,10 @@ import {
 } from "../src/assets.js";
 import { listAssets, listPages, readAsset } from "../src/db.js";
 import { getState, init } from "../src/store.js";
+import { emptyDocument } from "@mdsb/engine";
+import { previewSurface } from "../src/ui/preview.js";
+import { imageField } from "../src/ui/image-field.js";
+import { buildMenuFile } from "../src/menu-file.js";
 
 /** A JPEG carrying an APP1 EXIF block, which is what a phone camera writes. */
 const EXIF_JPEG = new Uint8Array([
@@ -59,6 +63,12 @@ const EXIF_JPEG = new Uint8Array([
 
 /** What the stubbed canvas hands back. A JPEG, and deliberately not that one. */
 const REENCODED = new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x10, 0xff, 0xd9]);
+const SIGNATURES: Readonly<Record<string, Uint8Array>> = {
+  "image/png": new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+  "image/jpeg": EXIF_JPEG,
+  "image/gif": new TextEncoder().encode("GIF89a"),
+  "image/webp": new Uint8Array([82, 73, 70, 70, 12, 0, 0, 0, 87, 69, 66, 80]),
+};
 
 /** Searches for the six bytes that open every EXIF block. */
 function carriesExif(bytes: Uint8Array): boolean {
@@ -195,7 +205,89 @@ describe("FR-079 and Principle IV, the allow list", () => {
   });
 
   it.each(["image/png", "image/jpeg", "image/webp", "image/gif"])("accepts %s", async (type) => {
-    expect((await addAsset(picture(type))).ok).toBe(true);
+    expect((await addAsset(picture(type, SIGNATURES[type]))).ok).toBe(true);
+  });
+
+  it.each(Object.entries(SIGNATURES))("detects %s with missing or generic picker metadata", async (type, bytes) => {
+    for (const metadata of ["", "application/octet-stream"]) {
+      const outcome = await addAsset(picture(metadata, bytes));
+      expect(outcome.ok, outcome.message).toBe(true);
+      const record = await readAsset(outcome.id ?? "");
+      expect(record?.mime).toBe(type === "image/png" || type === "image/webp" ? "image/png" : "image/jpeg");
+      expect(new Uint8Array(record?.data ?? new ArrayBuffer(0))).toEqual(REENCODED);
+    }
+  });
+
+  it.each(["", "application/octet-stream", "image/png"])("refuses disguised SVG with %s metadata before decoding", async (type) => {
+    const decode = vi.fn();
+    vi.stubGlobal("createImageBitmap", decode);
+    expect((await addAsset(picture(type, new TextEncoder().encode("<svg xmlns='http://www.w3.org/2000/svg'/>")))).ok).toBe(false);
+    expect(decode).not.toHaveBeenCalled();
+    expect(await listAssets()).toHaveLength(0);
+  });
+
+  it("returns a retryable refusal when normalized bytes cannot be read", async () => {
+    const kept = await addAsset(picture());
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementationOnce((callback) => {
+      const blob = new Blob([REENCODED], { type: "image/jpeg" });
+      vi.spyOn(blob, "arrayBuffer").mockRejectedValue(new Error("unreadable"));
+      callback(blob);
+    });
+    const outcome = await addAsset(picture());
+    expect(outcome.ok).toBe(false);
+    expect(outcome.message).toMatch(/read.*picture/i);
+    expect(await listAssets()).toHaveLength(1);
+    expect(await readAsset(kept.id ?? "")).toBeDefined();
+    expect((await addAsset(picture())).ok).toBe(true);
+  });
+
+  it("refuses unreadable input bytes and undecodable raster signatures without storing", async () => {
+    const file = picture();
+    vi.spyOn(file, "slice").mockReturnValue({ arrayBuffer: () => Promise.reject(new Error("read failed")) } as Blob);
+    expect((await addAsset(file)).ok).toBe(false);
+    vi.stubGlobal("createImageBitmap", () => Promise.reject(new Error("decode failed")));
+    expect((await addAsset(picture("", SIGNATURES["image/png"]))).ok).toBe(false);
+    expect(await listAssets()).toHaveLength(0);
+  });
+
+  it("keeps the existing picture and enables the picker again after a byte-read refusal", async () => {
+    const kept = await addAsset(picture());
+    const onLocal = vi.fn();
+    const field = imageField({ label: "Artwork", value: "", onInput: () => {}, localValue: kept.id, onLocal });
+    const picker = field.querySelector<HTMLInputElement>('input[id$="-device-file"]');
+    const pick = [...field.querySelectorAll("button")].find((button) => button.textContent?.includes("Choose a different picture"));
+    if (picker === null || pick === undefined) throw new Error("device picker missing");
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementationOnce((callback) => {
+      const blob = new Blob([REENCODED], { type: "image/jpeg" });
+      vi.spyOn(blob, "arrayBuffer").mockRejectedValue(new Error("unreadable"));
+      callback(blob);
+    });
+    Object.defineProperty(picker, "files", { configurable: true, value: [picture()] });
+    picker.dispatchEvent(new Event("change"));
+    expect(pick.disabled).toBe(true);
+    await vi.waitFor(() => expect(pick.disabled).toBe(false));
+    expect(field.querySelector('[id$="-device-status"]')?.textContent).toMatch(/read.*picture/i);
+    expect(picker.value).toBe("");
+    expect(onLocal).not.toHaveBeenCalled();
+    expect(await readAsset(kept.id ?? "")).toBeDefined();
+    picker.dispatchEvent(new Event("change"));
+    await vi.waitFor(() => expect(onLocal).toHaveBeenCalledOnce());
+  });
+
+  it("opens the existing menu-file preview only when the page has device pictures", async () => {
+    const { id } = await addAsset(picture());
+    if (id === undefined) throw new Error("picture missing");
+    const doc = { ...emptyDocument("rentry"), blocks: [{ id: "gallery", kind: "gallery" as const, layout: "single" as const,
+      items: [{ id: "art", imageUrl: "", alt: "Blue painting", localImageId: id }] }] };
+    init(true, doc);
+    const container = document.createElement("div");
+    previewSurface(container);
+    expect(container.querySelector<HTMLDetailsElement>("#menu-file-preview")?.open).toBe(true);
+    expect(container.querySelector<HTMLImageElement>("#menu-file-preview img")?.src).toBe(heldAsset(id));
+    expect(buildMenuFile(doc, heldAsset).html).toContain(heldAsset(id));
+    init(true, { ...doc, blocks: [{ id: "text", kind: "prose", text: "A painting" }] });
+    previewSurface(container);
+    expect(container.querySelector<HTMLDetailsElement>("#menu-file-preview")?.open).toBe(false);
   });
 
   it("refuses an SVG, and says so rather than failing later", async () => {

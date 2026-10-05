@@ -228,8 +228,8 @@ function suggestedMapping(headers: readonly string[]): PagePasteTableMapping {
     const found = headers.findIndex((header) => pattern.test(header));
     return found < 0 ? fallback : found;
   };
-  const product = index(/^(?:product|item|name)$/i, 0);
-  const price = index(/^(?:price|selling price)$/i, headers.length - 1);
+  const product = index(/^(?:product|item|name|service)$/i, 0);
+  const price = index(/^(?:price|selling price|rate)$/i, headers.length - 1);
   const size = headers.findIndex((header) => /^(?:size|quantity|unit|amount)$/i.test(header));
   return { product, price, ...(size < 0 || size === product || size === price ? {} : { size }) };
 }

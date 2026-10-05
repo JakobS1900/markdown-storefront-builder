@@ -1,5 +1,11 @@
 # Seller task script for the menu workflow and import correction
 
+Status, 2026-10-05: Jakob directed tablet checks in place of seller sessions
+because testers are unavailable. The original research protocol below is retained
+for reference, not as a release gate. All four workflows were exercised directly
+on the tablet; see [results](2026-10-05-tablet-workflows.md). This establishes
+functional device evidence, not independent usability results.
+
 Use this with at least five people who make or maintain a shop menu. Give each
 person both the current app and the prototype. Alternate which version they
 start with when the test setup permits it. Use fictional products only. Ask them to think aloud, but do not
@@ -13,13 +19,24 @@ which version was first, the device, and whether the seller normally makes or
 imports menus.
 
 The Android baseline is `v0.12.1`. Use the latest verified combined draft build
-from features 032 and 030 as version B, and record its exact commit and APK
+from features 032, 030 and 033 as version B, and record its exact commit and APK
 version before each session. Both builds use the same Android app ID. On one test
 device, complete baseline tasks first, then install the draft as an update with
 `adb install -r`. Do not uninstall an existing app to switch versions, because
 uninstalling removes saved pages. To alternate version order, use separate test
 devices or independent browser sessions. Record which setup was used. The draft
 is a test build, not a public release.
+
+As of 2026-10-05, version B is `0.13.0-test.7`, versionCode 25, from commit
+`d02278d`. It is installed on the SM_T700 and has passed native import, picture
+selection, preview, export and cold-launch persistence checks. See the
+[device evidence](2026-10-05-native-picture-picker.md).
+
+This tablet already has the prototype. Do not downgrade, uninstall or clear its
+data to recreate the baseline. Use a separate baseline device or an isolated
+browser session for version A. If only the prototype is available, record the
+session as prototype-only; it provides observations but not a baseline comparison.
+Use Start a new page for the session and retain existing saved pages.
 
 ## Task 1: make a menu
 

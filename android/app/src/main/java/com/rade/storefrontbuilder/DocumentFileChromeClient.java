@@ -33,7 +33,8 @@ final class DocumentFileChromeClient extends BridgeWebChromeClient {
     @Override
     public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> callback, FileChooserParams params) {
         String types = Arrays.toString(params.getAcceptTypes()).toLowerCase(Locale.ROOT);
-        if (params.isCaptureEnabled() || !(types.contains("text/") || types.contains(".txt") ||
+        boolean images = types.contains("image/");
+        if (params.isCaptureEnabled() || !(images || types.contains("text/") || types.contains(".txt") ||
             types.contains(".md") || types.contains(".csv") || types.contains(".tsv") ||
             types.contains(".json") || types.contains("application/json"))) {
             return super.onShowFileChooser(webView, callback, params);
@@ -44,7 +45,7 @@ final class DocumentFileChromeClient extends BridgeWebChromeClient {
         // Providers may report Markdown as a generic MIME type. The web import controls check the chosen name.
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
             .addCategory(Intent.CATEGORY_OPENABLE)
-            .setType("*/*")
+            .setType(images ? "image/*" : "*/*")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try {
             documents.launch(intent);

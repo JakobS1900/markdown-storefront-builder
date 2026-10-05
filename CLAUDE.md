@@ -8,23 +8,26 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
-**Nothing is in progress right now.** The next feature has not been started.
+**Feature 033 is implemented and verified:** `specs/033-flexible-table-import/`. It corrects
+menu organization and local-picture failures, then extends pasted table support
+through existing review controls. The branch is `033-flexible-table-import`.
+Draft PR #3 is stacked on 030. Native tablet selection, export and persistence
+passed on 2026-10-05, along with all four scripted menu workflows.
 
-Most recently finished: `specs/029-paste-a-page/`, bringing in a page you
-already have from rentry, pastebin, text.is, Markdown or plain text. Released
-as `v0.12.0` on 2026-09-14 and verified on the handset. Five chunks, a
-holistic review, 63 of its 64 tasks. 024 through 028 before it are also done
-and released.
+Features 030 and 032 are implemented and verified as draft prototypes. Jakob
+replaced the seller-session gate with tablet checks on 2026-10-05 because testers
+are unavailable. Do not ask him to recruit testers. The compatibility fix `bea8b0f` on 030 was
+verified on 2026-10-04. The tablet now runs signed `0.13.0-test.7`, including
+these fixes. Read the handoff for exact verification evidence.
 
 **028 was NOT the paste import.** It was earmarked for that and Jakob chose the
 formatting buttons instead on 2026-09-11, after a tester reported bold, italics
 and highlighting as missing. Two of those three had worked since feature 008 and
 had no control, only a hint telling the seller to type asterisks.
 
-**The next feature has not been started.** The old 029 idea, pasting a whole
-messy existing page from rentry or pastebin, is done and released. The remaining
-reader gaps are narrower: Gallery, About you, one-column tables, and remote
-picture handling. `docs/ROADMAP.md` has the current standing thinking.
+Keep conversion work bounded. No new import options, OCR, price matrices or image
+hosting are included in 033. Preserve uncertain source as Text and reuse explicit
+review choices. Follow normal integration and release checks; see the handoff.
 
 **That is a claim with an expiry date**, true only while `docs/HANDOFF.md` still
 says so. Believe the handoff over this block, always.

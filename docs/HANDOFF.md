@@ -4,7 +4,82 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## IMPORT COMPATIBILITY CORRECTIONS, 2026-10-04
+## USABILITY FOLLOW-UP INVESTIGATED, 2026-10-05
+
+Jakob requested further usability improvements after the tablet workflow pass.
+The [follow-up audit](research/2026-10-05-usability-follow-up.md) ranks three
+bounded opportunities: compact imported-row fields, seller-facing source-choice
+labels, and easier saved-page naming. The recommended first change is a responsive
+correction layout preserving visible source, warnings, field labels and all review
+safeguards. No application code changed in the audit and no new defect was
+established. Continue from its acceptance criteria through the project pipeline.
+The tablet remains on verified test.7; stay-awake is restored to 0.
+
+## TABLET WORKFLOW CHECKS PASSED, TESTING REQUIREMENT CHANGED, 2026-10-05
+
+Jakob said testers are no longer available and directed us to use the tablet.
+This supersedes the five-seller-session release gate in the historical entries
+below. Do not ask him to recruit testers or wait for those sessions. Use device
+verification and normal engineering/release checks; do not claim independent
+usability evidence.
+
+The four scripted workflows passed through the SM_T700 UI on signed test.7:
+create a two-category menu, correct a mapped table before saving, correct a short
+price list, and reuse an item name and heading above a quantity table. Preview
+and Copy matched expected values. Cancelling a column change preserved row edits.
+The final page survived force-stop/relaunch. All five pre-existing pages remain,
+alongside four new test pages. USB stay-awake is restored to 0.
+See [workflow evidence](research/2026-10-05-tablet-workflows.md).
+
+No application code changed during this pass. PRs remain draft as their current
+GitHub state, not because seller sessions are required. Next is the normal stacked
+PR integration and release workflow, with its required checks.
+
+## NATIVE PICTURE PICKER VERIFIED ON TABLET, 2026-10-05
+
+The SM_T700 now runs signed `0.13.0-test.7`, versionCode 25. Native CSV import,
+review, save, Preview and Copy passed. Ordinary image selection now uses the
+existing Android document picker, fixing the Samsung Gallery permission detour.
+PNG selection, cancellation, preview, embedded HTML export and cold-launch
+persistence passed. All four prior pages remain; the separate Tablet CSV check
+page is retained for inspection. USB stay-awake was restored to 0.
+Independent spec and quality reviews passed, as did full `npm run verify`
+(1,968 tests and 65 accessibility tests). See the
+[device evidence](research/2026-10-05-native-picture-picker.md) and feature 033
+T011. The five seller sessions remain the release gate. Keep all three PRs draft.
+
+Commit `d02278d` is pushed. Its
+[CI run](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37311364018)
+passed verification, app build and service-worker stamping. The
+[seller-task script](research/2026-10-01-seller-task-script.md) now identifies
+test.7 and explains how to preserve this tablet's data when arranging the baseline
+comparison. Next: observe the first available seller or review supplied session
+results. No real seller-session results have been recorded in this follow-up.
+
+## FEATURE 033 VERIFIED, SELLER SESSIONS PENDING, 2026-10-04
+
+Feature 033 is implemented on `033-flexible-table-import` in
+[draft PR #3](https://github.com/JakobS1900/markdown-storefront-builder/pull/3),
+stacked on 030. Generic quantity-table labels no longer become products, reused
+quoted category names stay clean, and ambiguous bold labels stay Text. Headed CSV
+and headed or headerless TSV reuse existing column controls. Simple two-column
+TSV retains automatic import. Malformed or multiline CSV stays intact as Text.
+Local pictures with missing or generic MIME metadata are validated by their bytes
+and decoded normally; failures return a retryable result. Saved local pictures
+open the existing preview. No new options, dependencies or saved schema were added.
+
+Independent chunk and holistic reviews passed. Full `npm run verify` exited 0 in
+114.8 seconds: 94 files, 1,968 tests, 65 accessibility tests, clean scans, light
+and dark contrast, menu-file rendering, local-picture browser checks and PWA updates.
+Real Chrome checks cover transparent PNG decoding, persistence, reopening and
+embedded export at 320 and 390 pixels. The tablet remains unavailable; its native
+picker is unverified and its installed APK predates these changes. Keep all three
+stacked PRs draft until the five seller sessions are reviewed. No APK or normal
+release was published. See the [evidence and limitations](research/2026-10-04-import-and-picture-corrections.md).
+The [code push CI](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37246417645)
+also passed verification, the app build and the service-worker stamp check.
+
+## PRECEDING IMPORT COMPATIBILITY CORRECTIONS, 2026-10-04
 
 Jakob asked to prioritize varied menu conversion and correct unusable interpretations while the tablet is unavailable. The [compatibility audit](research/2026-10-04-import-compatibility-audit.md) records fictional reproductions and bounded fixes on `030-adjust-imported-prices`.
 
