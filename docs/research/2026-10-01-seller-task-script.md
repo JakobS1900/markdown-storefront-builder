@@ -1,4 +1,4 @@
-# Seller task script for the menu workflow prototype
+# Seller task script for the menu workflow and import correction
 
 Use this with at least five people who make or maintain a shop menu. Give each
 person both the current app and the prototype. Alternate which version they
@@ -12,15 +12,14 @@ which is newer. Make sure each starts with a blank page. Use a timer. Record
 which version was first, the device, and whether the seller normally makes or
 imports menus.
 
-The current Android baseline is `v0.12.1`. The local signed prototype build is
-`0.13.0-test.1` at `android/app/build/outputs/apk/release/app-release.apk` in
-the feature checkout. Both use the same Android app ID. On one test device,
-complete baseline tasks first, then install the prototype as an update with
+The Android baseline is `v0.12.1`. Use the latest verified combined draft build
+from features 032 and 030 as version B, and record its exact commit and APK
+version before each session. Both builds use the same Android app ID. On one test
+device, complete baseline tasks first, then install the draft as an update with
 `adb install -r`. Do not uninstall an existing app to switch versions, because
 uninstalling removes saved pages. To alternate version order, use separate test
-devices or independent browser sessions. Record which setup was used. The
-prototype was checked on an Android 6.0.1 tablet after its WebView update. It is
-still a draft build, not a public release.
+devices or independent browser sessions. Record which setup was used. The draft
+is a test build, not a public release.
 
 ## Task 1: make a menu
 
@@ -34,24 +33,34 @@ the buyer view and copy text, or after 10 minutes. Let them choose their own
 path. Note where they hesitate, backtrack, or ask for help. Check the exact
 group and item order and all four price strings.
 
-## Task 2: bring in an existing menu
+## Task 2: bring in and correct an existing menu
 
 Give them this text to paste. Read this aloud: "Bring this menu into the app.
-Before saving, check which values are item names, sizes, and selling prices.
-Then show me the buyer view and the text you would copy."
+Change the Blue mug to Blue bowl and its selling price to from $35. Check the
+names, sizes, prices, and note before saving. Then show me the buyer view and
+the text you would copy."
 
 ```markdown
 # Ceramics
 
-| Product | Size | Price |
-| --- | --- | ---: |
-| Speckled mug | 12 oz | $28 |
-| Blue mug | 16 oz | $32 |
+| Size | Price | Item | Notes |
+| --- | ---: | --- | --- |
+| 12 oz | $28 | Speckled mug | Handmade |
+| 16 oz | $32 | Blue mug | Blue glaze |
 ```
 
 Stop the timer when they have shown both results, or after 10 minutes. Check
-that both names, both sizes, and both selling prices survive. Also ask them to
-point to anything they were unsure about before pressing Add.
+that Speckled mug, 12 oz, $28 and Handmade survive; that Blue bowl, 16 oz,
+from $35 and Blue glaze stay associated; and that no header becomes an item.
+Ask them to point to anything they were unsure about before pressing Add. If
+the app cannot make the correction before Add, let them try another path and
+record where they expected to find it.
+
+After they correct the row but before Add, ask them to try changing a column
+assignment without losing the correction. Record whether they find the warning,
+cancel or undo choice, and whether they trust the final result. If they have
+already pressed Add, skip this probe and record that. Do not coach them through
+the recovery path.
 
 ## Task 3: correct a short price list
 
@@ -68,8 +77,33 @@ Cotton tote | $18
 Stop after the buyer view or 10 minutes. Check that the other two names and prices
 remain as pasted, the corrected second row is exact, and the original lines were
 visible during review. Note whether they found the row correction controls
-without help. This task checks the usability iteration, not the broader feature
-030 correction panel.
+without help. This task checks whether the row correction is discoverable on
+an ordinary price list as well as on a table.
+
+## Task 4: a name above a price table
+
+Give them this fictional page. Read this aloud: "Bring this in as a menu. Make
+Figures contain Arrow Orb in 12 oz at $25 and 16 oz at $32. Show me the buyer
+view and the text you would copy. Figures and Arrow Orb should each appear once."
+
+```markdown
+# Figures
+
+Arrow Orb
+
+| Item | Amount | Price |
+| --- | --- | --- |
+| | 12 oz | $25 |
+| | 16 oz | $32 |
+```
+
+Stop after both results or 8 minutes. Record whether the seller discovers a
+direct way to use the nearby name and heading, removes duplicate source sections
+by hand, publishes duplicates, or gives up. Check both amount and price pairs.
+Record whether they choose `Adjust as prices` on the standalone name before
+finding the table's `Review section` control, and what they expected each to do.
+Ask what they thought would happen to the original name and heading before Add.
+Do not show them the source-use control during the task.
 
 ## After each app version
 
@@ -84,6 +118,7 @@ their words without explaining the design first.
 | | | | | 1 | | | | | | |
 | | | | | 2 | | | | | | |
 | | | | | 3 | | | | | | |
+| | | | | 4 | | | | | | |
 
 Do not treat a completed task alone as proof that the app is easier. Compare
 time, help, corrections, missing values, and the seller's explanation across

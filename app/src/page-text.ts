@@ -456,7 +456,7 @@ function textRunIsMenu(run: Run): boolean {
     return false;
   }
   if (textRunIsContactBlock(nonBlankLines)) return false;
-  if (runHasWideTable(run) || runHasUnmappedColumns(run) || runHasUnmappedHeader(run) || runHasSizeAsPrice(run)) return false;
+  if (runHasUnsafeTable(run) || runHasWideTable(run) || runHasUnmappedColumns(run) || runHasUnmappedHeader(run) || runHasSizeAsPrice(run)) return false;
 
   const candidates = candidatesForRun(run);
 
@@ -487,14 +487,14 @@ function tableCells(text: string): readonly string[] {
 }
 
 /** A narrow, complete pipe table. An irregular row leaves the whole source as Text. */
-export function readPagePasteTable(section: ProposedSection): PagePasteTable | undefined {
+function readCompleteTable(section: ProposedSection): PagePasteTable | undefined {
   const runs = readRuns(section.source).filter((run) => run.kind !== "blank");
   const tableRun = runs[0]?.kind === "heading" ? runs[1] : runs[0];
   if (tableRun?.kind !== "text" || runs.at(-1) !== tableRun) return undefined;
   const lines = tableRun.lines;
   if (lines[0]?.kind !== "tableHeader" || lines[1]?.kind !== "tableRule") return undefined;
   const headers = tableCells(lines[0].text);
-  if (headers.length < 3 || headers.some((cell) => cell === "") || tableCells(lines[1].text).length !== headers.length) return undefined;
+  if (headers.length < 2 || headers.some((cell) => cell === "") || tableCells(lines[1].text).length !== headers.length) return undefined;
   const rows: { line: number; cells: readonly string[] }[] = [];
   for (let i = 2; i < lines.length; i += 1) {
     const line = lines[i];
@@ -509,6 +509,11 @@ export function readPagePasteTable(section: ProposedSection): PagePasteTable | u
     rows.push({ line: section.from + tableRun.from + i + 1, cells });
   }
   return rows.length === 0 ? undefined : { headers, rows };
+}
+
+export function readPagePasteTable(section: ProposedSection): PagePasteTable | undefined {
+  const table = readCompleteTable(section);
+  return table !== undefined && (table.headers.length > 2 || readRuns(section.source).some(runHasUnsafeTable)) ? table : undefined;
 }
 
 export function mapPagePasteTable(section: ProposedSection, mapping: PagePasteTableMapping): MenuBlockWithoutIds | undefined {
@@ -535,12 +540,23 @@ function runHasWideTable(run: Run): boolean {
     && run.lines.some((line) => tableCells(line.text).length > 2);
 }
 
+function runHasUnsafeTable(run: Run): boolean {
+  if (run.kind !== "text" || !run.lines.some((line) => line.kind === "tableRule") || quantityTables(run) !== undefined) return false;
+  const table = readCompleteTable({ kind: "prose", source: runText(run), from: run.from, to: run.to, swappable: true });
+  return table === undefined || table.headers.length !== 2 || !/^price$/i.test(table.headers[1] ?? "")
+    || /^(?:price|cost|size|unit|quantity|amount|duration|notes?)$/i.test(table.headers[0] ?? "")
+    // The mapping reader skips repeated headers even without another separator.
+    || table.rows.length !== run.lines.filter((line) => line.kind === "text").length;
+}
+
 export function pagePasteConversionIssue(section: ProposedSection): string | undefined {
   const runs = readRuns(section.source);
-  if (runs.some(runHasWideTable)) {
+  if (runs.some((run) => runHasWideTable(run) || runHasUnsafeTable(run))) {
     return readPagePasteTable(section) === undefined
       ? "This table remains Text. Mapping supports a Markdown pipe table with a header, separator, and consistent rows."
-      : "This table has three or more columns. Choose which column holds each price before making it Prices. It will stay Text for now.";
+      : runs.some(runHasWideTable)
+        ? "This table has three or more columns. Choose which column holds each price before making it Prices. It will stay Text for now."
+        : "Choose which columns hold item names and prices before making this table Prices. It will stay Text for now.";
   }
   return runs.some((run) => runHasUnmappedHeader(run) || runHasUnmappedColumns(run) || runHasSizeAsPrice(run))
     ? "This table remains Text. Mapping supports a Markdown pipe table with a header, separator, and consistent rows."

@@ -4,6 +4,135 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## IMPORT COMPATIBILITY CORRECTIONS, 2026-10-04
+
+Jakob asked to prioritize varied menu conversion and correct unusable interpretations while the tablet is unavailable. The [compatibility audit](research/2026-10-04-import-compatibility-audit.md) records fictional reproductions and bounded fixes on `030-adjust-imported-prices`.
+
+Plain imports now preserve complete `from` prices, currency spacing, price ranges, service rates such as `$60 / 30 min`, and currency-marked decimal-comma prices. Amounts such as `12 oz` no longer become private supplier cost. Existing supplier column assignments and public contact notes are regression protected.
+
+Reversed two-column tables use the existing explicit column-review controls. Duration and Notes tables stay Text instead of inventing selling prices. Notes immediately below a price table stay with the original source as Text instead of becoming extra products. Repeated unruled headers require mapping and never become offers; their original header line remains Text after mapping.
+
+Fresh spec and quality reviews passed after fixes. Full `npm run verify` exited 0 on 2026-10-04: 93 test files, 1,917 tests, 65 accessibility tests, clean secret and dash scans, zero light and dark contrast failures, and passing menu-file and PWA update gates. The tablet is unavailable and the installed `0.13.0-test.5` predates these changes. Keep both PRs draft until the seller sessions are reviewed. No normal release is authorized by a solo conversion audit. Follow-up conversion priorities and unverified formats are listed in the audit.
+
+## FEATURE 030 IMPORT CORRECTION PANEL VERIFIED, SELLER SESSIONS PENDING
+
+On 2026-10-01, work started on branch `030-adjust-imported-prices`, based on
+the pushed `032-menu-first-workflow` prototype at `95a8396`. The
+[spec](../specs/030-adjust-imported-prices/spec.md),
+[plan](../specs/030-adjust-imported-prices/plan.md),
+[research](../specs/030-adjust-imported-prices/research.md),
+[review contract](../specs/030-adjust-imported-prices/contracts/review.md),
+[quickstart](../specs/030-adjust-imported-prices/quickstart.md) and
+[tasks](../specs/030-adjust-imported-prices/tasks.md) describe the broader
+correction panel. A plan review closed source-order, page-binding, manual Text
+recovery, source-replacement and old-tablet rendering gaps. Phase 1's pure
+reviewed-output foundation shipped to the feature branch as `ee61132`.
+
+Phase 2 field correction is implemented and its fresh spec and quality closure
+reviews passed on 2026-10-01. Sellers can edit source-keyed Item, Amount, Price
+and Details rows, exclude recognized offers, explicitly convert ambiguous Text
+lines, accept a genuine numeric name, and assign each wide table's columns.
+Corrections to one table do not block mapping another. The final full
+`npm run verify` exited 0: 90 test files, 1,804 tests, 63 accessibility tests,
+clean secret and dash scans, zero light and dark contrast failures, and passing
+menu-file and PWA update gates. Chrome Task A then passed at 320 and 390 CSS
+pixels with two reviewed rows, original source visible, zero document overflow
+and zero browser exceptions; Build, Preview and Copy retained the corrected
+name and selling price. See the [browser check](research/2026-10-01-import-correction-phase2-check.md).
+Phase 3 shared names and category moves are implemented. Sellers can select rows
+across correction pages, apply one item name, and move them to an existing or
+newly named Prices category. Duplicate category names have distinct choices.
+Compatible amount and price rows group under the same item; changed details stay
+separate. A fictional two-category, four-item saved acceptance check retains
+all four names and eight amount and price pairs in Build, Preview and Copy.
+The 101 focused tests pass, as do typecheck, lint, dash scan and both independent
+closure reviews. Phase 4 recovery is complete on 2026-10-02: deliberate remapping
+with undo, buffered source and file replacement, explicit keep or remove choices
+for headings left empty by moves or exclusions, header-only item entry, blank
+price acknowledgement, and focus after Clear selection. Fresh spec and quality
+reviews passed after fixing four findings. Its final `npm run verify` exited 0:
+90 test files, 1,845 tests, 64 accessibility tests, clean secret and dash scans,
+zero light and dark contrast failures, and passing menu-file and PWA update
+gates. The [Phase 4 check](research/2026-10-02-import-correction-phase4-check.md)
+records the review and verification evidence.
+
+A 320 CSS pixel Chrome check of Phase 3 on 2026-10-02 found a new release blocker
+for detached names. Mapping a two-offer table, assigning the preceding `Arrow
+Orb` line as both offers' shared name, and creating a `Figures` category left
+the original standalone name and heading in the saved page. Preview showed each
+twice. The [browser audit](research/2026-10-02-detached-name-browser-audit.md)
+has the source, steps and screenshots. Phase 5A's exact-line source-use contract
+was committed alone and pushed as `d85c24e` on 2026-10-02. Fresh spec and
+quality reviews passed after fixes for attached headings, Setext headings,
+quantity tables, added items, row moves, undo, and dropping a source section.
+The final full `npm run verify` exited 0: 90 files, 1,863 tests, 64 accessibility
+tests, clean secret and dash scans, zero light and dark contrast failures, and
+passing menu-file and PWA update gates. The saved `Document` schema is unchanged.
+Phase 5B is implemented and reviewed. The panel offers exact nearby name and
+heading choices with the affected row count, a Keep choice, and Undo. The final
+holistic review found and closed heading placement across retained notes and
+intervening categories, stale Undo snapshots, and a live Text-to-Prices summary.
+Its closure review passed 236 focused tests in six files. Full `npm run verify`
+exited 0 on 2026-10-02: 90 files, 1,886 tests, 65 accessibility tests, clean
+secret and dash scans, zero light and dark contrast failures, and passing menu
+file and PWA update gates. The saved `Document` schema is unchanged.
+
+The final [Chrome Task D check](research/2026-10-02-detached-source-browser-check.md)
+used four detached names, two headings and eight amount-price pairs. Build,
+Preview and Copy kept the exact values with each heading and name once, no page
+overflow at 320 or 390 CSS pixels, and no browser exception. The signed
+`0.13.0-test.2` APK was built, signed with v1/v2/v3, and installed as an update
+on the Android 6.0.1 tablet. A direct Text-to-Prices correction saved, previewed
+and survived cold launch while pre-existing pages remained. The [device check](research/2026-10-02-android6-import-correction-check.md) records the commands,
+APK hash, screenshots and the local file picker limitation. This verifies API
+23 with WebView 106, not the tablet's former WebView 49.
+
+On 2026-10-02, an Android 6 file picker follow-up fixed the text import button
+opening Dropbox's sign-in screen. The app now opens Android DocumentsUI for text
+and backup files, while retaining Capacitor's media picker. Web import controls
+reject unrelated files before reading them and show a visible explanation. The full `npm run verify` gate and
+both Android builds passed. Signed `0.13.0-test.3`, versionCode 21, installed
+over the existing app with saved pages intact. On the tablet, the real file
+button opened DocumentsUI, a PNG selection left the draft empty with an explanation, and cancelling
+and reopening worked twice. The [picker check](research/2026-10-02-android6-document-picker-check.md)
+records the APK hash and screenshots. A complete downloaded `.md` read remains
+unverified. Capacitor 7 still needs WebView 60 or newer; WebView 49 is outside
+its supported runtime.
+
+A 2026-10-02 [compact Build check](research/2026-10-02-compact-build-tablet-check.md)
+folded the optional private title on existing menus while keeping a saved title
+visible in the disclosure label. It removed the inactive paste start while the
+paste panel is open. Full `npm run verify` passed with 90 files, 1,889 tests and
+65 accessibility tests. Signed `0.13.0-test.4`, versionCode 22, installed as an
+update on the SM_T700; the prior saved section remained. The tablet showed the
+compact Build and active paste states, and Done pasting restored the start action.
+The media scanner indexed two fictional files, but Android 6 DocumentsUI still
+showed an empty Downloads list, so file content selection is still unverified.
+USB stay-awake was restored to setting `0`.
+
+A 2026-10-02 [Copy action check](research/2026-10-02-copy-paste-tablet-check.md)
+removed the inactive paste start button while Copy's paste panel is open, for
+empty and populated pages. Full `npm run verify` passed with 90 files, 1,890
+tests and 65 accessibility tests. Signed `0.13.0-test.5`, versionCode 23,
+installed in place on the SM_T700. The saved section and Copy output remained;
+the start action disappeared while the panel was active and returned after Done.
+USB stay-awake was restored to setting `0`.
+
+A later 2026-10-02 [local file import check](research/2026-10-02-android6-file-import-complete.md)
+resolved the earlier `.md` selection gap on the SM_T700. Android 6 DocumentsUI's
+virtual Downloads root remained empty, but `Show SD card > Device storage >
+Download` listed the ADB-copied fictional `.md`. Selecting it filled the app's
+source field. Explicit column, name, and category choices saved a new Figures
+page with one Arrow Orb item and both `12 oz / $25` and `16 oz / $32`. Preview,
+Copy, cold launch, and the page drawer confirmed the result and all three prior
+pages. This verifies local `.md` reading with WebView 106; a browser-managed
+download entry and WebView 49 remain untested. USB stay-awake returned to `0`.
+
+[Draft PR #2](https://github.com/JakobS1900/markdown-storefront-builder/pull/2)
+tracks this branch against feature 032. Keep it and feature 032's draft PR #1
+in draft until five real seller sessions exercise the combined build. The
+[seller task script](research/2026-10-01-seller-task-script.md) is ready to send.
+
 ## FEATURE 032 USABILITY ITERATION VERIFIED, SELLER SESSIONS PENDING
 
 On 2026-10-01, a phone-sized audit of the prototype found too many competing starts on a blank page, a persistent strip of six generic section choices, and mixed pasted price lines whose punctuation entered item names. The [iteration audit](research/2026-10-01-usability-iteration-audit.md) records the starting screens, measured friction, screenshots, and results. The branch now gives Create a menu and Paste a page first, moves secondary starts and section types into named disclosures, parses clear mixed price boundaries line by line, and lets sellers correct proposed Item and Price values before Add. Saved document and export formats are unchanged.
@@ -71,7 +200,7 @@ partly verified. The APK has not been published.
 Five real seller task sessions remain. Record time, help, corrections, and wrong
 or missing values against the current release before claiming usability success
 or publishing a normal feature release. Feature 030's broader correction panel
-remains separately scoped and has not been implemented.
+is now in progress on its own branch.
 
 ## QUANTITY IMPORT BUGFIX: v0.12.1 SHIPPED
 

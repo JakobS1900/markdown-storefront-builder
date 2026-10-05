@@ -49,9 +49,12 @@ function live(): HTMLElement {
   return root;
 }
 
-/** The page title field, which is on screen without opening anything. */
+/** Open the private title before focusing its field, as a seller would. */
 function titleField(): HTMLInputElement {
-  const field = document.querySelector<HTMLInputElement>("#app input[type=text]");
+  const group = document.querySelector<HTMLDetailsElement>("#build-private-title");
+  if (group === null) throw new Error("no private title disclosure");
+  group.open = true;
+  const field = group.querySelector<HTMLInputElement>("input[type=text]");
   if (field === null) throw new Error("no title field");
   return field;
 }

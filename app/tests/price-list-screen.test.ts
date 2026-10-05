@@ -382,6 +382,20 @@ describe("converting", () => {
 });
 
 describe("opening a file instead of pasting", () => {
+  it("rejects a non-text file chosen from an unrestricted Android document picker", () => {
+    shop();
+    press("Paste a price list");
+    const picker = document.getElementById("price-list-file");
+    if (!(picker instanceof HTMLInputElement)) throw new Error("no picker");
+    const file = new File(["binary"], "photo.png", { type: "image/png" });
+    Object.defineProperty(picker, "files", { value: [file], configurable: true });
+    picker.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(getState().pasting?.text).toBe("");
+    expect(document.getElementById("live-region")?.textContent).toContain("text or price list file");
+    expect(document.querySelector(".paste-file-error")?.textContent).toContain("text or price list file");
+    expect(document.querySelector<HTMLParagraphElement>(".paste-file-error")?.hidden).toBe(false);
+  });
+
   it("reads the chosen file after a line is unticked", async () => {
     openPaste("Original, $10");
     const picker = document.getElementById("price-list-file");
@@ -447,6 +461,8 @@ describe("opening a file instead of pasting", () => {
 
     const said = document.getElementById("live-region")?.textContent ?? "";
     expect(said).toContain("could not be read");
+    expect(document.querySelector(".paste-file-error")?.textContent).toContain("could not be read");
+    expect(document.querySelector<HTMLParagraphElement>(".paste-file-error")?.hidden).toBe(false);
     expect(getState().pasting?.text).toBe("");
   });
 

@@ -32,3 +32,5 @@
 ## Notes
 
 Reviewed against the existing whole-page review and parser. The present review shows source text and allows exclusion or Text/Prices switching, but does not expose field corrections. This is a specification review, not evidence of implemented behavior. No automatic parsing accuracy claim is made for the unavailable private source. Ready for planning.
+
+Rechecked on 2026-10-02 after adding User Story 4 from the detached-name browser audit. The scenarios distinguish explicitly using a source line from merely typing matching words, define what undo and later edits restore, and require saved output without duplicate standalone lines. The fictional acceptance source and screenshots make the added criteria testable without the private seller menu.

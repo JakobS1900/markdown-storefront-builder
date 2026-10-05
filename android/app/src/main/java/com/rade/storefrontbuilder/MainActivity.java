@@ -24,6 +24,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         getBridge().getWebView().addJavascriptInterface(new FileHandoff(), "AndroidFiles");
+        getBridge().getWebView().setWebChromeClient(new DocumentFileChromeClient(getBridge()));
 
         /*
          * Back closed the app from every screen, including Preview and Copy,

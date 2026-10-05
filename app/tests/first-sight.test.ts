@@ -127,8 +127,32 @@ describe("starting a page", () => {
     expect(getState().doc.title).toBe("Weekend market");
 
     document.querySelector<HTMLButtonElement>("#surface .empty-starts > button")?.click();
-    const editorTitle = document.querySelector<HTMLInputElement>("#surface .stack > .field input");
+    const namedTitle = document.querySelector<HTMLDetailsElement>("#build-private-title");
+    expect(namedTitle?.querySelector("summary")?.textContent).toContain("Weekend market");
+    const editorTitle = namedTitle?.querySelector<HTMLInputElement>("input");
     expect(editorTitle?.value).toBe("Weekend market");
+  });
+
+  it("folds the optional title and hides the paste start while its panel is open", () => {
+    live();
+    document.querySelector<HTMLButtonElement>("#surface .empty-starts > button")?.click();
+
+    const title = summary("Private page title");
+    expect(title.open).toBe(false);
+    expect(title.querySelector("input")?.closest("details")).toBe(title);
+    expect(document.querySelectorAll("#surface .page-actions button")).toHaveLength(1);
+
+    const pasteStart = document.querySelector<HTMLButtonElement>("#surface .page-actions button");
+    pasteStart?.focus();
+    pasteStart?.click();
+    expect(document.querySelector("#surface .page-paste")).not.toBeNull();
+    expect(document.querySelector("#surface .page-actions")).toBeNull();
+    expect(getState().doc.blocks).toHaveLength(1);
+
+    [...document.querySelectorAll<HTMLButtonElement>("#surface .page-paste button")]
+      .find((button) => button.textContent === "Done pasting")?.click();
+    expect(document.querySelector("#surface .page-paste")).toBeNull();
+    expect(document.querySelectorAll("#surface .page-actions button")).toHaveLength(1);
   });
 
   it("moves keyboard focus to a section added from the secondary choices", () => {
