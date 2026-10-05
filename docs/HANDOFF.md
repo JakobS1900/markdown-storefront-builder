@@ -4,13 +4,30 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
-## IMPORT COMPATIBILITY CORRECTIONS, 2026-10-04
+## FEATURE 033 VERIFIED, SELLER SESSIONS PENDING, 2026-10-04
 
-Follow-up in progress on `033-flexible-table-import`: [spec and plan](../specs/033-flexible-table-import/).
-Jakob approved bounded table compatibility work and clarified tester failures in
-item/category organization and local pictures. Reproduce and correct those failures
-first, then reuse existing controls for conservative pasted CSV/TSV support.
-No new options or saved schema are planned. The tablet remains unavailable.
+Feature 033 is implemented on `033-flexible-table-import` in
+[draft PR #3](https://github.com/JakobS1900/markdown-storefront-builder/pull/3),
+stacked on 030. Generic quantity-table labels no longer become products, reused
+quoted category names stay clean, and ambiguous bold labels stay Text. Headed CSV
+and headed or headerless TSV reuse existing column controls. Simple two-column
+TSV retains automatic import. Malformed or multiline CSV stays intact as Text.
+Local pictures with missing or generic MIME metadata are validated by their bytes
+and decoded normally; failures return a retryable result. Saved local pictures
+open the existing preview. No new options, dependencies or saved schema were added.
+
+Independent chunk and holistic reviews passed. Full `npm run verify` exited 0 in
+114.8 seconds: 94 files, 1,968 tests, 65 accessibility tests, clean scans, light
+and dark contrast, menu-file rendering, local-picture browser checks and PWA updates.
+Real Chrome checks cover transparent PNG decoding, persistence, reopening and
+embedded export at 320 and 390 pixels. The tablet remains unavailable; its native
+picker is unverified and its installed APK predates these changes. Keep all three
+stacked PRs draft until the five seller sessions are reviewed. No APK or normal
+release was published. See the [evidence and limitations](research/2026-10-04-import-and-picture-corrections.md).
+The [code push CI](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37246417645)
+also passed verification, the app build and the service-worker stamp check.
+
+## PRECEDING IMPORT COMPATIBILITY CORRECTIONS, 2026-10-04
 
 Jakob asked to prioritize varied menu conversion and correct unusable interpretations while the tablet is unavailable. The [compatibility audit](research/2026-10-04-import-compatibility-audit.md) records fictional reproductions and bounded fixes on `030-adjust-imported-prices`.
 
