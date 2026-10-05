@@ -379,7 +379,7 @@ it("keeps Add disabled when a row is edited after switching away from the draft 
 it("offers explicit manual prices for unsupported Text while leaving unchosen lines as Text", () => {
   live();
   click("Paste a page you already have");
-  paste("Product,Price\nMug,$25\nA note");
+  paste("Product|Price\nMug|$25\nA note");
   expect(document.querySelector(".page-paste")?.textContent).toContain("Adjust as prices");
   click("Adjust as prices");
   expect(document.querySelector(".page-paste-corrections")?.textContent).toContain("Source row 2");
@@ -409,8 +409,8 @@ it("offers explicit manual prices for unsupported Text while leaving unchosen li
 it("explains unsupported table syntax without offering unavailable mapping controls", () => {
   live();
   click("Paste a page you already have");
-  paste("Product,Size,Price,Notes\nMug,12 oz,$28,Blue\nBowl,16 oz,$32,Red");
-  expect(document.querySelector(".page-paste")?.textContent).toMatch(/remains Text.*Markdown pipe table.*header.*separator.*consistent rows/is);
+  paste("Product,Size,Price,Notes\nMug,12 oz,$28,Blue\nBowl,16 oz,$32");
+  expect(document.querySelector(".page-paste")?.textContent).toMatch(/remains Text.*inconsistent/is);
   expect(document.querySelector(".page-paste-table")).toBeNull();
 });
 

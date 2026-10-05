@@ -36,7 +36,11 @@ function send(method, params = {}) {
   const id = ++sequence;
   return new Promise((done, fail) => {
     const timer = setTimeout(() => { pending.delete(id); fail(new Error(`${method} exceeded 30 seconds`)); }, 30000);
-    pending.set(id, (message) => { clearTimeout(timer); message.error ? fail(new Error(message.error.message)) : done(message.result); });
+    pending.set(id, (message) => {
+      clearTimeout(timer);
+      if (message.error) fail(new Error(message.error.message));
+      else done(message.result);
+    });
     socket.send(JSON.stringify({ id, method, params }));
   });
 }

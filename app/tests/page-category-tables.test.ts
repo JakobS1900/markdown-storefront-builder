@@ -42,11 +42,18 @@ it.each(["> **Please read carefully**", "> **Please read carefully**\n\nThis is 
 
 it.each([
   "| 1qty | $100 |\n| 2qty | |",
-  "| 1qty | $100 |\nAsk before ordering",
   "| 1qty | $100 |\n| 2qty | $200 | limited edition |",
 ])("keeps uncertain quantity tables as Text without dropping their header or note: %s", (rows) => {
   const source = table("Star Wars figure", rows);
   expect(readProposal(source).sections.map(buildProposedBlock)).toEqual([{ kind: "prose", text: source }]);
+});
+
+it("keeps a complete quantity table and its adjacent note in source order", () => {
+  const source = table("Star Wars figure", "| 1qty | $100 |") + "\nAsk before ordering";
+  expect(readProposal(source).sections.map(buildProposedBlock)).toEqual([
+    { kind: "menu", tiers: [{ name: "Star Wars figure", price: "", quantities: [{ amount: "1qty", price: "$100" }] }] },
+    { kind: "prose", text: "Ask before ordering" },
+  ]);
 });
 
 it("keeps a separate note after a category's price tables", () => {

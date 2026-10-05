@@ -1,5 +1,5 @@
 import {
-  buildMappedPagePasteBlock, buildProposedBlock, headingTextFromLine, isStandaloneBoldLabel, pagePasteConversionIssue, readLines,
+  buildMappedPagePasteBlock, buildProposedBlock, headingTextFromLine, isStandaloneBoldLabel, pagePasteConversionIssue, readPagePasteLines as readLines,
   readPagePasteTable, readProposal, readRuns, runText, swapProposalKind,
   type PagePasteTableMapping, type ProposedBlock, type ProposedSection,
 } from "./page-text.js";
@@ -51,7 +51,7 @@ function sourceCandidates(sections: readonly ProposedSection[], tableIndex: numb
     .map((line, offset) => ({ line, sourceLine: previous.from + offset + 1 }))
     .filter(({ line }) => line.text.trim() !== "");
   const nearest = previousLines.at(-1);
-  const standalone = currentHeading < 0 && previous?.kind === "prose" && nearest?.line.kind === "text" &&
+  const standalone = currentHeading < 0 && previous?.kind === "prose" && readPagePasteTable(previous) === undefined && nearest?.line.kind === "text" &&
     previousLines.every(({ line }) => line.kind === "text")
     ? { sourceLine: nearest.sourceLine, sectionIndex: tableIndex - 1,
       value: nearest.line.text.trim() } : undefined;
@@ -173,8 +173,10 @@ function groupedTiers(rows: readonly PagePasteReviewRow[], quantitySourceLines: 
 
 function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteReviewRow[],
   categories: readonly PagePasteCategory[], quantitySourceLines: ReadonlySet<number>,
-  manual: boolean, sectionIndex: number, blockDestinations: WeakMap<ProposedBlock, string>): readonly ProposedBlock[] {
+  manual: boolean, sectionIndex: number, blockDestinations: WeakMap<ProposedBlock, string>,
+  furnitureLines: readonly number[]): readonly ProposedBlock[] {
   const lines = readLines(section.source);
+  const furniture = new Set(furnitureLines);
   const byLine = new Map(rows.map((row) => [row.sourceLine, row]));
   const blocks: ProposedBlock[] = [];
   let textLines: string[] = [];
@@ -200,7 +202,8 @@ function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteRevi
   const sourceHeadingId = headingOffset < 0 ? undefined : `source:${String(section.from + headingOffset + 1)}`;
   const firstIncluded = rows.find((row) => row.included === true);
   const firstRowLine = firstIncluded?.sourceLine ?? Infinity;
-  const firstRetainedLine = lines.findIndex((line, offset) => line.kind === "text" && !byLine.has(section.from + offset + 1) && line.text.trim() !== "");
+  const firstRetainedLine = lines.findIndex((line, offset) => line.kind === "text" && !byLine.has(section.from + offset + 1) &&
+    !furniture.has(section.from + offset + 1) && line.text.trim() !== "");
   if (!manual && originalHeading !== undefined &&
     (firstIncluded !== undefined && (firstIncluded.destinationId !== `section:${String(sectionIndex)}` &&
       firstIncluded.destinationId !== sourceHeadingId ||
@@ -223,7 +226,7 @@ function orderedRowBlocks(section: ProposedSection, rows: readonly PagePasteRevi
         flushMenu();
         if (manual) textLines.push(line.text);
       }
-    } else if (!manual && (line.kind === "heading" || line.kind === "tableHeader" || line.kind === "tableRule" ||
+    } else if (!manual && (furniture.has(sourceLine) || line.kind === "heading" || line.kind === "tableHeader" || line.kind === "tableRule" ||
       line.kind === "headingUnderline" || line.kind === "rule")) {
       return;
     } else if (line.text.trim() !== "") {
@@ -310,8 +313,7 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
   const categories: PagePasteCategory[] = [
     ...prepared.flatMap(({ index, proposed, mapping, block }) => {
       if (block.kind !== "menu" && mapping === undefined && !draft.manualSections?.includes(index)) return [];
-      const sourceHeading = readRuns(proposed.source).find((run) => run.kind === "heading");
-      const headingLine = sourceHeading?.lines.find((line) => line.kind === "heading");
+      const headingLine = readLines(proposed.source).find((line) => line.kind === "heading");
       const heading = block.kind === "menu" ? block.heading
         : headingLine === undefined ? undefined : headingTextFromLine(headingLine);
       return [{ id: `section:${String(index)}`, name: heading ?? `Prices section ${String(index + 1)}`,
@@ -378,7 +380,7 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
       (row.name.trim() === "" || row.amount.trim() !== "" && row.price.trim() === ""));
     // CHUNK 3: Keep moved offers at their source positions while a retained Text line splits the Prices blocks.
     const rowBlocks = rows.length > 0 && (manual || block.kind === "menu" || mapping !== undefined && validRoles && changed && !unsafeUncorrected)
-      ? orderedRowBlocks(proposed, rows, categories, quantitySourceLines, manual, index, blockDestinations)
+      ? orderedRowBlocks(proposed, rows, categories, quantitySourceLines, manual, index, blockDestinations, table?.furnitureLines ?? [])
       : menu?.blocks ?? [block];
     const headingRecovery = rows.length > 0 && rowBlocks.some((output) => output.kind === "heading") &&
       rows.every((row) => row.included !== true ||
@@ -470,6 +472,8 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
   const coverage = reviewedSections.flatMap((section): PagePasteSourceCoverage[] => {
     const itemLines = new Set(section.consumedSourceLines);
     const manual = draft.manualSections?.includes(section.index) === true;
+    const furniture = new Set(draft.mappings?.[section.index] !== undefined && section.blocks.some((block) => block.kind === "menu")
+      ? readPagePasteTable(section.proposed)?.furnitureLines : []);
     const usedHeading = readLines(section.source.source).some((line, offset) => line.kind === "heading" &&
       activeUses.get(section.source.from + offset + 1) === "category");
     return readLines(section.source.source).flatMap((line, offset) => {
@@ -487,7 +491,7 @@ export function buildPagePasteReview(draft: PagePasteReviewDraft): PagePasteRevi
             ? "text"
           : section.blocks.every((block) => block.kind === "prose") ? "text"
           : line.kind === "heading" ? "heading"
-            : line.kind === "tableHeader" || line.kind === "tableRule" || line.kind === "headingUnderline" || line.kind === "rule" ? "furniture"
+            : furniture.has(sourceLine) || line.kind === "tableHeader" || line.kind === "tableRule" || line.kind === "headingUnderline" || line.kind === "rule" ? "furniture"
               : itemLines.has(sourceLine) ? "item" : "text";
       return [{ sectionIndex: section.index, sourceLine, kind }];
     });

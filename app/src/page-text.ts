@@ -43,6 +43,8 @@
 import type { Block } from "@mdsb/engine";
 
 import { inferDelimiter, isTableRule, readCandidates, toProducts, type NewProduct } from "./price-list-text.js";
+import { pipeCells, scanPageTables, type PagePasteTable, type PageTableSpan } from "./page-tables.js";
+export type { PagePasteTable } from "./page-tables.js";
 
 /**
  * What one line looks like, before anything reads meaning into a group of them.
@@ -423,6 +425,19 @@ function runHasUnmappedColumns(run: Run): boolean {
         candidate.unit !== undefined || candidate.cost !== undefined || candidate.blurb !== undefined));
 }
 
+/** Spreadsheet cells cannot introduce Markdown headings inside the same table. */
+export function readPagePasteLines(text: string): readonly Line[] {
+  const lines = readLines(text);
+  const spans = scanPageTables(lines.map((line) => line.text)).filter((span) => span.delimiter !== "|");
+  if (spans.length === 0) return lines;
+  const contextual = [...lines];
+  for (const span of spans) for (let index = span.from; index <= span.to; index += 1) {
+    const line = contextual[index];
+    if (line !== undefined) contextual[index] = { text: line.text, kind: line.text.trim() === "" ? "blank" : "text" };
+  }
+  return contextual;
+}
+
 export function isStandaloneBoldLabel(name: string): boolean {
   const text = name.trim();
   const marker = text.slice(0, 2);
@@ -440,11 +455,6 @@ export interface PagePasteTableMapping {
   readonly size?: number;
 }
 
-export interface PagePasteTable {
-  readonly headers: readonly string[];
-  readonly rows: readonly { readonly line: number; readonly cells: readonly string[] }[];
-}
-
 function runHasUnmappedHeader(run: Run): boolean {
   if (run.kind !== "text") return false;
   const first = candidatesForRun(run)[0];
@@ -454,7 +464,12 @@ function runHasUnmappedHeader(run: Run): boolean {
   return /^(?:price|size|notes?|unit|quantity|amount|cost)$/i.test(label);
 }
 
-function textRunIsMenu(run: Run): boolean {
+function requiresDelimitedMapping(span: PageTableSpan): boolean {
+  return span.delimiter !== "|" && !(span.delimiter === "\t" && span.table?.headers.length === 2 && span.table.furnitureLines.length === 0);
+}
+
+function textRunIsMenu(run: Run & { readonly keepText?: boolean }): boolean {
+  if (run.keepText === true || scanPageTables(run.lines.map((line) => line.text)).some(requiresDelimitedMapping)) return false;
   const nonBlankLines = run.lines.filter((line) => line.text.trim() !== "");
   // FR-029-15a: image links are kept as Text in this feature. `A3` and `A4`
   // inside alt text look numeric enough for the price reader's fallback, and a
@@ -490,7 +505,7 @@ function sourceFromRuns(runs: readonly Run[], startRun: number, endRun: number):
 }
 
 function tableCells(text: string): readonly string[] {
-  return text.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+  return pipeCells(text);
 }
 
 /** A narrow, complete pipe table. An irregular row leaves the whole source as Text. */
@@ -503,22 +518,35 @@ function readCompleteTable(section: ProposedSection): PagePasteTable | undefined
   const headers = tableCells(lines[0].text);
   if (headers.length < 2 || headers.some((cell) => cell === "") || tableCells(lines[1].text).length !== headers.length) return undefined;
   const rows: { line: number; cells: readonly string[] }[] = [];
+  const furnitureLines = [section.from + tableRun.from + 1, section.from + tableRun.from + 2];
   for (let i = 2; i < lines.length; i += 1) {
     const line = lines[i];
     if (line === undefined || !line.text.includes("|")) return undefined;
     const cells = tableCells(line.text);
     if (cells.length !== headers.length) return undefined;
     if (cells.every((cell, index) => cell.toLowerCase() === headers[index]?.toLowerCase())) {
-      if (lines[i + 1]?.kind === "tableRule") i += 1;
+      furnitureLines.push(section.from + tableRun.from + i + 1);
+      if (lines[i + 1]?.kind === "tableRule") {
+        i += 1;
+        furnitureLines.push(section.from + tableRun.from + i + 1);
+      }
       continue;
     }
     if (line.kind === "tableRule" || cells.every((cell) => cell === "")) return undefined;
     rows.push({ line: section.from + tableRun.from + i + 1, cells });
   }
-  return rows.length === 0 ? undefined : { headers, rows };
+  return rows.length === 0 ? undefined : { headers, rows, furnitureLines };
 }
 
 export function readPagePasteTable(section: ProposedSection): PagePasteTable | undefined {
+  const spans = scanPageTables(section.source.split(/\r?\n/), section.from).filter((span) => span.delimiter !== "|");
+  if (spans.length > 0) {
+    const span = spans[0];
+    if (spans.length !== 1 || span === undefined || span.table === undefined) return undefined;
+    const lines = readLines(section.source);
+    return lines.every((line, offset) => offset >= span.from && offset <= span.to || line.kind === "blank" ||
+      offset < span.from && (line.kind === "heading" || line.kind === "headingUnderline")) ? span.table : undefined;
+  }
   const table = readCompleteTable(section);
   return table !== undefined && (table.headers.length > 2 || readRuns(section.source).some(runHasUnsafeTable)) ? table : undefined;
 }
@@ -538,8 +566,8 @@ export function mapPagePasteTable(section: ProposedSection, mapping: PagePasteTa
     if ((name === "" && price === "") || (price === "" && unit !== "")) return undefined;
     tiers.push({ name, price, ...(unit === "" ? {} : { unit }), ...(extras.length === 0 ? {} : { blurb: extras.join("; ") }) });
   }
-  const heading = readRuns(section.source).find((run) => run.kind === "heading");
-  return heading === undefined ? { kind: "menu", tiers } : { kind: "menu", heading: headingTextFromRun(heading), tiers };
+  const heading = readPagePasteLines(section.source).find((line) => line.kind === "heading");
+  return heading === undefined ? { kind: "menu", tiers } : { kind: "menu", heading: headingTextFromLine(heading), tiers };
 }
 
 function runHasWideTable(run: Run): boolean {
@@ -554,6 +582,7 @@ function tableLabel(text: string): string {
 }
 
 function runHasUnsafeTable(run: Run): boolean {
+  if (run.lines.some((line) => line.text.includes("\\|"))) return true;
   if (run.kind !== "text" || !run.lines.some((line) => line.kind === "tableRule") || quantityTables(run) !== undefined) return false;
   const table = readCompleteTable({ kind: "prose", source: runText(run), from: run.from, to: run.to, swappable: true });
   return table === undefined || table.headers.length !== 2 || !/^price$/i.test(table.headers[1] ?? "")
@@ -563,6 +592,10 @@ function runHasUnsafeTable(run: Run): boolean {
 }
 
 export function pagePasteConversionIssue(section: ProposedSection): string | undefined {
+  const delimited = scanPageTables(section.source.split(/\r?\n/)).filter(requiresDelimitedMapping);
+  if (delimited.length > 0) return delimited.some((span) => span.table === undefined)
+    ? "This table remains Text because its rows or quotes are inconsistent. Multiline CSV fields are not supported."
+    : "Choose which columns hold item names and prices before making this table Prices. It will stay Text for now.";
   const runs = readRuns(section.source);
   if (runs.some((run) => runHasWideTable(run) || runHasUnsafeTable(run))) {
     return readPagePasteTable(section) === undefined
@@ -620,8 +653,37 @@ function sectionFromDraft(runs: readonly Run[], draft: DraftSection): ProposedSe
   };
 }
 
+/** Refine only proposals; the public run reader still reconstructs the original paste. */
+function proposalRuns(text: string): readonly (Run & { readonly keepText?: boolean })[] {
+  const original = readRuns(text);
+  const lines = original.flatMap((run) => run.lines);
+  const spans = scanPageTables(lines.map((line) => line.text));
+  if (spans.length === 0) return original;
+  const result: (Run & { readonly keepText?: boolean })[] = [];
+  let runIndex = 0;
+  let spanIndex = 0;
+  for (let from = 0; from < lines.length;) {
+    while ((original[runIndex]?.to ?? Infinity) < from) runIndex += 1;
+    const run = original[runIndex];
+    if (run === undefined) break;
+    const span = spans[spanIndex];
+    if (span?.from === from) {
+      result.push({ kind: "text", from, to: span.to, lines: lines.slice(from, span.to + 1) });
+      from = span.to + 1;
+      spanIndex += 1;
+    } else {
+      const to = Math.min(run.to, (span?.from ?? lines.length) - 1);
+      const besideTable = run.kind === "text" && ((span?.from ?? Infinity) <= run.to ||
+        (spans[spanIndex - 1]?.to ?? -1) >= run.from);
+      result.push({ kind: run.kind, from, to, lines: lines.slice(from, to + 1), ...(besideTable ? { keepText: true } : {}) });
+      from = to + 1;
+    }
+  }
+  return result;
+}
+
 export function readProposal(text: string): Proposal {
-  const runs = readRuns(text);
+  const runs = proposalRuns(text);
   const drafts: DraftSection[] = [];
   let pendingBlankStart: number | undefined;
 

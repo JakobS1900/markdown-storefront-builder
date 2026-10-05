@@ -23,9 +23,7 @@ it("routes repeated unruled headers through mapping without importing them as of
   expect(buildPagePasteReview(draft).blocks).toEqual([{ kind: "prose", text }]);
   const mapped = buildPagePasteReview({ ...draft, mappings: { 0: { product: 0, price: 1 } } });
   expect(mapped.blocks).toEqual([
-    { kind: "menu", tiers: [{ name: "Mug", price: "$25" }] },
-    { kind: "prose", text: "| Item | Price |" },
-    { kind: "menu", tiers: [{ name: "Cup", price: "$15" }] },
+    { kind: "menu", tiers: [{ name: "Mug", price: "$25" }, { name: "Cup", price: "$15" }] },
   ]);
   expect(mapped.rows.map((row) => row.sourceLine)).toEqual([3, 5]);
   expect(mapped.canConfirm).toBe(true);
@@ -42,11 +40,14 @@ it.each([
   expect(section === undefined ? undefined : readPagePasteTable(section)?.headers).toHaveLength(2);
 });
 
-it("keeps an adjacent delivery note with its table as Text instead of inventing an item", () => {
+it("keeps an adjacent delivery note as Text after its table", () => {
   const text = "| Item | Price |\n| --- | --- |\n| Portrait | $25 |\nDelivery is free";
   const review = buildPagePasteReview({ text, dropped: [], swapped: [] });
-  expect(review.blocks).toEqual([{ kind: "prose", text }]);
-  expect(review.rows).toEqual([]);
+  expect(review.blocks).toEqual([
+    { kind: "menu", tiers: [{ name: "Portrait", price: "$25" }] },
+    { kind: "prose", text: "Delivery is free" },
+  ]);
+  expect(review.rows.map((row) => row.name)).toEqual(["Portrait"]);
 });
 
 it("still automatically imports ordinary two-column prices", () => {
