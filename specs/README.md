@@ -52,10 +52,11 @@ answerable without reading fifty commit messages.
 | [027 the setup wizard](027-setup-wizard/) | 2026-09-08 | **before** | yes | yes | yes | **yes** |
 | [028 formatting buttons](028-text-formatting/) | 2026-09-11 | **before** | yes | yes | no | **yes** |
 | [029 paste a page](029-paste-a-page/) | 2026-09-14 | **before** | yes | 63/64 | no | **yes** |
-| [030 adjust imported prices](030-adjust-imported-prices/) | Correction and compatibility fixes verified on tablet; integration pending | **before** | yes | yes | plan review | **yes** |
-| [032 menu-first workflow](032-menu-first-workflow/) | Scripted tablet workflows verified; integration pending | **before** | yes | yes | yes | yes |
-| [033 reliable imports and local pictures](033-flexible-table-import/) | Verified on tablet; integration pending | **before** | yes | yes | yes | yes |
-| [034 compact import review](034-compact-import-review/) | Verified on tablet test.8; integration pending | **before** | yes | yes | yes | single chunk reviewed |
+| [030 adjust imported prices](030-adjust-imported-prices/) | Merged 2026-10-05; normal release pending | **before** | yes | yes | plan review | **yes** |
+| [032 menu-first workflow](032-menu-first-workflow/) | Merged 2026-10-05; normal release pending | **before** | yes | yes | yes | yes |
+| [033 reliable imports and local pictures](033-flexible-table-import/) | Merged 2026-10-05; normal release pending | **before** | yes | yes | yes | yes |
+| [034 compact import review](034-compact-import-review/) | Merged 2026-10-05; normal release pending | **before** | yes | yes | yes | single chunk reviewed |
+| [035 clear import choices and page names](035-clear-import-and-page-names/) | Verified on signed tablet 0.13.0; publication pending | **before** | yes | yes | yes | yes |
 
 **028's holistic review column said `owed` for part of 2026-09-11**, because two
 attempts at it died on the account session limit, and a required step that has

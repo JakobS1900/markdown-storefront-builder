@@ -37,7 +37,7 @@ import {
   startPastingPage,
   type State,
 } from "../store.js";
-import { dismissSidebar } from "../surface-history.js";
+import { dismissSidebar, rememberSurface } from "../surface-history.js";
 import { openBackup } from "../import.js";
 import { STARTERS } from "../starters/index.js";
 // The focus trap lives in `dom.ts` rather than here, since feature 027 gave the
@@ -255,6 +255,22 @@ export function pagesPanelContents(state: State): Node[] {
 
   parts.push(
     el("div", { class: "adders" }, [
+      button({
+        label: "Name this page",
+        onClick: () => {
+          dismissSidebar(() => {
+            rememberSurface("build", () => {
+              if (getState().surface !== "build") setSurface("build");
+              const group = document.getElementById("build-private-title");
+              if (!(group instanceof HTMLDetailsElement)) return;
+              group.open = true;
+              const input = group.querySelector("input");
+              input?.focus({ preventScroll: true });
+              input?.scrollIntoView?.({ block: "center" });
+            });
+          });
+        },
+      }),
       button({
         label: "Start a new page",
         variant: "primary",

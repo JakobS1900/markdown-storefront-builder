@@ -219,7 +219,8 @@ function focusRowPager(index: number, direction: "next" | "previous"): void {
 
 function focusSectionButton(index: number, label: string): void {
   const section = document.querySelector(`.page-paste-sections li[data-section-index="${String(index)}"]`);
-  [...(section?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((control) => control.textContent === label)?.focus();
+  [...(section?.querySelectorAll<HTMLButtonElement>("button") ?? [])]
+    .find((control) => (control.getAttribute("aria-label") ?? control.textContent) === label)?.focus();
 }
 
 const ROW_PAGE = 20;
@@ -255,13 +256,15 @@ function tableSourceChoices(reviewed: PagePasteReviewSection, refresh: () => voi
       line.kind === (role === "name" ? "usedName" : "usedCategory"));
     const sourceRole = role === "name" ? "item name" : "category";
     const originalRole = role === "name" ? "Text" : "Heading";
-    const useLabel = `Use source row ${String(candidate.sourceLine)} as ${sourceRole} for ${String(affected)} row${affected === 1 ? "" : "s"}`;
-    const undoLabel = `Undo source row ${String(candidate.sourceLine)} ${sourceRole}${role === "category" ? " for all linked rows" : ""}`;
+    const useLabel = `Use ${candidate.value} as the ${sourceRole}`;
+    const undoLabel = `Undo ${candidate.value} as the ${sourceRole} for all linked prices`;
+    const accessibleLabel = (label: string): string => `${label}, original line ${String(candidate.sourceLine)}, table section ${String(reviewed.index + 1)}`;
     const keepLabel = `Keep source row ${String(candidate.sourceLine)} as ${originalRole}`;
     return [el("div", { class: "page-paste-source-choice", role: "group",
       "aria-label": `Source row ${String(candidate.sourceLine)} ${sourceRole}`,
       "data-source-line": String(candidate.sourceLine), "data-source-role": role }, [
-      el("strong", {}, [`Source row ${String(candidate.sourceLine)}: ${candidate.value}`]),
+      el("strong", {}, [candidate.value]),
+      el("p", { class: "hint" }, [`Original line ${String(candidate.sourceLine)}`]),
       el("p", {}, [role === "name"
         ? `Result: ${candidate.value} as item name for ${String(affected)} ${selected.length > 0 ? "selected" : "included"} price row${affected === 1 ? "" : "s"}.`
         : `Result: ${candidate.value} as Prices category for ${String(affected)} ${selected.length > 0 ? "selected" : "included"} price row${affected === 1 ? "" : "s"}.`]),
@@ -269,17 +272,17 @@ function tableSourceChoices(reviewed: PagePasteReviewSection, refresh: () => voi
         : used ? "Used once in the page." : `Source row ${String(candidate.sourceLine)} stays ${originalRole} unless you use it.`]),
       ...(role === "category" && draft.sourceUses?.[candidate.sourceLine]?.role === role
         ? [el("p", {}, ["Keeping or undoing this heading restores it for all linked rows."])] : []),
-      button({ label: useLabel, disabled: unavailable || sourceIsItem || role === "name" && source.block.kind !== "prose",
+      button({ label: accessibleLabel(useLabel), visibleLabel: useLabel, disabled: unavailable || sourceIsItem || role === "name" && source.block.kind !== "prose",
         onClick: () => { if (usePagePasteSourceLine(candidate.sourceLine, reviewed.index, role) === 0) {
           announce("This source row cannot be used now. Finish the other review choice first."); return;
         }
-        refresh(); focusSectionButton(reviewed.index, undoLabel); } }),
+        refresh(); focusSectionButton(reviewed.index, accessibleLabel(undoLabel)); } }),
       ...(sourceIsItem ? [] : [button({ label: keepLabel, disabled: unavailable, onClick: () => {
         undoPagePasteSourceLine(candidate.sourceLine); refresh(); focusSectionButton(reviewed.index, keepLabel);
         announce(`Source row ${String(candidate.sourceLine)} stays ${originalRole} in the page.`);
       } })]),
-      ...(draft.sourceUses?.[candidate.sourceLine]?.role === role ? [button({ label: undoLabel, disabled: unavailable, onClick: () => {
-        undoPagePasteSourceLine(candidate.sourceLine); refresh(); focusSectionButton(reviewed.index, useLabel);
+      ...(draft.sourceUses?.[candidate.sourceLine]?.role === role ? [button({ label: accessibleLabel(undoLabel), visibleLabel: undoLabel, disabled: unavailable, onClick: () => {
+        undoPagePasteSourceLine(candidate.sourceLine); refresh(); focusSectionButton(reviewed.index, accessibleLabel(useLabel));
       } })] : []),
     ])];
   });

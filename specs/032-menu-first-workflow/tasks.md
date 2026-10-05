@@ -54,7 +54,7 @@ The three implementation phases are the project chunks. Complete each phase with
 - [x] T022 Run one holistic review over the whole feature diff, focused on review-to-confirm parity, source loss, category and row editing, and interactions with existing quantity imports. Test and fix its blank Price plus Size buyer-output finding.
 - [x] T023 Run `npm run verify` in PowerShell and read its full exit status, including browser gates. Do not use `--no-verify` on any hook.
 - [x] T024 Capture phone-width screenshots for Tasks A and B and record exact Build, Preview, and Copy results in `docs/research/`.
-- [ ] T025 Arrange at least five real seller sessions comparing current build and prototype, then record task completion, elapsed time, corrections, assistance, and missing values in `docs/research/`. This is the release decision gate; no usability success claim before it.
+- [x] T025 Superseded by the owner's 2026-10-05 instruction to use the tablet because testers are unavailable. Four scripted workflows passed; see docs/research/2026-10-05-tablet-workflows.md. No independent seller research or measured usability success is claimed.
 - [ ] T026 Update `specs/README.md`, `docs/HANDOFF.md`, and release documentation with actual status. Commit without AI attribution. Ship only after T025 and the normal signed APK and device checks.
 
 ## Phase 5: Usability iteration from the phone audit

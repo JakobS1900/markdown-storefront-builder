@@ -21,7 +21,7 @@ validated across six shipped features on the Tessera Android project.
 | 9 | `/review` | **UNAVAILABLE**, substitute below |
 | 10 | `/cso` for permissions, file I/O, network, or auth | **UNAVAILABLE**, substitute below |
 | 11 | Verification on the real target | Available, see below |
-| 12 | Commit, version, changelog, ship | Manual, local only |
+| 12 | Commit, version, changelog, ship | Normal merge and push, signed GitHub release with APK |
 
 ## Substitutes for the unavailable gstack gates
 

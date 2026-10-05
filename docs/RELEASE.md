@@ -136,7 +136,11 @@ whether or not anybody wants it. Nothing here uploads it.
 Play App Signing would have made the signing key replaceable rather than fatal,
 and skipping the store gives that up too. Back the key up. See above.
 
-## What is still missing
+## Device coverage
 
-- **A second device.** Roadmap 5.9. Everything has been verified on one Moto G7
-  on Android 10, and the keyboard inset fix is the least portable thing here.
+Earlier releases were verified on a Moto G7 running Android 10. The menu/import
+stack and the October 5 usability follow-ups are also checked on a Samsung
+SM_T700 running Android 6.0.1 with WebView 106. See the dated reports under
+docs/research for exact builds and scenarios. Narrow phone layouts for the
+latest follow-ups are checked in real Chrome at 320px and 390px; this does not
+replace testing their native keyboard behavior on another phone.
