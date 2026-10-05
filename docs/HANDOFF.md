@@ -4,6 +4,27 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## CLEAR IMPORT CHOICES AND PAGE NAMING VERIFIED, 2026-10-05
+
+Jakob approved the remaining two bounded usability improvements and pushing to
+GitHub. Feature 035 on `035-clear-import-and-page-names` is based on d5f36e9.
+See its [spec](../specs/035-clear-import-and-page-names/spec.md),
+[plan](../specs/035-clear-import-and-page-names/plan.md) and
+[tasks](../specs/035-clear-import-and-page-names/tasks.md).
+Two test-first chunks, fresh spec/quality reviews and whole-diff review passed.
+Import choices name the actual item/category. Name this page focuses the existing
+private title, retaining unfinished edits and correct Back history. Long imported
+labels wrap. Full verification passed: 1,978 tests, 65 accessibility assertions
+and all browser gates. See [evidence](research/2026-10-05-clear-import-and-page-names.md).
+
+The tablet now runs signed 0.13.0, versionCode 27. Naming with Samsung keyboard,
+unchanged output, Back, source choices/undo, Preview/Copy and cold launch passed.
+All ten baseline pages remain; one QA page was renamed and one fictional Figures
+page added, for eleven total. Original keyboard and USB stay-awake restored.
+PRs 1 through 4 are merged normally into master and deployment passed. Feature
+035 still needs its verified commit pushed, normal merge and v0.13.0 Release
+with the signed APK. Do not stop at another prerelease or request seller testing.
+
 ## COMPACT IMPORT REVIEW VERIFIED, 2026-10-05
 
 Jakob approved implementing the first usability recommendation. Feature 034 is
@@ -27,7 +48,7 @@ stacked on 033. Its clean-checkout
 [CI run](https://github.com/JakobS1900/markdown-storefront-builder/actions/runs/37321161631)
 passed. The signed APK is published in
 [v0.13.0-test.8](https://github.com/JakobS1900/markdown-storefront-builder/releases/tag/v0.13.0-test.8).
-Normal integration of the existing stack remains pending, with no seller gate.
+Historical test.8 record: the stack subsequently merged normally on 2026-10-05.
 
 ## USABILITY FOLLOW-UP INVESTIGATED, 2026-10-05
 

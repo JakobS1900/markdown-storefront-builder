@@ -83,7 +83,7 @@ Complete the foundation first as its own commit. Each later phase is one impleme
 - [x] T030 Run one holistic review of the full `030-adjust-imported-prices` diff for source loss, category placement, grouping, review-to-confirm parity and preservation of existing pages. Fix findings with regressions. Closure review passed 236 focused tests across six files.
 - [x] T031 Run `npm run verify` in PowerShell and read its full exit status. Check the quantity fixture, all six column permutations, real Chrome Task A and recovery Task C at 320 and 390 CSS pixels, the two-category four-item Task B acceptance, and real Chrome Task D at both widths. Check the Android 6 tablet with an updated signed APK and record exact evidence in `docs/research/`. The final gate exited 0 with 1,886 tests in 90 files; Chrome Task D and the Android 6 correction check passed. Task D also exercised Task B's two-category four-item shape in the browser.
 - [x] T032 Update `docs/HANDOFF.md`, `specs/README.md` and this task list with actual status. Commit without AI attribution, push the branch and update the draft PR against `032-menu-first-workflow`.
-- [ ] T033 Keep the stacked PR draft until feature 032's five real seller sessions and this panel's seller observation have been reviewed. Do not publish a normal release from a solo test.
+- [x] T033 Superseded by the owner's 2026-10-05 instruction to use tablet checks because testers are unavailable. Native correction, mapping cancellation and persistence passed; PR #2 merged normally after its verification checks. No seller-study claim is made.
 
 ## Dependencies and parallel work
 

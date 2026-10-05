@@ -67,20 +67,28 @@ function disown(layer: "sidebar" | "wizard"): void {
  * Build is the first screen. Back from anywhere else returns to it, back from
  * it leaves, and wandering between the other two never deepens anything.
  */
-export function rememberSurface(surface: Surface): void {
+export function rememberSurface(surface: Surface, afterNavigation?: () => void): void {
   const current = asSurface((history.state as { surface?: unknown } | null)?.surface);
-  if (current === surface) return;
+  if (current === surface) {
+    afterNavigation?.();
+    return;
+  }
 
   if (surface === "build") {
     // Give the entry back rather than stacking another on top of it. The
     // popstate that follows sets the surface, which is the same thing the
     // caller is about to do, so doing it twice costs nothing.
-    if (current !== undefined) history.back();
+    if (current !== undefined) {
+      // Focus a destination only after the history handler has rendered it.
+      if (afterNavigation !== undefined) window.addEventListener("popstate", afterNavigation, { once: true });
+      history.back();
+    } else afterNavigation?.();
     return;
   }
 
   if (current === undefined) history.pushState({ surface }, "");
   else history.replaceState({ surface }, "");
+  afterNavigation?.();
 }
 
 /**
@@ -117,11 +125,17 @@ export function sidebarOwnsHistory(): boolean {
  * also where the system gesture lands. That is what keeps the two identical
  * rather than merely similar.
  */
-export function dismissSidebar(): void {
+export function dismissSidebar(afterClose?: () => void): void {
   if (sidebarOwnsHistory()) {
+    // Registered after the app's history handler: it closes and repaints the
+    // drawer before a caller moves focus into the now reachable editor.
+    if (afterClose !== undefined) window.addEventListener("popstate", afterClose, { once: true });
     disown("sidebar");
     history.back();
-  } else closeSidebar();
+  } else {
+    closeSidebar();
+    afterClose?.();
+  }
 }
 
 /**

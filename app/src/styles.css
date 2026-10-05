@@ -1714,6 +1714,7 @@ fieldset.item > .btn.icon.danger {
 }
 
 .page-paste-sections {
+  overflow-wrap: anywhere;
   margin: 0;
   padding: 0;
   list-style: none;

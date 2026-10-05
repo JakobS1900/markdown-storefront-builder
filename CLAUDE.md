@@ -8,22 +8,20 @@ shipped. For technologies, project structure, and shell commands, read
 live document and it outranks this block, which is edited by tooling rather than
 by whoever last did the work.
 
-**Feature 034 is implemented and verified:** `specs/034-compact-import-review/`.
-Compact import-correction fields passed full verification and native tablet checks
-on signed test.8. Branch `034-compact-import-review` is stacked on 033.
-Read the handoff for delivery status and pending stack integration.
+**Feature 035 is implemented and verified:** `specs/035-clear-import-and-page-names/`.
+Jakob approved clearer import choices, easier page naming and GitHub delivery.
+Read its tasks and the live handoff for implementation and integration status.
 
-**Feature 033 is implemented and verified:** `specs/033-flexible-table-import/`. It corrects
-menu organization and local-picture failures, then extends pasted table support
-through existing review controls. The branch is `033-flexible-table-import`.
-Draft PR #3 is stacked on 030. Native tablet selection, export and persistence
-passed on 2026-10-05, along with all four scripted menu workflows.
+**Features 030, 032, 033 and 034 are merged into master.** Their four pull
+requests passed verification and merged normally on 2026-10-05. Master's
+deployment passed. Feature 035 completes the normal v0.13.0 release, including
+the previously verified correction panel, menu-first workflow, flexible table
+imports, local pictures and compact tablet fields.
 
-Features 030 and 032 are implemented and verified as draft prototypes. Jakob
-replaced the seller-session gate with tablet checks on 2026-10-05 because testers
-are unavailable. Do not ask him to recruit testers. The compatibility fix `bea8b0f` on 030 was
-verified on 2026-10-04. The tablet now runs signed `0.13.0-test.8`, including
-these fixes. Read the handoff for exact verification evidence.
+Jakob replaced the seller-session gate with tablet checks on 2026-10-05 because
+testers are unavailable. Do not ask him to recruit testers. These checks are
+scripted device verification, not independent participant research. Read the
+handoff for exact verification and release evidence.
 
 **028 was NOT the paste import.** It was earmarked for that and Jakob chose the
 formatting buttons instead on 2026-09-11, after a tester reported bold, italics

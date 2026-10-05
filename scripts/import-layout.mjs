@@ -85,7 +85,7 @@ async function check() {
   }
   if (!socket) throw new Error("Chrome did not start within 30 seconds");
   await send("Runtime.enable");
-  const fixture = '| Item | Amount | Price | Notes |\n| --- | --- | --- | --- |\n| Hand painted ceramic mug with a long fictional name | 12 oz | $25 | Glazed blue with a hand painted leaf pattern and careful gift wrapping |\n| Bowl | 16 oz | | |';
+  const fixture = `| ${'VeryLongName'.repeat(12)} | Amount | Price | Notes |\n| --- | --- | --- | --- |\n| Hand painted ceramic mug with a long fictional name | 12 oz | $25 | Glazed blue with a hand painted leaf pattern and careful gift wrapping |\n| Bowl | 16 oz | | |`;
   await send("Emulation.setDeviceMetricsOverride", { width: 800, height: 1000, deviceScaleFactor: 1, mobile: true });
   await navigate();
   await evaluate(`(async () => {
