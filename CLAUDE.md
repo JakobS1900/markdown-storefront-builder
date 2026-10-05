@@ -12,10 +12,11 @@ by whoever last did the work.
 menu organization and local-picture failures, then extends pasted table support
 through existing review controls. The branch is `033-flexible-table-import`.
 Draft PR #3 is stacked on 030. Native tablet selection, export and persistence
-passed on 2026-10-05. Seller sessions remain pending; read the handoff for scope.
+passed on 2026-10-05, along with all four scripted menu workflows.
 
-Features 030 and 032 are implemented and verified as draft prototypes; seller
-sessions remain the release gate. The compatibility fix `bea8b0f` on 030 was
+Features 030 and 032 are implemented and verified as draft prototypes. Jakob
+replaced the seller-session gate with tablet checks on 2026-10-05 because testers
+are unavailable. Do not ask him to recruit testers. The compatibility fix `bea8b0f` on 030 was
 verified on 2026-10-04. The tablet now runs signed `0.13.0-test.7`, including
 these fixes. Read the handoff for exact verification evidence.
 
@@ -26,7 +27,7 @@ had no control, only a hint telling the seller to type asterisks.
 
 Keep conversion work bounded. No new import options, OCR, price matrices or image
 hosting are included in 033. Preserve uncertain source as Text and reuse explicit
-review choices. Keep stacked PRs draft until the seller-session evidence is reviewed.
+review choices. Follow normal integration and release checks; see the handoff.
 
 **That is a claim with an expiry date**, true only while `docs/HANDOFF.md` still
 says so. Believe the handoff over this block, always.

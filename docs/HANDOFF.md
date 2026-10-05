@@ -4,6 +4,26 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## TABLET WORKFLOW CHECKS PASSED, TESTING REQUIREMENT CHANGED, 2026-10-05
+
+Jakob said testers are no longer available and directed us to use the tablet.
+This supersedes the five-seller-session release gate in the historical entries
+below. Do not ask him to recruit testers or wait for those sessions. Use device
+verification and normal engineering/release checks; do not claim independent
+usability evidence.
+
+The four scripted workflows passed through the SM_T700 UI on signed test.7:
+create a two-category menu, correct a mapped table before saving, correct a short
+price list, and reuse an item name and heading above a quantity table. Preview
+and Copy matched expected values. Cancelling a column change preserved row edits.
+The final page survived force-stop/relaunch. All five pre-existing pages remain,
+alongside four new test pages. USB stay-awake is restored to 0.
+See [workflow evidence](research/2026-10-05-tablet-workflows.md).
+
+No application code changed during this pass. PRs remain draft as their current
+GitHub state, not because seller sessions are required. Next is the normal stacked
+PR integration and release workflow, with its required checks.
+
 ## NATIVE PICTURE PICKER VERIFIED ON TABLET, 2026-10-05
 
 The SM_T700 now runs signed `0.13.0-test.7`, versionCode 25. Native CSV import,

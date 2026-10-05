@@ -1,5 +1,11 @@
 # Seller task script for the menu workflow and import correction
 
+Status, 2026-10-05: Jakob directed tablet checks in place of seller sessions
+because testers are unavailable. The original research protocol below is retained
+for reference, not as a release gate. All four workflows were exercised directly
+on the tablet; see [results](2026-10-05-tablet-workflows.md). This establishes
+functional device evidence, not independent usability results.
+
 Use this with at least five people who make or maintain a shop menu. Give each
 person both the current app and the prototype. Alternate which version they
 start with when the test setup permits it. Use fictional products only. Ask them to think aloud, but do not
