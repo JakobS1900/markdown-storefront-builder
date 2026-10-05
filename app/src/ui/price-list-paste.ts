@@ -19,11 +19,14 @@
  * unrelated things under one word is how somebody loses their work.
  */
 import { announce, button, checkbox, el, field } from "./dom.js";
-import { canBeProduct, readCandidates, type Candidate } from "../price-list-text.js";
+import { canAddReviewedProduct, canBeProduct, readCandidates, type Candidate } from "../price-list-text.js";
 import {
   convertPaste,
   getState,
+  PASTE_REVIEW_PAGE_SIZE,
+  setPastePage,
   setPasteText,
+  setPasteRow,
   startPasting,
   stopPasting,
   tickAllPasteLines,
@@ -39,12 +42,10 @@ import {
  * and one checkbox plus a label per line means ten thousand lines is twenty
  * thousand nodes. That does not degrade on a phone, it stops it.
  *
- * Capping what is DRAWN rather than what is accepted is the version that loses
- * nothing: the text is all still there, "Tick all" still ticks all of it, and
- * converting still converts all of it. Only the scrolling list is bounded, and
- * the screen says so rather than quietly showing a prefix.
+ * Draw one page at a time. The source and checked choices cover all lines, and
+ * every proposed row is reachable without making an old phone render them all.
  */
-const DRAWN = 500;
+const DRAWN = PASTE_REVIEW_PAGE_SIZE;
 
 /** How the seller opens the panel, shown when it is not already open. */
 export function pasteOpener(blockId: string): HTMLElement[] {
@@ -57,16 +58,16 @@ export function pasteOpener(blockId: string): HTMLElement[] {
   ];
 }
 
-/** What one line will become, spelled out so a wrong split is visible first. */
-function becomes(candidate: Candidate): string {
-  const parts = [candidate.price === "" ? "no price" : candidate.price];
+/** Extra columns stay visible even though only item and price are edited here. */
+function otherDetails(candidate: Candidate): string {
+  const parts: string[] = [];
   if (candidate.unit !== undefined) parts.push(candidate.unit);
   // Named, because a number silently landing in "cost" is the one field a
   // seller must never be surprised by: it is what they paid, and it is the
   // reason `cost` is stored and never published.
   if (candidate.cost !== undefined) parts.push(`cost ${candidate.cost}`);
   if (candidate.blurb !== undefined) parts.push(candidate.blurb);
-  return `${candidate.name}: ${parts.join(", ")}`;
+  return parts.join(", ");
 }
 
 /**
@@ -75,19 +76,57 @@ function becomes(candidate: Candidate): string {
  * Split out from `pastePanel` so it can be rebuilt on its own. See the comment
  * on `refresh` for why that matters.
  */
-function panelBody(text: string, ticked: ReadonlySet<number>): Node[] {
+function panelBody(
+  text: string,
+  ticked: ReadonlySet<number>,
+  corrections: Readonly<Record<number, { readonly name: string; readonly price: string }>>,
+  page: number,
+  refresh: () => void,
+): Node[] {
   if (text === "") return [];
 
-  const candidates = readCandidates(text);
-  // Counted with `canBeProduct`, exactly as `toProducts` filters, so the
+  const candidates = readCandidates(text).map((candidate, i) => ({ ...candidate, ...corrections[i] }));
+  // Counted with the same reviewed-name check used before conversion, so the
   // button cannot promise more than the conversion delivers. Counting raw
   // ticks let a seller tick a blank line and be told "Add 3 items" for two,
   // or "Added 1 item" when nothing at all had been added.
-  const chosen = candidates.filter((candidate, i) => ticked.has(i) && canBeProduct(candidate)).length;
-  const noun = `item${chosen === 1 ? "" : "s"}`;
+  let chosen = candidates.filter((candidate, i) => ticked.has(i) && canAddReviewedProduct(candidate)).length;
+  const count = el("p", { class: "paste-count" }, [`${String(chosen)} of ${String(candidates.length)} lines ready`]);
+  const issue = el("p", { class: "paste-issue", role: "status" });
+  const add = button({
+    label: `Add ${String(chosen)} item${chosen === 1 ? "" : "s"}`,
+    variant: "primary",
+    disabled: chosen === 0,
+    onClick: () => {
+      convertPaste();
+      announce(`Added ${String(chosen)} item${chosen === 1 ? "" : "s"}. Undo is in the price list.`);
+    },
+  });
+  const updateCount = (): void => {
+    chosen = candidates.filter((candidate, i) => ticked.has(i) && canAddReviewedProduct(candidate)).length;
+    const unnamed = candidates.findIndex((candidate, i) => ticked.has(i) && canBeProduct(candidate) && !canAddReviewedProduct(candidate));
+    count.textContent = `${String(chosen)} of ${String(candidates.length)} lines ready`;
+    issue.textContent = unnamed === -1 ? "" : `Fill in Item on line ${String(unnamed + 1)} or untick it before adding.`;
+    add.textContent = `Add ${String(chosen)} item${chosen === 1 ? "" : "s"}`;
+    add.disabled = chosen === 0 || unnamed !== -1;
+  };
+  const edit = (index: number, key: "name" | "price", value: string): void => {
+    setPasteRow(index, key, value);
+    const candidate = candidates[index];
+    if (candidate !== undefined) candidates[index] = { ...candidate, [key]: value };
+    updateCount();
+  };
+  updateCount();
+  const first = Math.min(page * DRAWN, Math.max(0, candidates.length - 1));
+  const last = Math.min(first + DRAWN, candidates.length);
+  const go = (next: number): void => {
+    setPastePage(next);
+    refresh();
+    document.querySelector<HTMLElement>(".paste-lines input")?.focus({ preventScroll: true });
+  };
 
   return [
-    el("p", { class: "paste-count" }, [`${String(chosen)} of ${String(candidates.length)} lines ticked`]),
+    count,
     el("div", { class: "paste-tools", role: "group", "aria-label": "Choose lines" }, [
       button({ label: "Tick all", onClick: () => tickAllPasteLines() }),
       button({ label: "Untick all", onClick: () => untickAllPasteLines() }),
@@ -96,14 +135,19 @@ function panelBody(text: string, ticked: ReadonlySet<number>): Node[] {
       ? []
       : [
           el("p", { class: "paste-capped" }, [
-            `Showing the first ${String(DRAWN)} of ${String(candidates.length)} lines. Tick all and Add still cover every line.`,
+            `Showing lines ${String(first + 1)} to ${String(last)} of ${String(candidates.length)}. Tick all and Add still cover every line.`,
+          ]),
+          el("div", { class: "paste-tools", role: "group", "aria-label": "Review pages" }, [
+            button({ label: "Previous 100 lines", disabled: page === 0, onClick: () => go(page - 1) }),
+            button({ label: "Next 100 lines", disabled: last === candidates.length, onClick: () => go(page + 1) }),
           ]),
         ]),
     el(
       "ul",
       { class: "paste-lines" },
-      candidates.slice(0, DRAWN).map((candidate, i) =>
-        el("li", {}, [
+      candidates.slice(first, last).map((candidate, offset) => {
+        const i = first + offset;
+        return el("li", {}, [
           // A line that cannot become a product gets no checkbox, because
           // there is nothing for the seller to decide about it. It is still
           // shown: they have to be able to see everything they pasted, and a
@@ -123,20 +167,29 @@ function panelBody(text: string, ticked: ReadonlySet<number>): Node[] {
               ]
             : [el("p", { class: "paste-skipped" }, [candidate.line.trim() === "" ? "(blank line)" : candidate.line])]),
           ...(ticked.has(i) && canBeProduct(candidate)
-            ? [el("p", { class: "paste-becomes" }, [becomes(candidate)])]
+            ? [
+                el("div", { class: "paste-becomes", role: "group", "aria-label": `Proposed item for line ${String(i + 1)}` }, [
+                  field({
+                    label: `Item, line ${String(i + 1)}`,
+                    value: candidate.name,
+                    onInput: (value) => edit(i, "name", value),
+                  }),
+                  field({
+                    label: `Price, line ${String(i + 1)}`,
+                    value: candidate.price,
+                    onInput: (value) => edit(i, "price", value),
+                  }),
+                  ...(otherDetails(candidate) === ""
+                    ? []
+                    : [el("p", {}, [`Other details: ${otherDetails(candidate)}`])]),
+                ]),
+              ]
             : []),
-        ]),
-      ),
+        ]);
+      }),
     ),
-    button({
-      label: `Add ${String(chosen)} ${noun}`,
-      variant: "primary",
-      disabled: chosen === 0,
-      onClick: () => {
-        convertPaste();
-        announce(`Added ${String(chosen)} ${noun}. Undo is in the price list.`);
-      },
-    }),
+    issue,
+    add,
   ];
 }
 
@@ -171,7 +224,7 @@ export function pastePanel(blockId: string): HTMLElement[] {
    */
   const refresh = (): void => {
     const now = getState().pasting;
-    body.replaceChildren(...(now === undefined ? [] : panelBody(now.text, new Set(now.ticked))));
+    body.replaceChildren(...(now === undefined ? [] : panelBody(now.text, new Set(now.ticked), now.corrections, now.page, refresh)));
   };
 
   refresh();
@@ -227,11 +280,13 @@ function fileControl(refresh: () => void): Node[] {
   picker.addEventListener("change", () => {
     const file = picker.files?.[0];
     if (file === undefined) return;
+    const draft = getState().pasting;
     open.disabled = true;
 
     void file
       .text()
       .then((text) => {
+        if (draft === undefined || getState().pasting?.sourceRevision !== draft.sourceRevision) return;
         setPasteText(text);
         refresh();
         announce("Read the file. Tick the lines that are items.");

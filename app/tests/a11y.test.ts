@@ -268,6 +268,20 @@ describe("the shell is accessible", () => {
     expect((await violations()).map((v) => v.id)).toEqual([]);
   });
 
+  it("names every table mapping control and keeps the review keyboard reachable", async () => {
+    const root = mount();
+    startPastingPage();
+    setPagePasteText("| Product | Size | Price | Notes |\n| --- | --- | --- | --- |\n| Mug | 12 oz | $28 | Blue |");
+    renderShell(root);
+    const selects = [...document.querySelectorAll<HTMLSelectElement>(".page-paste-table select")];
+    expect(selects).toHaveLength(3);
+    for (const control of selects) {
+      expect(control.labels?.[0]?.textContent?.trim().length ?? 0).toBeGreaterThan(0);
+      expect(control.tabIndex).toBeGreaterThanOrEqual(0);
+    }
+    expect((await violations()).map((v) => v.id)).toEqual([]);
+  });
+
   it("has no axe violations in the build that actually ships, which has no uploading", async () => {
     // The published site carries no Imgur Client-ID, so this is the DOM real
     // artists meet. Checking only the richer build would leave the common one

@@ -27,11 +27,11 @@ android {
         applicationId "com.rade.storefrontbuilder"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
+        versionCode 19
         // Not 1.0. The roadmap has two open items and this has been verified on
         // one handset by the person who wrote it, so calling it 1.0 would be the
         // same kind of claim as a ticked box that was never true.
-        versionName "0.12.1"
+        versionName "0.13.0-test.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -47,12 +47,11 @@ android {
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
             }
-            // v1 is the old JAR signature, needed only below API 24, and this
-            // app requires 24. v3 is worth turning on for one reason: it is the
+            // Android 6 needs v1 signing. v3 is worth turning on for one reason: it is the
             // scheme that carries a rotation lineage, so a key that leaks can
             // later be replaced without every installed copy becoming a dead
             // end. Signing v3 now is what makes that possible at all.
-            enableV1Signing false
+            enableV1Signing true
             enableV2Signing true
             enableV3Signing true
         }

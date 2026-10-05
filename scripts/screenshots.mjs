@@ -199,7 +199,7 @@ const js = (value) => JSON.stringify(value);
 async function clickText(selector, pattern, { pointer = false } = {}) {
   return evaluate(`(() => {
     const re = new RegExp(${js(pattern)});
-    const n = [...document.querySelectorAll(${js(selector)})].find(x => re.test((x.textContent || '').trim()));
+    const n = [...document.querySelectorAll(${js(selector)})].find(x => re.test((x.getAttribute('aria-label') || x.textContent || '').trim()));
     if (!n) return false;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     n.scrollIntoView({ block: 'center' });

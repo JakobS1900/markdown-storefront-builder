@@ -19,8 +19,8 @@ import { askToKeepStorage, assetIds, holdAssets } from "./assets.js";
 import { deletePage, listPages, readPage, writePage, type StoredPage } from "./db.js";
 import type { Rounding } from "./money.js";
 import { openBackup } from "./import.js";
-import { buildProposedBlock, readProposal, swapProposalKind } from "./page-text.js";
-import { canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
+import { buildMappedPagePasteBlock, buildProposedBlock, pagePasteConversionIssue, readPagePasteTable, readProposal, swapProposalKind, type PagePasteTableMapping } from "./page-text.js";
+import { canAddReviewedProduct, canBeProduct, readCandidates, toProducts } from "./price-list-text.js";
 // A type, and only a type. The answer set is defined beside the pure function
 // that turns it into a page, because that is what gives it its shape; the store
 // merely holds one while the wizard is open. Importing it as a value would put
@@ -195,13 +195,20 @@ export interface State {
     readonly blockId: string;
     readonly text: string;
     readonly ticked: readonly number[];
+    readonly sourceRevision: number;
+    readonly corrections: Readonly<Record<number, { readonly name: string; readonly price: string }>>;
+    readonly page: number;
   };
   // Separate from `pasting`: its blockId and seven actions edit an existing
   // price list. A page paste has no destination block and writes a new page.
   readonly pastingPage?: {
     readonly text: string;
+    readonly sourceRevision: number;
+    readonly reviewStart: number;
     readonly dropped: readonly number[];
     readonly swapped: readonly number[];
+    readonly mappings?: Readonly<Record<number, PagePasteTableMapping>>;
+    readonly confirming?: boolean;
   };
   readonly status: Status;
   readonly storageOk: boolean;
@@ -709,7 +716,7 @@ export function setBulkPricingInputs(next: { multiplier: string; extra: string; 
  */
 export function startPasting(blockId: string): void {
   if (state.pasting?.blockId === blockId) return;
-  set({ pasting: { blockId, text: "", ticked: [] } });
+  set({ pasting: { blockId, text: "", ticked: [], sourceRevision: ++pasteSourceRevision, corrections: {}, page: 0 } });
 }
 
 /**
@@ -730,7 +737,27 @@ export function setPasteText(text: string): void {
   if (current === undefined) return;
 
   const ticked = readCandidates(text).flatMap((candidate, i) => (candidate.suggested ? [i] : []));
-  set({ pasting: { blockId: current.blockId, text, ticked } });
+  set({ pasting: { blockId: current.blockId, text, ticked, sourceRevision: ++pasteSourceRevision, corrections: {}, page: 0 } });
+}
+
+/** Keeps later review lines reachable without drawing every editor at once. */
+export const PASTE_REVIEW_PAGE_SIZE = 100;
+
+export function setPastePage(page: number): void {
+  const current = state.pasting;
+  if (current === undefined || !Number.isInteger(page) || page < 0 ||
+    page >= Math.ceil(readCandidates(current.text).length / PASTE_REVIEW_PAGE_SIZE)) return;
+  set({ pasting: { ...current, page } });
+}
+
+/** Corrects one proposed value without changing the source or saved document. */
+export function setPasteRow(index: number, field: "name" | "price", value: string): void {
+  const current = state.pasting;
+  if (current === undefined || !Number.isInteger(index) || index < 0) return;
+  const candidate = readCandidates(current.text)[index];
+  if (candidate === undefined || !canBeProduct(candidate)) return;
+  const previous = current.corrections[index] ?? { name: candidate.name, price: candidate.price };
+  set({ pasting: { ...current, corrections: { ...current.corrections, [index]: { ...previous, [field]: value } } } });
 }
 
 /** Ticks or unticks one pasted line. */
@@ -775,29 +802,61 @@ export function stopPasting(): void {
 
 export function startPastingPage(): void {
   if (state.pastingPage !== undefined) return;
-  set({ pastingPage: { text: "", dropped: [], swapped: [] } });
+  set({ pastingPage: { text: "", sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
 }
 
 export function setPagePasteText(text: string): void {
-  if (state.pastingPage === undefined) return;
-  set({ pastingPage: { text, dropped: [], swapped: [] } });
+  if (state.pastingPage === undefined || confirmingPagePaste) return;
+  set({ pastingPage: { text, sourceRevision: ++pasteSourceRevision, reviewStart: 0, dropped: [], swapped: [] } });
+}
+
+let pasteSourceRevision = 0;
+
+export function setPagePasteReviewStart(start: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || !Number.isInteger(start) || start < 0 ||
+    start >= readProposal(current.text).sections.length) return;
+  set({ pastingPage: { ...current, reviewStart: start } });
+}
+
+export function setPagePasteTableMapping(index: number, mapping: PagePasteTableMapping): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste) return;
+  const section = readProposal(current.text).sections[index];
+  const table = section === undefined ? undefined : readPagePasteTable(section);
+  if (table === undefined) return;
+  const roles = [mapping.product, mapping.price, ...(mapping.size === undefined ? [] : [mapping.size])];
+  if (roles.some((role) => !Number.isInteger(role) || role < 0 || role >= table.headers.length) || new Set(roles).size !== roles.length) return;
+  set({ pastingPage: { ...current, mappings: { ...current.mappings, [index]: mapping } } });
+}
+
+export function clearPagePasteTableMapping(index: number): void {
+  const current = state.pastingPage;
+  if (current === undefined || confirmingPagePaste || current.mappings?.[index] === undefined) return;
+  const mappings = { ...current.mappings };
+  delete mappings[index];
+  const rest = { ...current };
+  delete rest.mappings;
+  set({ pastingPage: Object.keys(mappings).length === 0 ? rest : { ...rest, mappings } });
 }
 
 export function dropPagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || readProposal(current.text).sections[index] === undefined || current.dropped.includes(index)) return;
+  if (current === undefined || confirmingPagePaste || readProposal(current.text).sections[index] === undefined || current.dropped.includes(index)) return;
   set({ pastingPage: { ...current, dropped: [...current.dropped, index] } });
 }
 
 export function restorePagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined) return;
+  if (current === undefined || confirmingPagePaste) return;
   set({ pastingPage: { ...current, dropped: current.dropped.filter((i) => i !== index) } });
 }
 
 export function swapPagePasteSection(index: number): void {
   const current = state.pastingPage;
-  if (current === undefined || !readProposal(current.text).sections[index]?.swappable) return;
+  if (current === undefined || confirmingPagePaste) return;
+  const section = readProposal(current.text).sections[index];
+  if (section === undefined || !section.swappable || pagePasteConversionIssue(section) !== undefined) return;
   const swapped = current.swapped.includes(index)
     ? current.swapped.filter((i) => i !== index)
     : [...current.swapped, index];
@@ -805,6 +864,7 @@ export function swapPagePasteSection(index: number): void {
 }
 
 export function stopPastingPage(): void {
+  if (confirmingPagePaste) return;
   set({ pastingPage: undefined });
 }
 
@@ -816,11 +876,15 @@ export async function confirmPagePaste(): Promise<void> {
   const current = state.pastingPage;
   if (current === undefined || confirmingPagePaste) return;
   confirmingPagePaste = true;
+  const frozen = { ...current, confirming: true };
+  set({ pastingPage: frozen });
   try {
     const proposal = readProposal(current.text);
     const blocks = proposal.sections.flatMap((section, index): Block[] => {
       if (current.dropped.includes(index)) return [];
-      const block = buildProposedBlock(current.swapped.includes(index) ? swapProposalKind(section) : section);
+      const reviewed = current.swapped.includes(index) ? swapProposalKind(section) : section;
+      const mapping = current.mappings?.[index];
+      const block = mapping === undefined ? buildProposedBlock(reviewed) : buildMappedPagePasteBlock(reviewed, mapping);
       if (block.kind === "menu") return [{ id: newId(), ...block, tiers: block.tiers.map((tier) => ({ id: newId(), ...tier })) }];
       return [{ id: newId(), ...block }];
     });
@@ -829,19 +893,18 @@ export async function confirmPagePaste(): Promise<void> {
     // openBackup owns validation and persistence. JSON.stringify lets its
     // parser refuse a faulty builder result before any stored page changes.
     const result = await openBackup(JSON.stringify(doc));
-    // A seller may close this draft and begin another while the storage and
-    // page-list work finishes. The old result must not clear the new draft.
-    if (state.pastingPage !== current) return;
+    if (state.pastingPage !== frozen) return;
     if (!result.ok) {
       set({ status: { kind: "error", message: "This paste could not be made into a page. Nothing has been changed. Your pasted text is still here." } });
       return;
     }
     set({ pastingPage: undefined, status: { kind: "saved", message: "Opened the paste as a new page. Your previous page is still saved under Your pages on the Build screen." } });
   } catch {
-    if (state.pastingPage !== current) return;
+    if (state.pastingPage !== frozen) return;
     set({ status: { kind: "error", message: "This paste could not be saved as a new page. Your previous pages are still saved and your pasted text is still here. Try again." } });
   } finally {
     confirmingPagePaste = false;
+    if (state.pastingPage === frozen) set({ pastingPage: current });
   }
 }
 
@@ -876,7 +939,19 @@ export function convertPaste(): void {
   const block = state.doc.blocks.find((b) => b.id === current.blockId);
   if (block === undefined || block.kind !== "menu") return;
 
-  const products = toProducts(readCandidates(current.text), current.ticked);
+  const reviewed = readCandidates(current.text).map((candidate, index) => ({
+    ...candidate,
+    ...current.corrections[index],
+  }));
+  if (current.ticked.some((index) => {
+    const candidate = reviewed[index];
+    return candidate !== undefined && canBeProduct(candidate) && !canAddReviewedProduct(candidate);
+  })) return;
+  const ready = current.ticked.filter((index) => {
+    const candidate = reviewed[index];
+    return candidate !== undefined && canAddReviewedProduct(candidate);
+  });
+  const products = toProducts(reviewed, ready);
   // Nothing ticked, or nothing ticked that could be a product. FR-066: this
   // does nothing rather than writing an empty section.
   if (products.length === 0) return;
@@ -1021,6 +1096,15 @@ export function updateBlock(id: string, next: Block): void {
 export function addBlock(block: Block): void {
   replaceBlocks([...state.doc.blocks, block]);
   selectBlock(block.id);
+}
+
+export function insertBlockAfter(anchorId: string, block: Block): boolean {
+  const blocks = state.doc.blocks;
+  const index = blocks.findIndex((candidate) => candidate.id === anchorId);
+  if (index < 0 || blocks.some((candidate) => candidate.id === block.id)) return false;
+  replaceBlocks([...blocks.slice(0, index + 1), block, ...blocks.slice(index + 1)]);
+  selectBlock(block.id);
+  return true;
 }
 
 /**

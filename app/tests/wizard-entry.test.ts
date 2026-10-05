@@ -196,7 +196,7 @@ describe("the way in", () => {
     // The blank page. On the empty state it is the document already open, so
     // what has to remain reachable is the way to put a section in it.
     expect(getState().doc.blocks).toHaveLength(0);
-    expect(document.querySelectorAll("#app .adders-dock button").length).toBeGreaterThan(0);
+    expect(document.querySelectorAll("#app .section-additions .adders button").length).toBeGreaterThan(0);
   });
 
   it("takes a history entry as it opens, so the back gesture has one to spend", () => {
@@ -238,6 +238,31 @@ describe("the way in", () => {
     expect(back).not.toBe(document.body);
     expect(back?.getAttribute("aria-controls")).toBe(WIZARD_ID);
     expect(document.getElementById("app")?.contains(back)).toBe(true);
+  });
+
+  it("reopens the starting choices before returning focus after setup closes", async () => {
+    live();
+    const choices = document.getElementById("build-more-starts");
+    if (!(choices instanceof HTMLDetailsElement)) throw new Error("missing starting choices");
+    choices.open = true;
+    wizardTrigger()?.click();
+
+    let parentOpenWhenFocused = false;
+    const recordFocus = (event: FocusEvent): void => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.getAttribute("aria-controls") === WIZARD_ID) {
+        parentOpenWhenFocused = target.closest("details")?.open === true;
+      }
+    };
+    document.addEventListener("focusin", recordFocus);
+    try {
+      press("Close setup");
+      await settleUntil(() => !getState().wizardOpen);
+      expect(parentOpenWhenFocused).toBe(true);
+      expect(document.activeElement?.getAttribute("aria-controls")).toBe(WIZARD_ID);
+    } finally {
+      document.removeEventListener("focusin", recordFocus);
+    }
   });
 });
 

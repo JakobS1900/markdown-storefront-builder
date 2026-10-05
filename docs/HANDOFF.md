@@ -4,6 +4,75 @@ The live document a new session reads first. `CLAUDE.md` still points at
 `specs/README.md` for what each feature is; this file is only about what is
 happening right now and what to do next.
 
+## FEATURE 032 USABILITY ITERATION VERIFIED, SELLER SESSIONS PENDING
+
+On 2026-10-01, a phone-sized audit of the prototype found too many competing starts on a blank page, a persistent strip of six generic section choices, and mixed pasted price lines whose punctuation entered item names. The [iteration audit](research/2026-10-01-usability-iteration-audit.md) records the starting screens, measured friction, screenshots, and results. The branch now gives Create a menu and Paste a page first, moves secondary starts and section types into named disclosures, parses clear mixed price boundaries line by line, and lets sellers correct proposed Item and Price values before Add. Saved document and export formats are unchanged.
+
+Fresh review found four more paths to fix: a blank corrected item could silently disappear, review lines beyond 100 were unreachable, delayed file reads could lose or overwrite a changed source, and changing section 101 in whole-page review lost its position. Closure review also caught keyboard focus dropping after the section pager. Each has a failing regression followed by a fix. The final full `npm run verify` passed with exit 0 in 3m 44s: 89 test files, 1,762 tests, 63 accessibility tests, clean light and dark contrast, menu file, and PWA update gates. Chrome task runs at 320 and 390 CSS pixels showed zero runtime exceptions and no document-width overflow, with exact corrected values in Preview and Copy.
+
+On tablet `3404d221b89fc1f1`, the first signed iteration APK passed direct menu entry, price correction, Preview, Copy, and cold-start persistence on Android 6.0.1 with WebView 106. The final APK was rebuilt after the pager fix with JDK 21 (`BUILD SUCCESSFUL in 2m 21s`), passed v1/v2/v3 signature and API 23 checks, and installed with `Success`. Final SHA-256: `073EDF47E7562C9CFCD2F1C344090DC4E583890961BBBD86D7A76542F0056FCC`. A cold launch showed `DeviceQA` and `Ceramics, 2 items`; the pre-existing `Untitled page` was also present in the saved page drawer during the task run. The tablet's USB stay-awake setting was restored to `0`. See [device check](research/2026-10-01-android-6-check.md). This iteration is on [draft PR #1](https://github.com/JakobS1900/markdown-storefront-builder/pull/1). T025, five real seller sessions using [the task script](research/2026-10-01-seller-task-script.md), remains the release gate. Do not claim a measured usability win or publish a normal release before those sessions.
+
+## FEATURE 032 MENU WORKFLOW PROTOTYPE VERIFIED
+
+On 2026-10-01, a seller workflow audit reproduced a public three-column menu
+table losing its selling prices after Text was converted to Prices. The same
+audit found that starting a short menu requires too much navigation and the
+wizard creates unrelated material to clean up. See
+`docs/research/2026-10-01-seller-workflow-audit.md` and
+`specs/032-menu-first-workflow/`.
+
+Branch `032-menu-first-workflow` has the three prototype chunks: guard unsafe
+public Text-to-Prices conversion, make direct menu editing easier, and map
+pasted Markdown table columns with visible row review. Per-chunk and holistic
+reviews are complete; their findings were fixed and regression tested. The
+holistic review found a blank Price plus nonempty Size case that could publish
+the Size as a price. It now remains Text.
+
+The branch is pushed to `origin/032-menu-first-workflow`. Draft GitHub PR #1
+tracks review and seller testing. Keep it in draft until the five seller
+sessions and a compatible Android device check have been reviewed.
+
+`npm run verify` passed on 2026-10-01 with exit 0: 89 test files, 1,739 tests,
+63 accessibility tests, clean light and dark contrast, menu file and PWA update
+gates. Chrome checks at 320 and 390 CSS pixels showed both reviewed table rows,
+no horizontal document overflow, and matching Build, Preview, and Copy values.
+See `docs/research/2026-10-01-menu-prototype-check.md` for exact evidence and
+screenshots. `docs/research/2026-10-01-seller-task-script.md` is ready to share.
+
+Desktop work continued while Jakob's device was busy. A fresh full-diff code
+review found no new actionable issue. The
+menu editor was made denser with side-by-side Item and Price fields and shorter
+examples. Fresh spec and code reviews caught missing later-row guidance and
+item tools squeezed into the Price column; both were fixed and closure checked.
+Chrome at 320 CSS pixels now shows three item cards with their tools inside the
+cards and no document overflow. The four-item creation and two-row table import
+still preserve their Preview and Copy values. A final diff review kept compact
+labels only on named Prices categories, so blank sections retain their type.
+A whitespace-only category review finding was fixed and regression tested. The
+final `npm run verify` passed with exit 0, including 1,739 tests, 63
+accessibility tests, light and dark contrast, menu file and PWA update gates.
+
+Jakob connected tablet `3404d221b89fc1f1` on 2026-10-01. It is an SM_T700
+running Android 6.0.1, API 23. The app now uses Capacitor 7 and a legacy web
+bundle, declares API 23, and carries v1, v2, and v3 signatures. Its WebView 49
+showed a white screen. Jakob authorized updating WebView without Play Store
+sign-in. A Google signed WebView 106 ARM APK for API 23 was checked against the
+installed WebView certificate, installed, and confirmed as the active package.
+The final APK then rendered on the tablet. A Prices section survived reinstall
+and cold start. See `docs/research/2026-10-01-android-6-check.md`.
+
+The signed test APK was rebuilt from the final code as versionCode 19,
+versionName `0.13.0-test.1`. Gradle reported `BUILD SUCCESSFUL in 27s`;
+`apksigner` confirmed v1/v2/v3 signatures and the expected certificate. The
+earlier API 24 build hashes are in the prototype check. The API 23 build is
+installed on the tablet and Android interaction is
+partly verified. The APK has not been published.
+
+Five real seller task sessions remain. Record time, help, corrections, and wrong
+or missing values against the current release before claiming usability success
+or publishing a normal feature release. Feature 030's broader correction panel
+remains separately scoped and has not been implemented.
+
 ## QUANTITY IMPORT BUGFIX: v0.12.1 SHIPPED
 
 Released 2026-09-15. Fix commit `424f0e8`, merged to master as `b5a893f`,
@@ -50,7 +119,7 @@ is implemented; the larger correction UI is still only a specification.
 The proposed Adjust imported prices section lets sellers correct item names,
 quantities or weights, prices, column assignments and categories before saving.
 Use fictional acceptance examples. Do not ask for the private menu again.
-Planning and implementation of the correction UI are next. General image
+Planning and implementation of the correction UI remain pending. General image
 rendering, highlighting and other arrow syntax remain open follow-ups.
 
 ## FEATURE 029 IS DONE AND SHIPPED as `v0.12.0`. Historical release status follows.

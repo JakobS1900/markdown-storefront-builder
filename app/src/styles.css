@@ -643,6 +643,51 @@ main {
   margin-top: 1.1rem;
 }
 
+.block-editor > .menu-form > * + * {
+  margin-top: 0.7rem;
+}
+
+.menu-form fieldset.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  column-gap: 0.5rem;
+  align-items: start;
+  margin-top: 0.45rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.menu-form fieldset.item > * + * {
+  margin-top: 0.4rem;
+}
+
+.menu-form fieldset.item > :is(.field.checkbox, .more[open]) {
+  grid-column: 1 / -1;
+}
+
+.menu-form fieldset.item > .field:not(.checkbox) {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-form fieldset.item > .field:not(.checkbox) input {
+  order: 1;
+}
+
+.menu-form fieldset.item > .field:not(.checkbox) .hint {
+  order: 2;
+  margin: 0.3rem 0 0;
+}
+
+.menu-form fieldset.item > .row-tools {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.block-editor > .menu-form + .btn {
+  margin-top: 0.85rem;
+}
+
 /*
  * A group of fields inside a section, and not a box.
  *
@@ -763,42 +808,29 @@ fieldset.item > .btn.icon.danger {
   gap: 0.5rem;
 }
 
-/*
- * The add-a-section row docks above the tab bar on a phone.
- *
- * It is the last thing on the surface and it is the control reached for most,
- * which is the wrong way round. Measured on the twelve section example at
- * 390x844 before this: the list ran 320 to 1358, the row sat at 1382, and the
- * page was 1579 tall in an 844 viewport. Adding anything meant scrolling past
- * everything already built, and it got worse the more there was to scroll.
- *
- * Sticky rather than fixed, and that is not a preference. A fixed descendant
- * resolves against the nearest transformed ancestor, and `#app` is one keyframe
- * away from being that again: see the note on `#app` and what it cost the tab
- * bar. Sticky also settles into the flow at the end of the list rather than
- * hovering over the gap below it.
- *
- * `bottom` is the tab bar's own height written out: the 44px control, the
- * 0.4rem it is padded with top and bottom, its 1px top border, and whatever the
- * device reserves at the bottom edge. The two rules have to agree or this row
- * either overlaps the bar or floats clear of it. Leaving the border out of the
- * sum measured as a 1px overlap, which is how this arrived at 1px.
- *
- * The negative margin is the page gutter from `main`, so the row reaches the
- * edges like the bar it sits on rather than being a floating slab with the
- * background showing down both sides.
- *
- * Phone only. Above 900px the tab bar is at the top, this offset would be
- * measured from nothing, and the split view has the room this was short of.
- */
+.section-additions .adders {
+  padding-top: 0.5rem;
+}
+
 @media (max-width: 899px) {
-  .adders-dock {
+  .section-additions-sticky {
     position: sticky;
     bottom: calc(var(--tap) + 0.8rem + 1px + env(safe-area-inset-bottom));
     z-index: 5;
     margin-inline: -1rem;
-    padding: 0.6rem 1rem;
+    padding: 0.35rem 1rem;
     background: var(--veil);
+    border-top: 1px solid var(--line);
+  }
+
+  .section-additions-sticky[open] > .more-body {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 0.65rem 1rem;
+    background: var(--panel);
     border-top: 1px solid var(--line);
   }
 }
@@ -1682,8 +1714,6 @@ fieldset.item > .btn.icon.danger {
 }
 
 .page-paste-sections {
-  max-height: 60vh;
-  overflow-y: auto;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1707,6 +1737,26 @@ fieldset.item > .btn.icon.danger {
   font: inherit;
   font-size: var(--t-sm);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.page-paste-table {
+  margin-top: 0.75rem;
+  min-width: 0;
+}
+
+.page-paste-table .field,
+.page-paste-table select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.page-paste-rows {
+  padding-left: 1.5rem;
+}
+
+.page-paste-rows li {
   overflow-wrap: anywhere;
 }
 

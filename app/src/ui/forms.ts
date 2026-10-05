@@ -512,13 +512,13 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
       field({
         label: "Item",
         value: tier.name,
-        hint: 'What you are selling: "Carved oak sign", "Logo design", "Sourdough loaf".',
+        hint: 'For example "Handmade mug".',
         onInput: (name) => editTier(i, (t) => ({ ...t, name })),
       }),
       field({
         label: "Price",
         value: tier.price,
-        hint: 'Anything you like: "45", "from 45", or "DM me".',
+        hint: 'For example "$28" or "Ask me".',
         onInput: (price) => editTier(i, (t) => ({ ...t, price })),
       }),
       disclosure({
@@ -700,7 +700,13 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
     ]),
   );
 
-  return el("div", {}, [
+  return el("div", { class: "menu-form" }, [
+    field({
+      label: "Category",
+      value: block.heading ?? "",
+      hint: 'Name this group, for example "Ceramics" or "Prints".',
+      onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
+    }),
     ...(choosable ? [bulkPricingToolbar(block)] : []),
     ...(choosable ? bulkPricingPanel(block) : []),
     ...tiers,
@@ -709,7 +715,11 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
     button({
       label: "Add another item",
       variant: "primary",
-      onClick: () => withTiers((tiers) => [...tiers, { id: newId(), name: "", price: "" }]),
+      onClick: () => {
+        withTiers((tiers) => [...tiers, { id: newId(), name: "", price: "" }]);
+        const rows = document.getElementById(`editor-${block.id}`)?.querySelectorAll("fieldset.item");
+        rows?.[rows.length - 1]?.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
+      },
     }),
     // Beside "Add another item", because it answers the same question for
     // somebody whose list already exists somewhere else. Feature 023.
@@ -727,12 +737,6 @@ function menuForm(block: Extract<Block, { kind: "menu" }>, onChange: OnChange): 
       // `dom.ts`'s comment on `nextFieldId`.
       id: `menu-settings-${block.id}`,
       children: [
-        field({
-          label: "Section heading (optional)",
-          value: block.heading ?? "",
-          hint: 'What this price list is: "Prices", "Commissions", "Bakes this week".',
-          onInput: (v) => onChange(withOptional(nowBlock(block), "heading", v)),
-        }),
         field({
           label: "Currency (optional)",
           value: block.currency ?? "",

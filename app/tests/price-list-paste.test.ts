@@ -32,6 +32,7 @@ import {
   newPage,
   selectBlock,
   setPasteText,
+  setPasteRow,
   setSurface,
   startPasting,
   stopPasting,
@@ -98,6 +99,73 @@ function freshList(): string {
 const LIST = "Sketch, 30\nFull colour, 80\nCustom, DM me";
 
 describe("holding a paste", () => {
+  it("keeps row corrections in the draft and clears them with new source or cancel", () => {
+    const id = shop();
+    const before = JSON.stringify(getState().doc);
+    startPasting(id);
+    setPasteText("Woven basket, $24\nHand-dyed scarf: from $35\nCotton tote | $18");
+    setPasteRow(1, "name", "Indigo scarf");
+    setPasteRow(1, "price", "from $42");
+    expect(getState().pasting?.corrections?.[1]).toEqual({ name: "Indigo scarf", price: "from $42" });
+    expect(JSON.stringify(getState().doc)).toBe(before);
+
+    setPasteText("Other item, $12");
+    expect(getState().pasting?.corrections).toEqual({});
+    setPasteRow(0, "name", "Other name");
+    stopPasting();
+    expect(getState().pasting).toBeUndefined();
+    expect(JSON.stringify(getState().doc)).toBe(before);
+  });
+
+  it("adds only the corrected row values to Build, Preview and Copy", () => {
+    const id = freshList();
+    startPasting(id);
+    setPasteText("Woven basket, $24\nHand-dyed scarf: from $35\nCotton tote | $18");
+    setPasteRow(1, "name", "Indigo scarf");
+    setPasteRow(1, "price", "from $42");
+    convertPaste();
+
+    expect(menuBlock().tiers.map(({ name, price }) => [name, price])).toEqual([
+      ["Woven basket", "$24"],
+      ["Indigo scarf", "from $42"],
+      ["Cotton tote", "$18"],
+    ]);
+    const target = getState().doc.target;
+    const copied = compile(getState().doc, target).markdown;
+    expect(copied).toContain("Indigo scarf");
+    expect(copied).toContain("from &#36;42");
+    expect(copied).not.toContain("Hand-dyed scarf");
+  });
+
+  it("does not add a corrected row whose item name is blank", () => {
+    const id = freshList();
+    startPasting(id);
+    setPasteText("Basket, $24");
+    setPasteRow(0, "name", "  ");
+    const before = JSON.stringify(getState().doc);
+    convertPaste();
+    expect(JSON.stringify(getState().doc)).toBe(before);
+  });
+
+  it("does not silently drop a checked unnamed row while adding other rows", () => {
+    const id = freshList();
+    startPasting(id);
+    setPasteText("Basket, $24\nTote, $18");
+    setPasteRow(0, "name", "");
+    const before = JSON.stringify(getState().doc);
+    convertPaste();
+    expect(JSON.stringify(getState().doc)).toBe(before);
+  });
+
+  it("applies a correction on a later review page", () => {
+    const id = freshList();
+    startPasting(id);
+    setPasteText(Array.from({ length: 101 }, (_, i) => `Item ${String(i + 1)}, $${String(i + 1)}`).join("\n"));
+    setPasteRow(100, "name", "Final item");
+    convertPaste();
+    expect(menuBlock().tiers[100]).toMatchObject({ name: "Final item", price: "$101" });
+  });
+
   it("pre-ticks the lines that look like items", () => {
     startPasting(shop());
     setPasteText("COMMISSIONS\nSketch, 30\nFull colour, 80");

@@ -54,10 +54,9 @@ Verify before doing anything with either:
   android/app/build/outputs/apk/release/app-release.apk
 ```
 
-It must report `Verified using v2 scheme: true` and `v3 scheme: true`, and the
-certificate digest must match the one above. v1 is off deliberately: it is the
-old JAR signature and is only needed below API 24, which this app does not
-support. v3 is on because it is the scheme that carries a rotation lineage, so a
+It must report `Verified using v1 scheme: true`, `v2 scheme: true`, and
+`v3 scheme: true`, and the certificate digest must match the one above. v1 is
+needed for Android 6, API 23. v3 is on because it carries a rotation lineage, so a
 leaked key could later be replaced rather than ending the app.
 
 **Without the key on the machine the build still succeeds** and produces

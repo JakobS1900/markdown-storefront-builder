@@ -331,6 +331,9 @@ export function renderShell(root: HTMLElement): void {
     ...(wizardOpen ? [wizardLayer(state)] : []),
   );
 
+  // Open saved groups before returning focus to controls inside them.
+  restoreOpenGroups(openGroups);
+
   // After the render, because the nodes it moves focus to have just been made.
   // It acts only on a change of state, or every keystroke would drag the caret
   // out of the field being typed into and into the panel.
@@ -360,8 +363,7 @@ export function renderShell(root: HTMLElement): void {
     root.querySelector<HTMLElement>(`[aria-controls="${WIZARD_ID}"]`),
   );
 
-  // Groups before the caret: a field inside a folded group cannot take focus.
-  restoreOpenGroups(openGroups);
+  // The caret belongs to a field that is now inside its restored group.
   restoreCaret(caret);
 
   // An offer to undo takes focus when nothing else holds it. The control that

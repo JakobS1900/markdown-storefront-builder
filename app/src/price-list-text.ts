@@ -162,6 +162,31 @@ function cells(line: string, delimiter: Delimiter): string[] {
   return fenced.split(on).map((cell) => cell.trim());
 }
 
+/** A price cell with no item words or size words wrapped around its number. */
+function clearPrice(value: string): boolean {
+  if (/^(?:dm me|ask me)$/i.test(value.trim())) return true;
+  const money = parseMoney(value);
+  return money !== undefined && /^(?:from\s*)?[$€£¥]?\s*$/i.test(money.prefix)
+    && /^(?:\+)?$/.test(money.suffix.trim());
+}
+
+/** A different separator is safe when it has a clearly priced cell. */
+function clearOtherBoundary(bare: string, inferred: Delimiter): string[] | undefined {
+  for (const { id } of DELIMITERS) {
+    if (id === inferred) continue;
+    const parts = cells(bare, id);
+    if (parts.length >= 2 && parts[0] !== "" && parts.slice(1).some(clearPrice)) {
+      return parts;
+    }
+  }
+
+  const colon = bare.lastIndexOf(":");
+  if (colon <= 0) return undefined;
+  const name = bare.slice(0, colon).trim();
+  const price = bare.slice(colon + 1).trim();
+  return name !== "" && clearPrice(price) ? [name, price] : undefined;
+}
+
 /**
  * The fallback when no separator was found: the price is the last thing on the
  * line that holds a digit.
@@ -211,13 +236,16 @@ function splitAtLastNumber(bare: string): { name: string; price: string; unit?: 
  * instead of discarding the column they were in.
  */
 function readLine(line: string, delimiter: Delimiter): Omit<Candidate, "suggested"> {
-  const parts = cells(line, delimiter);
+  let parts = cells(line, delimiter);
   const bare = line.replace(DECORATION, "").trim();
 
   // The paste's separator did not appear on this line, so this line gets the
   // fallback rather than being left as one undivided name. Mixed lists are the
   // normal case: a heading, some comma separated items, and one item somebody
   // typed differently.
+  if (parts.length < 2 || !parts.slice(1).some(clearPrice)) {
+    parts = clearOtherBoundary(bare, delimiter) ?? parts;
+  }
   if (parts.length < 2) {
     const split = splitAtLastNumber(bare);
     return split.unit === undefined
@@ -228,7 +256,8 @@ function readLine(line: string, delimiter: Delimiter): Omit<Candidate, "suggeste
   const name = parts[0] ?? "";
   const rest = parts.slice(1);
 
-  const moneyAt = rest.findIndex((cell) => parseMoney(cell) !== undefined);
+  const clearAt = rest.findIndex(clearPrice);
+  const moneyAt = clearAt === -1 ? rest.findIndex((cell) => parseMoney(cell) !== undefined) : clearAt;
   const priceAt = moneyAt === -1 ? 0 : moneyAt;
   const costAt = rest.findIndex((cell, i) => i > priceAt && parseMoney(cell) !== undefined);
   const unitAt = rest.findIndex((cell, i) => i !== priceAt && i !== costAt && cell !== "");
@@ -316,6 +345,11 @@ export function canBeProduct(candidate: Candidate): boolean {
   const trimmed = candidate.line.trim();
   if (trimmed === "" || isTableRule(trimmed)) return false;
   return candidate.name !== "" || candidate.price !== "";
+}
+
+/** A checked row with no item name still needs correction before Add. */
+export function canAddReviewedProduct(candidate: Candidate): boolean {
+  return canBeProduct(candidate) && candidate.name.trim() !== "";
 }
 
 /**
